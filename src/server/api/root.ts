@@ -1,4 +1,5 @@
 import { videoRouter } from "~/server/api/routers/video";
+import { asanaRouter } from "~/server/api/routers/asana";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -8,6 +9,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  */
 export const appRouter = createTRPCRouter({
   video: videoRouter,
+  asana: asanaRouter,
 });
 
 // export type definition of API

@@ -19,14 +19,26 @@ import { MessageList, Input, MessageBox } from 'react-chat-elements';
 import 'react-chat-elements/dist/main.css';
 
 interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+    type: 'system' | 'human' | 'ai' | 'tool';
+    content: string;
+    tool_call_id?: string;
+    name?: string;
 }
 
 export default function Chat() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      type: 'system',
+      content: `You are a personal assistant who helps manage tasks in Asana. 
+                You never give IDs to the user since those are just for you to keep track of. 
+                When a user asks to create a task and you don't know the project to add it to for sure, clarify with the user.
+                The current date is: ${new Date().toISOString().split('T')[0]}`
+    }
+  ]);
   const [input, setInput] = useState('');
   const viewport = useRef<HTMLDivElement>(null);
+
+  const asanaChat = api.asana.chat.useMutation();
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -35,13 +47,31 @@ export default function Chat() {
     }
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const userMessage: Message = { role: 'user', content: input };
+    const userMessage: Message = { type: 'human', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+
+    try {
+      const response = await asanaChat.mutateAsync({
+        message: input,
+        history: messages
+      });
+
+      setMessages(prev => [...prev, { 
+        type: 'ai', 
+        content: response.response.toString() 
+      }]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => [...prev, { 
+        type: 'ai', 
+        content: 'Sorry, I encountered an error processing your request.' 
+      }]);
+    }
   };
 
   return (
@@ -55,11 +85,11 @@ export default function Chat() {
                 mb="md"
                 style={{
                   display: 'flex',
-                  justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                  justifyContent: message.type === 'human' ? 'flex-end' : 'flex-start',
                 }}
               >
                 <Group align="flex-start" gap="xs">
-                  {message.role === 'assistant' && (
+                  {message.type === 'ai' && (
                     <Avatar 
                       size="md" 
                       radius="xl" 
@@ -72,20 +102,20 @@ export default function Chat() {
                     radius="lg"
                     style={{
                       maxWidth: '70%',
-                      backgroundColor: message.role === 'user' ? '#228be6' : '#f1f3f5',
+                      backgroundColor: message.type === 'human' ? '#228be6' : '#e9ecef',
                     }}
                   >
                     <Text
                       size="sm"
                       style={{
-                        color: message.role === 'user' ? 'white' : 'inherit',
+                        color: message.type === 'human' ? 'white' : 'black',
                         whiteSpace: 'pre-wrap',
                       }}
                     >
                       {message.content}
                     </Text>
                   </Paper>
-                  {message.role === 'user' && (
+                  {message.type === 'human' && (
                     <Avatar 
                       size="md" 
                       radius="xl" 
@@ -126,45 +156,6 @@ export default function Chat() {
 
       <Space h="xl" />
 
-      {/* React Chat Elements Demo */}
-      <Paper shadow="md" radius="md" p="md" withBorder >
-        <Stack h="100%">
-            
-          <MessageList
-            className='message-list'
-            lockable={true}
-            toBottomHeight={'100%'}
-            dataSource={messages.map((msg, index) => ({
-              id: index,
-              position: msg.role === 'user' ? 'right' : 'left',
-              type: 'text',
-              title: msg.role === 'user' ? 'You' : 'AI',
-              text: msg.content,
-              date: new Date(),
-              focus: false,
-              status: 'sent',
-              notch: true,
-              titleColor: msg.role === 'user' ? '#228be6' : '#666'
-            }))}
-            messageBoxStyles={{
-              backgroundColor: '#f0f0f0',
-              color: '#333333'
-            }}
-          />
-          
-          <Input
-            placeholder="Type your message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            rightButtons={
-              <Button onClick={handleSubmit}>
-                <IconSend size={16} />
-              </Button>
-            }
-          />
-        </Stack>
-        </Paper>
-      <Space h="xl" />
       
     </>
   );
