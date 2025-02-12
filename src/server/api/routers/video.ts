@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OpenAIEmbeddings } from "@langchain/openai";
 
 import {
   createTRPCRouter,
@@ -46,4 +47,35 @@ export const videoRouter = createTRPCRouter({
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
   }),
+  search: protectedProcedure
+    .input(
+      z.object({
+        query: z.string(),
+        limit: z.number().default(5),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const embeddings = new OpenAIEmbeddings({
+        openAIApiKey: process.env.OPENAI_API_KEY,
+      });
+
+      const queryEmbedding = await embeddings.embedQuery(input.query);
+
+      const results = await ctx.db.$queryRaw`
+        SELECT 
+          vc."chunk_text" as "chunkText",
+          vc."video_id" as "videoId",
+          vc."chunk_start" as "chunkStart",
+          vc."chunk_end" as "chunkEnd",
+          v."slug",
+          v."id",
+          1 - (vc."chunk_embedding" <=> ${queryEmbedding}::vector) as similarity
+        FROM "VideoChunk" vc
+        JOIN "Video" v ON v."id" = vc."video_id"
+        ORDER BY vc."chunk_embedding" <=> ${queryEmbedding}::vector
+        LIMIT ${input.limit};
+      `;
+
+      return { results };
+    }),
 });
