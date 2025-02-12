@@ -2,6 +2,7 @@ import { LatestPost } from "~/app/_components/post";
 import { auth } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
 import VideoSearch from "~/app/_components/VideoSearch";
+import Chat from "./_components/Chat";
 export default async function Home() {
   const videos = await api.video.get();
   const session = await auth();
@@ -21,6 +22,7 @@ export default async function Home() {
             {videos ? videos.map((video) => <div key={video.id}>{video.slug}</div>) : <div>No videos found</div>}
           </div>
           <VideoSearch />
+          <Chat />
           {session?.user && <LatestPost />}
         </div>
       </main>
