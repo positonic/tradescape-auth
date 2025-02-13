@@ -96,6 +96,52 @@ const createVideoSearchTool = (ctx: any) => tool(
   }
 );
 
+const addVideoSchema = z.object({
+  videoUrl: z.string().url(),
+  isSearchable: z.boolean().default(true),
+});
+
+const createAddVideoTool = (ctx: any) => tool(
+  async (input): Promise<string> => {
+    try {
+      const url = new URL(input.videoUrl);
+      let slug: string | null = url.searchParams.get('v');
+      
+      if (!slug) {
+        const matches = input.videoUrl.match(/youtu\.be\/([^?&]+)/);
+        slug = matches?.[1] ?? null;
+      }
+
+      if (!slug) {
+        throw new Error('Could not extract video ID from URL. Please provide a valid YouTube URL.');
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+      const video = await ctx.db.video.create({
+        data: {
+          id: crypto.randomUUID(),
+          videoUrl: input.videoUrl,
+          slug: slug,
+          status: "pending",
+          isSearchable: input.isSearchable,
+          userId: ctx.session.user.id,
+        },
+      });
+
+      return `Successfully added video to the database! The video ${input.isSearchable ? 'will' : 'will not'} be searchable. Processing will take a few minutes - you can track the progress at ${baseUrl}/videos. Video ID: ${video.id}`;
+    } catch (error) {
+      console.error('Error adding video:', error);
+      throw new Error(`Failed to add video: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  },
+  {
+    name: "add_video",
+    description: "Adds a YouTube video to the database for processing. Provide the video URL and optionally specify if it should be searchable. Processing takes a few minutes.",
+    schema: addVideoSchema,
+  }
+);
+
 export const toolRouter = createTRPCRouter({
   chat: protectedProcedure
     .input(z.object({
@@ -115,13 +161,14 @@ export const toolRouter = createTRPCRouter({
         });
 
         // Create the tools with context
-        const tools = [adderTool, createVideoSearchTool(ctx)];
+        const tools = [adderTool, createVideoSearchTool(ctx), createAddVideoTool(ctx)];
         const llmWithTools = model.bindTools(tools);
 
         const systemMessage = new SystemMessage(
             "You have access to the following tools:\n" +
             "- adder: Adds two numbers together. Use this when asked to perform addition.\n" +
             "- video_search: Search through video transcripts semantically. Use this when asked about video content or to find specific topics in videos.\n" +
+            "- add_video: Adds a YouTube video to the database. Use this when users want to analyze or process a video. The video URL is required, and you can specify if it should be searchable (default is true).\n" +
             "After using a tool, always provide a natural language response explaining the result."
         );
 
@@ -154,6 +201,8 @@ export const toolRouter = createTRPCRouter({
                  toolResult = await adderTool.invoke(toolCallArgs);
              } else if (toolCall.name === "video_search") {
                  toolResult = await createVideoSearchTool(ctx).invoke(toolCall.args as any);
+             } else if (toolCall.name === "add_video") {
+                 toolResult = await createAddVideoTool(ctx).invoke(toolCall.args as any);
              } else {
                  throw new Error(`Unknown tool: ${toolCall.name}`);
              }
