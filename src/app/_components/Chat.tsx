@@ -74,6 +74,37 @@ export default function Chat() {
     }
   };
 
+  const renderMessageContent = (content: string) => {
+    // Regular expression to match YouTube video IDs in square brackets
+    const videoPattern = /\[Video ([a-zA-Z0-9_-]+)\]/g;
+    
+    // Split the content into parts and replace video references with links
+    const parts = content.split(videoPattern);
+    
+    if (parts.length === 1) {
+      return content; // No video IDs found, return original content
+    }
+
+    return parts.map((part, index) => {
+      // Every odd index in parts array will be a video ID
+      if (index % 2 === 1) {
+        return (
+          <a 
+            key={index} 
+            href={`/video/${part}`}
+            style={{ 
+              color: 'inherit', 
+              textDecoration: 'underline' 
+            }}
+          >
+            {`Video ${part}`}
+          </a>
+        );
+      }
+      return part;
+    });
+  };
+
   return (
     <>
       <Paper shadow="md" radius="md" p="md" withBorder style={{ height: '600px' }}>
@@ -112,7 +143,7 @@ export default function Chat() {
                         whiteSpace: 'pre-wrap',
                       }}
                     >
-                      {message.content}
+                      {renderMessageContent(message.content)}
                     </Text>
                   </Paper>
                   {message.type === 'human' && (

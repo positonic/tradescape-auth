@@ -91,4 +91,13 @@ export const videoRouter = createTRPCRouter({
         },
       });
     }),
+
+  getBySlug: publicProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      const video = await ctx.db.video.findFirst({
+        where: { slug: input },
+      });
+      return video;
+    }),
 });

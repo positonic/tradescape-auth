@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { api } from "~/trpc/react";
 
-export function LatestPost() {
+export function SearchVideos() {
   const [latestPost] = api.video.getLatest.useSuspenseQuery();
 
   const utils = api.useUtils();

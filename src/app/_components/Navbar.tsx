@@ -1,0 +1,34 @@
+import Link from "next/link";
+import { IconHome, IconVideo, IconUsers, IconChartBar, IconSettings } from "@tabler/icons-react";
+
+export default function Navbar() {
+  return (
+    <nav className="w-20 bg-white border-r flex flex-col items-center py-4 space-y-4">
+      <div className="p-2">
+        <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+          <span className="text-white text-xl font-bold">A</span>
+        </div>
+      </div>
+      
+      <div className="flex-1 flex flex-col space-y-2">
+        <NavItem href="/" icon={<IconHome size={24} />} />
+        <NavItem href="/videos" icon={<IconVideo size={24} />} />
+        <NavItem href="/customers" icon={<IconUsers size={24} />} />
+        <NavItem href="/analytics" icon={<IconChartBar size={24} />} />
+      </div>
+      
+      <NavItem href="/settings" icon={<IconSettings size={24} />} />
+    </nav>
+  );
+}
+
+function NavItem({ href, icon }: { href: string; icon: React.ReactNode }) {
+  return (
+    <Link 
+      href={href} 
+      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+    >
+      {icon}
+    </Link>
+  );
+} 
