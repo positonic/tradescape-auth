@@ -22,7 +22,6 @@ export default async function Navbar() {
       
       {session ? (
               <>
-                <span>{session.user?.name}</span>
                 <NavItem href="/api/auth/signout" icon={<IconLogout size={24} />} />
               </>
             ) : <NavItem href="/api/auth/signin" icon={<IconLogin size={24} />} />}
