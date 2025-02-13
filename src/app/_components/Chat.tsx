@@ -38,7 +38,7 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const viewport = useRef<HTMLDivElement>(null);
 
-  const asanaChat = api.asana.chat.useMutation();
+  const asanaChat = api.tools.chat.useMutation();
 
   // Scroll to bottom when messages change
   useEffect(() => {
