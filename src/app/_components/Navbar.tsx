@@ -1,7 +1,9 @@
+import { auth } from "~/server/auth";
 import Link from "next/link";
-import { IconHome, IconVideo, IconUsers, IconChartBar, IconSettings } from "@tabler/icons-react";
+import { IconHome, IconVideo, IconUsers, IconChartBar, IconSettings, IconLogout, IconLogin} from "@tabler/icons-react";
 
-export default function Navbar() {
+export default async function Navbar() {
+  const session = await auth();
   return (
     <nav className="w-20 bg-white border-r flex flex-col items-center py-4 space-y-4">
       <div className="p-2">
@@ -17,6 +19,13 @@ export default function Navbar() {
         <NavItem href="/analytics" icon={<IconChartBar size={24} />} />
       </div>
       
+      
+      {session ? (
+              <>
+                <span>{session.user?.name}</span>
+                <NavItem href="/api/auth/signout" icon={<IconLogout size={24} />} />
+              </>
+            ) : <NavItem href="/api/auth/signin" icon={<IconLogin size={24} />} />}
       <NavItem href="/settings" icon={<IconSettings size={24} />} />
     </nav>
   );

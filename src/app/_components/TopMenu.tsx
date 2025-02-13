@@ -1,7 +1,9 @@
+import { auth } from "~/server/auth";
 import { IconSearch, IconBell } from "@tabler/icons-react";
 import { TextInput, Button, Avatar } from "@mantine/core";
 
-export default function TopMenu() {
+export default async function TopMenu() {
+    const session = await auth();
   return (
     <div className="h-16 bg-white border-b px-4 flex items-center justify-between">
       <div className="flex items-center flex-1">
@@ -22,7 +24,17 @@ export default function TopMenu() {
         <button className="p-2 hover:bg-gray-100 rounded-full">
           <IconBell size={20} />
         </button>
-        <Avatar size="sm" radius="xl" />
+        <p className="text-center text-2xl text-white">
+            {session && <div className="flex items-center gap-2 text-gray-700">
+            {session && (
+              <>
+                <span>{session.user?.name}</span>
+                <Avatar size="sm" radius="xl" />
+              </>
+            )}
+        </div>}
+        </p>
+       
       </div>
     </div>
   );

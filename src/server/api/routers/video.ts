@@ -103,3 +103,11 @@ export const videoRouter = createTRPCRouter({
       return video;
     }),
 });
+
+export async function getVideoBySlug(slug: string) {
+  const db = await import("~/server/db").then((mod) => mod.db);
+  const video = await db.video.findFirst({
+    where: { slug },
+  });
+  return video;
+}
