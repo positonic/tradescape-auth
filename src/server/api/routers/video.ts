@@ -36,13 +36,12 @@ export const videoRouter = createTRPCRouter({
     return video ?? null;
   }),
 
-  get: protectedProcedure.query(async ({ ctx }) => {
-    const videos = await ctx.db.video.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-
-    return videos;
-  }),
+  get: publicProcedure
+    .query(async ({ ctx }) => {
+      return await ctx.db.video.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+    }),
 
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
@@ -77,5 +76,19 @@ export const videoRouter = createTRPCRouter({
       `;
 
       return { results };
+    }),
+
+  create: publicProcedure
+    .input(z.object({ url: z.string().url() }))
+    .mutation(async ({ ctx, input }) => {
+      // Generate a simple slug from the current timestamp
+      const slug = Date.now().toString(36);
+      
+      return await ctx.db.video.create({
+        data: {
+          videoUrl: input.url,
+          slug,
+        },
+      });
     }),
 });
