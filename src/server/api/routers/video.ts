@@ -6,6 +6,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+import { extractYoutubeSlugFromUrl } from "~/utils/youtube";
 
 export const videoRouter = createTRPCRouter({
   hello: publicProcedure
@@ -78,15 +79,16 @@ export const videoRouter = createTRPCRouter({
       return { results };
     }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(z.object({ url: z.string().url() }))
     .mutation(async ({ ctx, input }) => {
-      // Generate a simple slug from the current timestamp
-      const slug = Date.now().toString(36);
+      const slug = extractYoutubeSlugFromUrl(input.url);
       
       return await ctx.db.video.create({
         data: {
           videoUrl: input.url,
+          status: 'pending',
+          userId: ctx.session.user.id,
           slug,
         },
       });

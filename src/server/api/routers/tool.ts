@@ -2,11 +2,10 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
-import { SystemMessage, AIMessage, HumanMessage, ToolMessage, BaseMessageLike } from "@langchain/core/messages";
-import { BaseLanguageModelInput } from "@langchain/core/language_models/base";
+import { SystemMessage, AIMessage, HumanMessage, ToolMessage } from "@langchain/core/messages";
 import { tool } from "@langchain/core/tools";
-import { prisma } from "~/server/db";
 import { OpenAIEmbeddings } from "@langchain/openai";
+import { extractYoutubeSlugFromUrl } from "~/utils/youtube";
 
 const adderSchema = z.object({
     a: z.number(),
@@ -104,17 +103,7 @@ const addVideoSchema = z.object({
 const createAddVideoTool = (ctx: any) => tool(
   async (input): Promise<string> => {
     try {
-      const url = new URL(input.videoUrl);
-      let slug: string | null = url.searchParams.get('v');
-      
-      if (!slug) {
-        const matches = input.videoUrl.match(/youtu\.be\/([^?&]+)/);
-        slug = matches?.[1] ?? null;
-      }
-
-      if (!slug) {
-        throw new Error('Could not extract video ID from URL. Please provide a valid YouTube URL.');
-      }
+      const slug = extractYoutubeSlugFromUrl(input.videoUrl);
 
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
