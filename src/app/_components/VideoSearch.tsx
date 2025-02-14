@@ -2,11 +2,20 @@
 
 import { useState } from 'react';
 import { api } from "~/trpc/react";
+import { TextInput, Button, Paper, Text, Stack, Group, Badge } from '@mantine/core';
+
+interface SearchResult {
+  videoId: string;
+  chunkStart: number;
+  chunkText: string;
+  similarity: number;
+  slug: string;
+}
 
 export default function VideoSearch() {
   const [query, setQuery] = useState('');
   
-  const search = api.video.search.useQuery(
+  const search = api.video.search.useQuery<{ results: SearchResult[] }>(
     { query, limit: 5 },
     { 
       enabled: false, // Don't run automatically
@@ -21,46 +30,60 @@ export default function VideoSearch() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <input
-          type="text"
+    <Stack gap="md">
+      <Group>
+        <TextInput
+          placeholder="Search video content..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="flex-1 p-2 border rounded"
-          placeholder="Search video content..."
+          style={{ flex: 1 }}
         />
-        <button
+        <Button
           onClick={handleSearch}
-          disabled={search.isFetching}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
+          loading={search.isFetching}
         >
-          {search.isFetching ? 'Searching...' : 'Search'}
-        </button>
-      </div>
+          Search
+        </Button>
+      </Group>
 
-      <div className="space-y-4">
+      <Stack gap="md">
+        {search.data?.results && (
+          <Text size="sm" c="dimmed">
+            Found {search.data.results.length} results
+          </Text>
+        )}
         {search.data?.results.map((result: any) => (
-          <div key={`${result.videoId}-${result.chunkStart}`} className="p-4 border rounded">
-            <p className="text-sm text-gray-500">
-              Similarity: {(result.similarity * 100).toFixed(2)}%
-            </p>
-            <p>{result.chunkText}</p>
-            <a 
-              href={`https://www.youtube.com/watch?v=${result.slug}&t=${Math.floor(result.chunkStart)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:underline"
-            >
-              View on YouTube
-            </a>
-          </div>
+          <Paper key={`${result.videoId}-${result.chunkStart}`} p="md" withBorder>
+            <Stack gap="xs">
+              <Badge variant="light" color="blue">
+                Similarity: {(result.similarity * 100).toFixed(2)}%
+              </Badge>
+              <Text>
+                {result.chunkText.split(new RegExp(`(${query})`, 'gi')).map((part, i) => 
+                  part.toLowerCase() === query.toLowerCase() ? (
+                    <Text component="span" fw={700} key={i}>{part}</Text>
+                  ) : part
+                )}
+              </Text>
+              <Text
+                component="a"
+                href={`https://www.youtube.com/watch?v=${result.slug}&t=${Math.floor(result.chunkStart)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                c="blue"
+                style={{ textDecoration: 'none' }}
+                fw={500}
+              >
+                View on YouTube
+              </Text>
+            </Stack>
+          </Paper>
         ))}
-      </div>
+      </Stack>
 
       {search.error && (
-        <p className="text-red-500">Error: {search.error.message}</p>
+        <Text c="red">{search.error.message}</Text>
       )}
-    </div>
+    </Stack>
   );
 }

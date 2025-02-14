@@ -75,7 +75,7 @@ export const videoRouter = createTRPCRouter({
         ORDER BY vc."chunk_embedding" <=> ${queryEmbedding}::vector
         LIMIT ${input.limit};
       `;
-
+      console.log(results);
       return { results };
     }),
 

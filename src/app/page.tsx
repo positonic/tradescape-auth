@@ -1,6 +1,5 @@
 import { auth } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
-import VideoSearch from "~/app/_components/VideoSearch";
 import Chat from "./_components/Chat";
 import Link from "next/link";
 

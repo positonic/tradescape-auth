@@ -72,13 +72,13 @@ model VideoChunk {
   id              Int                    @id @default(autoincrement())
   video_id        String?
   chunk_text      String
-  //chunk_embedding Unsupported("vector")?
-  chunkEmbedding Unsupported("vector(1536)") // OpenAI embeddings are 1536 dimensions
-  chunk_start     Int?
-  chunk_end       Int?
+  chunk_embedding Unsupported("vector(1536)") @map("chunk_embedding") // OpenAI embeddings are 1536 dimensions
+  chunk_start     Int?                   // character position start
+  chunk_end       Int?                   // character position end
+  chunk_start_time Float?                // timestamp in seconds
+  chunk_end_time   Float?                // timestamp in seconds
   created_at      DateTime?              @default(now()) @db.Timestamptz(6)
   Video           Video?                 @relation(fields: [video_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  //@@index([chunk_embedding])
-  @@index([chunkEmbedding(type: Vector)]) // For pgvector
+  @@index([chunk_embedding(type: Vector)]) // For pgvector
 }

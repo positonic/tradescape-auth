@@ -1,6 +1,7 @@
 import { auth } from "~/server/auth";
 import { VideosList } from "./components/VideosList";
 import Link from "next/link";
+import VideoSearch from "~/app/_components/VideoSearch";
 
 export default async function VideosPage() {
   const session = await auth();
@@ -17,6 +18,7 @@ export default async function VideosPage() {
             {session?.user && (
                 <div className="w-full">
                     <h1 className="text-2xl font-bold mb-6">Videos</h1>
+                    <VideoSearch />
                     <VideosList />
                 </div>
                     

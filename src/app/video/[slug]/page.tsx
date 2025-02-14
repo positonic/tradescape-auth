@@ -4,15 +4,21 @@ import Link from "next/link";
 import { auth } from "~/server/auth";
 import { HydrateClient } from "~/trpc/server";
 import { getVideoBySlug } from "~/server/api/routers/video";
+import { parseVTT } from '~/utils/vttParser';
 
 export default async function VideoDetailPage({
-  params,
+  params: { slug },
 }: {
   params: { slug: string };
 }) {
   const session = await auth();
-  const video = await getVideoBySlug(params.slug);
+  const video = await getVideoBySlug(slug);
 
+  
+  console.log('video?.transcription', video?.transcription);
+  const captions = video?.transcription ? parseVTT(video.transcription) : [];
+  console.log('captions', captions);
+  
   return (
     <HydrateClient>
       <div className="container mx-auto">
@@ -45,13 +51,18 @@ export default async function VideoDetailPage({
                     <h2 className="text-lg font-semibold">Last Updated</h2>
                     <p>{new Date(video.updatedAt!).toLocaleString()}</p>
                   </div>
-                  {video.transcription && (
+                  {captions.length > 0 && (
                     <div>
                       <h2 className="text-lg font-semibold">Transcription</h2>
-                      <div className="mt-2 p-4 bg-gray-900 rounded-lg max-h-96 overflow-y-auto">
-                        <p className="whitespace-pre-wrap">
-                          {JSON.parse(video.transcription).text}
-                        </p>
+                      <div className="space-y-4">
+                        {captions.map((caption, index) => (
+                          <div key={index} className="border-b pb-2">
+                            <div className="text-sm text-gray-500">
+                              {caption.startTime} → {caption.endTime}
+                            </div>
+                            <p>{caption.text}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
