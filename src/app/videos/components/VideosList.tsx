@@ -77,6 +77,28 @@ export function VideosList() {
 
   return (
     <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
+        {videos?.map((video) => (
+          <Link 
+            href={`/video/${video.slug}`} 
+            key={video.id}
+            className="block no-underline"
+          >
+            <Paper 
+              className="p-4 hover:shadow-md transition-shadow cursor-pointer"
+            >
+              {video.title && <p className="text-sm mb-2">{video.title}</p>}
+              <p className="text-sm mb-2">URL: {video.videoUrl}</p>
+              <p className="text-sm mb-2">Slug: {video.slug}</p>
+              {video.createdAt && (
+                <p className="text-sm text-gray-500">
+                  Added: {new Date(video.createdAt).toLocaleString()}
+                </p>
+              )}
+            </Paper>
+          </Link>
+        ))}
+      </div>
       <Paper className="p-6">
         <h2 className="text-lg font-semibold mb-4">Add New Video</h2>
         <Box className="max-w-2xl">
@@ -92,27 +114,7 @@ export function VideosList() {
         </Box>
       </Paper>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-        {videos?.map((video) => (
-          <Link 
-            href={`/video/${video.slug}`} 
-            key={video.id}
-            className="block no-underline"
-          >
-            <Paper 
-              className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <p className="text-sm mb-2">URL: {video.videoUrl}</p>
-              <p className="text-sm mb-2">Slug: {video.slug}</p>
-              {video.createdAt && (
-                <p className="text-sm text-gray-500">
-                  Added: {new Date(video.createdAt).toLocaleString()}
-                </p>
-              )}
-            </Paper>
-          </Link>
-        ))}
-      </div>
+      
     </div>
   );
 } 

@@ -12,6 +12,7 @@ datasource db {
 model Video {
   id            String   @id @default(uuid())
   slug          String?
+  title         String?
   videoUrl      String
   transcription String?
   status        String

@@ -5,6 +5,7 @@ import { auth } from "~/server/auth";
 import { HydrateClient } from "~/trpc/server";
 import { getVideoBySlug } from "~/server/api/routers/video";
 import { parseVTT } from '~/utils/vttParser';
+import { Innertube } from 'youtubei.js/web';
 
 export default async function VideoDetailPage({
   params: { slug },
@@ -14,6 +15,10 @@ export default async function VideoDetailPage({
   const session = await auth();
   const video = await getVideoBySlug(slug);
 
+  // Add video info logging
+  const innertube = await Innertube.create();
+  const videoInfo = await innertube.getInfo('9Yf7asDPBaE');
+  console.log('YouTube Video Info:', videoInfo);
   
   console.log('video?.transcription', video?.transcription);
   const captions = video?.transcription ? parseVTT(video.transcription) : [];
