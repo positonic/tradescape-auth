@@ -39,7 +39,7 @@ export default async function VideoDetailPage({
               
               {video && (
                 <div className="space-y-4">
-                  <h1 className="text-2xl font-bold mb-4">Video Details</h1>
+                  <h1 className="text-2xl font-bold mb-4">{video.title}</h1>
                   <div>
                     <h2 className="text-lg font-semibold">Video URL</h2>
                     <p>{video.videoUrl}</p>
