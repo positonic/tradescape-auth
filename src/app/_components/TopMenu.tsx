@@ -15,12 +15,7 @@ export default async function TopMenu() {
       </div>
       
       <div className="flex items-center space-x-4">
-        <Button variant="outline" size="sm">
-          Export
-        </Button>
-        <Button size="sm">
-          Add Product
-        </Button>
+        
         <button className="p-2 hover:bg-gray-100 rounded-full">
           <IconBell size={20} />
         </button>

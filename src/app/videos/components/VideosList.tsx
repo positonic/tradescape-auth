@@ -5,7 +5,7 @@ import { api } from "~/trpc/react";
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX } from '@tabler/icons-react';
-import { TextInput, Button, Box, Paper } from '@mantine/core';
+import { TextInput, Button, Box, Paper, Badge } from '@mantine/core';
 import Link from 'next/link';
 
 interface VideoFormValues {
@@ -88,6 +88,15 @@ export function VideosList() {
               className="p-4 hover:shadow-md transition-shadow cursor-pointer"
             >
               {video.title && <p className="text-sm mb-2">{video.title}</p>}
+              <div className="flex items-center gap-2 mb-2">
+                <Badge
+                  color={video.status === 'PROCESSING' ? 'yellow' : 
+                         video.status === 'COMPLETED' ? 'green' : 
+                         video.status === 'FAILED' ? 'red' : 'gray'}
+                         variant="light">
+                  {video.status}
+                </Badge>
+              </div>
               <p className="text-sm mb-2">URL: {video.videoUrl}</p>
               <p className="text-sm mb-2">Slug: {video.slug}</p>
               {video.createdAt && (

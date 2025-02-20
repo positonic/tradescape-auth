@@ -7,17 +7,19 @@ interface Caption {
 }
 
 export function parseVTT(vttContent: string): Caption[] {
-  // Remove WEBVTT header and split into chunks
-  const chunks = JSON.parse(vttContent)
+  // First, convert escaped newlines to actual newlines and clean up the string
+  const cleanContent = vttContent
+    .replace(/^"|"$/g, '')  // Remove leading/trailing quotes
+    .replace(/\\n/g, '\n')  // Convert escaped newlines to actual newlines
     .replace('WEBVTT\n\n', '')
-    .trim()
-    .split('\n\n');
+    .trim();
 
+  // Split into caption blocks
+  const blocks = cleanContent.split('\n\n');
   const captions: Caption[] = [];
-    
 
-  for (const chunk of chunks) {
-    const lines = chunk.split('\n');
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
     
     if (lines.length < 2) continue;
 

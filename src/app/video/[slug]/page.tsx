@@ -1,4 +1,4 @@
-import { Paper } from '@mantine/core';
+import { Paper, Badge, Button } from '@mantine/core';
 import { api } from "~/trpc/server";
 import Link from "next/link";
 import { auth } from "~/server/auth";
@@ -6,7 +6,7 @@ import { HydrateClient } from "~/trpc/server";
 import { getVideoBySlug } from "~/server/api/routers/video";
 import { parseVTT } from '~/utils/vttParser';
 import { Innertube } from 'youtubei.js/web';
-
+import { TranscriptionAccordion } from '~/components/TranscriptionAccordion';
 export default async function VideoDetailPage({
   params: { slug },
 }: {
@@ -22,8 +22,23 @@ export default async function VideoDetailPage({
   
   console.log('video?.transcription', video?.transcription);
   const captions = video?.transcription ? parseVTT(video.transcription) : [];
+  const transcription = captions.map(caption => caption.text).join(' ');
+
   console.log('captions', captions);
   
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'yellow';
+      case 'completed':
+        return 'green';
+      case 'failed':
+        return 'red';
+      default:
+        return 'gray';
+    }
+  };
+
   return (
     <HydrateClient>
       <div className="container mx-auto">
@@ -46,7 +61,9 @@ export default async function VideoDetailPage({
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold">Status</h2>
-                    <p>{video.status}</p>
+                    <Badge color={getStatusColor(video.status)} variant="light">
+                      {video.status}
+                    </Badge>
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold">Created At</h2>
@@ -56,21 +73,13 @@ export default async function VideoDetailPage({
                     <h2 className="text-lg font-semibold">Last Updated</h2>
                     <p>{new Date(video.updatedAt!).toLocaleString()}</p>
                   </div>
+                  
                   {captions.length > 0 && (
-                    <div>
-                      <h2 className="text-lg font-semibold">Transcription</h2>
-                      <div className="space-y-4">
-                        {captions.map((caption, index) => (
-                          <div key={index} className="border-b pb-2">
-                            <div className="text-sm text-gray-500">
-                              {caption.startTime} → {caption.endTime}
-                            </div>
-                            <p>{caption.text}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <TranscriptionAccordion transcription={transcription}/>    
                   )}
+                  <Button>
+                    Summarize transcription
+                  </Button>
                 </div>
               )}
             </Paper>
