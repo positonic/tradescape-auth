@@ -1,6 +1,7 @@
 import { videoRouter } from "~/server/api/routers/video";
 import { toolRouter } from "~/server/api/routers/tool";
-import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
+import { discordRouter } from "./routers/discord";
+import { createTRPCRouter, createCallerFactory } from "./trpc";
 
 /**
  * This is the primary router for your server.
@@ -10,6 +11,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 export const appRouter = createTRPCRouter({
   video: videoRouter,
   tools: toolRouter,
+  discord: discordRouter,
 });
 
 // export type definition of API

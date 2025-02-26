@@ -1,6 +1,55 @@
-# Create T3 App
+# Video Transcription & Analysis Platform
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+A modern web application for transcribing, analyzing, and searching through video content, built with the T3 Stack.
+
+## 🌟 Features
+
+- **Video Processing**
+  - YouTube video URL support
+  - Automatic transcription generation
+  - Semantic search through video content
+  - Real-time processing status tracking
+
+- **AI-Powered Chat Interface**
+  - Interactive chat with AI assistant
+  - Video content analysis
+  - Natural language video search
+  - Tool-based interaction system
+
+- **Authentication**
+  - Discord OAuth integration
+  - Protected routes and API endpoints
+  - Session management
+
+- **Advanced Search**
+  - Vector-based semantic search (pgvector)
+  - Chunk-based video content indexing
+  - Similarity scoring
+
+## 🛠 Tech Stack
+
+- **Frontend**
+  - Next.js 15
+  - React 18
+  - Mantine UI
+  - TailwindCSS
+  - TypeScript
+
+- **Backend**
+  - tRPC
+  - Prisma
+  - PostgreSQL with pgvector
+  - NextAuth.js
+  - LangChain
+
+- **AI/ML**
+  - OpenAI embeddings
+  - LangChain integration
+  - Vector similarity search
+
+## 🚀 Getting Started
+
+1. **Clone the repository**
 
 ## What's next? How do I make an app with this?
 
