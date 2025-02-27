@@ -1,5 +1,5 @@
 import { Paper, Badge, Button } from '@mantine/core';
-import { api } from "~/trpc/server";
+
 import Link from "next/link";
 import { auth } from "~/server/auth";
 import { HydrateClient } from "~/trpc/server";
@@ -7,11 +7,14 @@ import { getVideoBySlug } from "~/server/api/routers/video";
 import { parseVTT } from '~/utils/vttParser';
 import { Innertube } from 'youtubei.js/web';
 import { TranscriptionAccordion } from '~/components/TranscriptionAccordion';
+import { SummarizeButton } from '~/app/_components/SummarizeButton';
+
 export default async function VideoDetailPage({
-  params: { slug },
+  params,
 }: {
-  params: { slug: string };
+  params: { slug: string }
 }) {
+  const { slug } = params;
   const session = await auth();
   const video = await getVideoBySlug(slug);
 
@@ -43,12 +46,15 @@ export default async function VideoDetailPage({
     <HydrateClient>
       <div className="container mx-auto">
         <div className="flex justify-between items-center mb-6">
-          {!session && <Link href={session ? "/api/auth/signout" : "/api/auth/signin"}
-                className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
-                >
-                Sign in
-            </Link>}
-            {session?.user ? (
+          {!session && (
+            <Link
+              href={session ? "/api/auth/signout" : "/api/auth/signin"}
+              className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
+            >
+              Sign in
+            </Link>
+          )}
+          {session?.user ? (
             <Paper className="p-6 bg-gray-800 w-full">
               {!video && <div>Video not found</div>}
               
@@ -77,9 +83,14 @@ export default async function VideoDetailPage({
                   {captions.length > 0 && (
                     <TranscriptionAccordion transcription={transcription}/>    
                   )}
-                  <Button>
-                    Summarize transcription
-                  </Button>
+                  {(transcription && video.status.toLowerCase() === 'completed') && (
+                    <div>
+                      <SummarizeButton 
+                        transcription={transcription}
+                        isCompleted={video.status.toLowerCase() === 'completed'}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </Paper>
@@ -88,10 +99,8 @@ export default async function VideoDetailPage({
               <p>Please sign in to view video details</p>
             </div>
           )}
-        
         </div>
       </div>
-      
     </HydrateClient>
   );
 }

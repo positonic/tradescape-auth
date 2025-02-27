@@ -17,7 +17,7 @@ export function VideosList() {
   const utils = api.useUtils();
   const addVideoMutation = api.video.create.useMutation({
     onSuccess: () => {
-      utils.video.get.invalidate();
+      void utils.video.get.invalidate();
     },
   });
 
@@ -122,8 +122,6 @@ export function VideosList() {
           </form>
         </Box>
       </Paper>
-
-      
     </div>
   );
 } 

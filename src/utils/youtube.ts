@@ -1,19 +1,26 @@
 export function extractYoutubeSlugFromUrl(url: string): string {
-  try {
-    const parsedUrl = new URL(url);
-    let videoId: string | null = parsedUrl.searchParams.get('v');
-    
-    if (!videoId) {
-      const matches = url.match(/youtu\.be\/([^?&]+)/);
-      videoId = matches?.[1] ?? null;
-    }
+  // Regular expressions for different YouTube URL formats
+  const patterns = [
+    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i,
+    /^[a-zA-Z0-9_-]{11}$/
+  ];
 
-    if (!videoId) {
-      throw new Error('Could not extract video ID from URL. Please provide a valid YouTube URL.');
+  for (const pattern of patterns) {
+    const match = pattern.exec(url);
+    if (match?.[1]) {
+      return match[1];
     }
-
-    return videoId;
-  } catch (error) {
-    throw new Error('Invalid URL provided. Please provide a valid YouTube URL.');
   }
+
+  try {
+    const urlObj = new URL(url);
+    const videoId = urlObj.searchParams.get('v');
+    if (videoId) {
+      return videoId;
+    }
+  } catch {
+    // Invalid URL, continue to throw error
+  }
+
+  throw new Error('Could not extract YouTube video ID from URL');
 } 

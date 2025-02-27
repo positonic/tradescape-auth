@@ -15,8 +15,6 @@ import {
   Space
 } from '@mantine/core';
 import { IconSend } from '@tabler/icons-react';
-import { MessageList, Input, MessageBox } from 'react-chat-elements';
-import 'react-chat-elements/dist/main.css';
 
 interface Message {
     type: 'system' | 'human' | 'ai' | 'tool';
@@ -63,7 +61,7 @@ export default function Chat() {
 
       setMessages(prev => [...prev, { 
         type: 'ai', 
-        content: response.response.toString() 
+        content: typeof response.response === 'string' ? response.response : JSON.stringify(response.response)
       }]);
     } catch (error) {
       console.error('Chat error:', error);

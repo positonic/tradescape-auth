@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { OpenAIEmbeddings } from "@langchain/openai";
+import { summarizeTranscription } from "~/server/services/videoService";
 
 import {
   createTRPCRouter,
@@ -86,7 +87,8 @@ export const videoRouter = createTRPCRouter({
     .input(z.object({ url: z.string().url() }))
     .mutation(async ({ ctx, input }) => {
       const slug = extractYoutubeSlugFromUrl(input.url);
-      
+      console.log('ctx.session', ctx.session);
+      console.log('ctx.session.user.id', ctx.session.user.id);
       return await ctx.db.video.create({
         data: {
           videoUrl: input.url,
@@ -104,6 +106,17 @@ export const videoRouter = createTRPCRouter({
         where: { slug: input },
       });
       return video;
+    }),
+  
+  summarizeTranscription: protectedProcedure
+    .input(z.object({ 
+      transcription: z.string(),
+      summaryType: z.string()
+    }))
+    .mutation(async ({ input }) => {
+      const summary = await summarizeTranscription(input.transcription, input.summaryType)
+      console.log("summarizeTranscription is", summary)
+      return summary
     }),
 });
 

@@ -15,7 +15,7 @@ export function VideoForm() {
   const utils = api.useUtils();
   const addVideoMutation = api.video.create.useMutation({
     onSuccess: () => {
-      utils.video.get.invalidate();
+      void utils.video.get.invalidate();
     },
   });
 

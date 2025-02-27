@@ -25,7 +25,7 @@ export default function VideoSearch() {
 
   const handleSearch = () => {
     if (query) {
-      search.refetch();
+      void search.refetch();
     }
   };
 
@@ -52,7 +52,7 @@ export default function VideoSearch() {
             Found {search.data.results.length} results
           </Text>
         )}
-        {search.data?.results.map((result: any) => (
+        {search.data?.results.map((result) => (
           <Paper key={`${result.videoId}-${result.chunkStart}`} p="md" withBorder>
             <Stack gap="xs">
               <Badge variant="light" color="blue">

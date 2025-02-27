@@ -1,11 +1,24 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import type { inferAsyncReturnType } from '@trpc/server';
+import { createTRPCRouter, protectedProcedure, createTRPCContext } from "~/server/api/trpc";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, AIMessage, HumanMessage, ToolMessage } from "@langchain/core/messages";
 import { tool } from "@langchain/core/tools";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { extractYoutubeSlugFromUrl } from "~/utils/youtube";
+
+type Context = inferAsyncReturnType<typeof createTRPCContext>;
+
+interface VideoChunkResult {
+  chunkText: string;
+  videoId: string;
+  chunkStart: number;
+  chunkEnd: number;
+  slug: string;
+  id: string;
+  similarity: number;
+}
 
 const adderSchema = z.object({
     a: z.number(),
@@ -58,7 +71,7 @@ const videoSearchSchema = z.object({
 });
 
 // Define the tool as a function that takes ctx
-const createVideoSearchTool = (ctx: any) => tool(
+const createVideoSearchTool = (ctx: Context) => tool(
   async (input): Promise<string> => {
     const embeddings = new OpenAIEmbeddings({
       openAIApiKey: process.env.OPENAI_API_KEY,
@@ -66,7 +79,7 @@ const createVideoSearchTool = (ctx: any) => tool(
 
     const queryEmbedding = await embeddings.embedQuery(input.query);
 
-    const results = await ctx.db.$queryRaw`
+    const results = await ctx.db.$queryRaw<VideoChunkResult[]>`
       SELECT 
         vc."chunk_text" as "chunkText",
         vc."video_id" as "videoId",
@@ -82,7 +95,7 @@ const createVideoSearchTool = (ctx: any) => tool(
     `;
 
     // Format results into a readable string
-    const formattedResults = results.map((r: any) => 
+    const formattedResults = results.map((r: VideoChunkResult) => 
       `Video ${r.slug} (${r.chunkStart}-${r.chunkEnd}): ${r.chunkText}`
     ).join('\n');
 
@@ -100,21 +113,31 @@ const addVideoSchema = z.object({
   isSearchable: z.boolean().default(true),
 });
 
-const createAddVideoTool = (ctx: any) => tool(
+const createAddVideoTool = (ctx: Context) => tool(
   async (input): Promise<string> => {
     try {
       const slug = extractYoutubeSlugFromUrl(input.videoUrl);
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      console.log('ctx.session? is ', ctx.session);
+      console.log('ctx.session?.user ', ctx.session?.user);
+      if (!ctx.session?.user?.id) {
+        throw new Error('User must be authenticated to add videos');
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
       const video = await ctx.db.video.create({
         data: {
           id: crypto.randomUUID(),
           videoUrl: input.videoUrl,
-          slug: slug,
+          slug,
           status: "pending",
           isSearchable: input.isSearchable,
-          userId: ctx.session.user.id,
+          user: {
+            connect: {
+              id: ctx.session.user.id
+            }
+          }
         },
       });
 
@@ -175,28 +198,28 @@ export const toolRouter = createTRPCRouter({
         try {
             let response = await llmWithTools.invoke(messages);
             
-            if(!response || !response.tool_calls || response.tool_calls.length === 0) {
-                return { response: response.content };
+            if(!response?.tool_calls?.length) {
+                return { response: response?.content ?? '' };
             }
             
             // If there are tool calls, execute them and get final response
             const toolCall = response.tool_calls[0];
-            if(!toolCall || !toolCall.args) return { response: response.content };
+            if(!toolCall?.args) return { response: response?.content ?? '' };
             
              // Find the appropriate tool based on the name
-             let toolResult;
+             let toolResult: string;
              if (toolCall.name === "adder") {
-              const toolCallArgs = toolCall.args as { a: number; b: number };
-                 toolResult = await adderTool.invoke(toolCallArgs);
+                const toolCallArgs = toolCall.args as z.infer<typeof adderSchema>;
+                toolResult = String(await adderTool.invoke(toolCallArgs));
              } else if (toolCall.name === "video_search") {
-                 toolResult = await createVideoSearchTool(ctx).invoke(toolCall.args as any);
+                const toolCallArgs = toolCall.args as z.infer<typeof videoSearchSchema>;
+                toolResult = String(await createVideoSearchTool(ctx).invoke(toolCallArgs));
              } else if (toolCall.name === "add_video") {
-                 toolResult = await createAddVideoTool(ctx).invoke(toolCall.args as any);
+                const toolCallArgs = toolCall.args as z.infer<typeof addVideoSchema>;
+                toolResult = String(await createAddVideoTool(ctx).invoke(toolCallArgs));
              } else {
-                 throw new Error(`Unknown tool: ${toolCall.name}`);
+                throw new Error(`Unknown tool: ${toolCall.name}`);
              }
-
-            
             
             // Add both the AI response with tool call and the tool result
             messages.push(new AIMessage({ content: "", tool_calls: response.tool_calls }));
@@ -205,7 +228,7 @@ export const toolRouter = createTRPCRouter({
             // Get AI's interpretation of the tool result
             response = await llmWithTools.invoke(messages);
             
-            return { response: response.content };
+            return { response: response?.content ?? '' };
         } catch (error) {
             console.error('Error:', error);
             throw new Error(`AI chat error: ${error instanceof Error ? error.message : String(error)}`);

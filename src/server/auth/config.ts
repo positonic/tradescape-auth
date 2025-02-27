@@ -13,7 +13,7 @@ import { db } from "~/server/db";
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
-      id: string;
+    id: string;
       // ...other properties
       // role: UserRole;
     } & DefaultSession["user"];
@@ -44,6 +44,7 @@ export const authConfig = {
           scope: "identify email guilds",
         },
       },
+      allowDangerousEmailAccountLinking: true,
     }),
     /**
      * ...add more providers here.
@@ -61,83 +62,22 @@ export const authConfig = {
   },
   callbacks: {
     jwt: ({ token, account, user }) => {
-      console.log("jwt: jwt callback token", token);
-      console.log("jwt: jwt callback account", account);
-      console.log("jwt: jwt callback user", user);
-      // On initial sign-in, account is available.
       if (account) {
-        token.accessToken = account.access_token; // Save Discord's access token.
+        token.accessToken = account.access_token;
+      }
+      if (user) {
+        token.id = user.id;
       }
       return token;
     },
-    session: async ({ session, token }) => {
+    session: ({ session, token }) => {
+      if (token && (token.id || token.sub)) {
+        session.user.id = String(token.id ?? token.sub);
+      }
       return {
         ...session,
         token,
       };
     },
-    // session: ({ session, user, token }) => {
-    //   console.log("jwt: session callback session", session);
-    //   console.log("jwt: session callback user", user);
-    //   console.log("jwt: session callback token", token);
-    //   return ({
-    //   ...session,
-    //   user: {
-    //     ...session.user,
-    //     id: user?.id ?? token.sub,
-    //   },
-    // })},
-    // session: async ({ session, user, token }) => {
-    //   console.log("jwt: session", session);
-    //   console.log("jwt: user", user);
-    //   console.log("jwt: token", token);
-    //   console.log("jwt: token.accessToken", token.accessToken);
-    //   if (!token.accessToken) {
-    //     return {
-    //       ...session,
-    //       user: {
-    //         ...session.user,
-    //         id: user.id,
-    //         isHavenMember: false,
-    //       },
-    //     };
-    //   }
-
-    //   try {
-    //     const response = await fetch('https://discord.com/api/users/@me/guilds', {
-    //       headers: {
-    //         Authorization: `Bearer ${token.accessToken as string}`,
-    //       },
-    //     });
-    //     console.log("jwt: response", response);
-    //     if (!response.ok) {
-    //       throw new Error(`Discord API responded with status ${response.status}`);
-    //     }
-        
-    //     const guilds = await response.json();
-    //     console.log("jwt: guilds", guilds);
-    //     const HAVEN_GUILD_ID = process.env.HAVEN_GUILD_ID;
-    //     const isHavenMember = guilds.some((guild: { id: string }) => guild.id === HAVEN_GUILD_ID);
-    //     console.log("jwt: isHavenMember is ", isHavenMember)
-    //     return {
-    //       ...session,
-    //       user: {
-    //             ...session.user,
-    //             id: user?.id ?? token.sub,
-    //             isHavenMember
-    //           },
-    //     };
-    //   } catch (error) {
-    //     console.error('Error fetching guilds:', error);
-    //     return {
-    //       ...session,
-    //       user: {
-    //         ...session.user,
-    //         id: user.id,
-    //         isHavenMember: false,
-    //       },
-    //     };
-    //   }
-    // },
   },
 } satisfies NextAuthConfig;

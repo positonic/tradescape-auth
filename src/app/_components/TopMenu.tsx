@@ -1,6 +1,6 @@
 import { auth } from "~/server/auth";
 import { IconSearch, IconBell } from "@tabler/icons-react";
-import { TextInput, Button, Avatar } from "@mantine/core";
+import { TextInput, Avatar } from "@mantine/core";
 
 export default async function TopMenu() {
     const session = await auth();
