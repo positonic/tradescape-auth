@@ -8,7 +8,7 @@ export default async function Navbar() {
     <nav className="w-20 bg-white border-r flex flex-col items-center py-4 space-y-4">
       <div className="p-2">
         <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-          <span className="text-white text-xl font-bold">A</span>
+          <span className="text-white text-xl font-bold">H</span>
         </div>
       </div>
       

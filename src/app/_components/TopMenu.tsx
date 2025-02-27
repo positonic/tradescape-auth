@@ -7,11 +7,11 @@ export default async function TopMenu() {
   return (
     <div className="h-16 bg-white border-b px-4 flex items-center justify-between">
       <div className="flex items-center flex-1">
-        <TextInput
+        {/* <TextInput
           placeholder="Search..."
           leftSection={<IconSearch size={16} />}
           className="w-64"
-        />
+        /> */}
       </div>
       
       <div className="flex items-center space-x-4">
@@ -20,14 +20,14 @@ export default async function TopMenu() {
           <IconBell size={20} />
         </button>
         <p className="text-center text-2xl text-white">
-            {session && <div className="flex items-center gap-2 text-gray-700">
+            {session && <span className="flex items-center gap-2 text-gray-700">
             {session && (
               <>
                 <span>{session.user?.name}</span>
                 <Avatar size="sm" radius="xl" />
               </>
             )}
-        </div>}
+        </span>}
         </p>
        
       </div>

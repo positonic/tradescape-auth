@@ -6,7 +6,7 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { SystemMessage, AIMessage, HumanMessage, ToolMessage } from "@langchain/core/messages";
 import { tool } from "@langchain/core/tools";
 import { OpenAIEmbeddings } from "@langchain/openai";
-import { extractYoutubeSlugFromUrl } from "~/utils/youtube";
+import { getVideoIdFromYoutubeUrl } from "~/utils/youtube";
 
 type Context = inferAsyncReturnType<typeof createTRPCContext>;
 
@@ -116,7 +116,7 @@ const addVideoSchema = z.object({
 const createAddVideoTool = (ctx: Context) => tool(
   async (input): Promise<string> => {
     try {
-      const slug = extractYoutubeSlugFromUrl(input.videoUrl);
+      const slug = getVideoIdFromYoutubeUrl(input.videoUrl);
 
       console.log('ctx.session? is ', ctx.session);
       console.log('ctx.session?.user ', ctx.session?.user);

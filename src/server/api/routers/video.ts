@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { OpenAIEmbeddings } from "@langchain/openai";
-import { summarizeTranscription } from "~/server/services/videoService";
-
+import { summarizeTranscription, describeAndSave, summarizeAndSaveSummary, getSetups } from "~/server/services/videoService";
 import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import { extractYoutubeSlugFromUrl } from "~/utils/youtube";
+import { getVideoIdFromYoutubeUrl } from "~/utils/youtube";
+import { VideoService } from "~/server/services/videoService";
 
 export const videoRouter = createTRPCRouter({
   hello: publicProcedure
@@ -31,22 +31,31 @@ export const videoRouter = createTRPCRouter({
 
   getLatest: protectedProcedure.query(async ({ ctx }) => {
     const video = await ctx.db.video.findFirst({
+      where: {
+        users: {
+          some: {
+            userId: ctx.session.user.id
+          }
+        }
+      },
       orderBy: { createdAt: "desc" },
-      //where: { createdBy: { id: ctx.session.user.id } },
     });
 
     return video ?? null;
   }),
 
-  get: protectedProcedure
-    .query(async ({ ctx }) => {
-      return await ctx.db.video.findMany({
-        where: {
-          userId: ctx.session.user.id
-        },
-        orderBy: { createdAt: "desc" },
-      });
-    }),
+  get: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.db.video.findMany({
+      where: {
+        users: {
+          some: {
+            userId: ctx.session.user.id
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }),
 
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
@@ -86,16 +95,14 @@ export const videoRouter = createTRPCRouter({
   create: protectedProcedure
     .input(z.object({ url: z.string().url() }))
     .mutation(async ({ ctx, input }) => {
-      const slug = extractYoutubeSlugFromUrl(input.url);
-      console.log('ctx.session', ctx.session);
-      console.log('ctx.session.user.id', ctx.session.user.id);
-      return await ctx.db.video.create({
-        data: {
-          videoUrl: input.url,
-          status: 'pending',
-          userId: ctx.session.user.id,
-          slug,
-        },
+      const slug = getVideoIdFromYoutubeUrl(input.url);
+      const videoService = new VideoService(ctx.db);
+      
+      return await videoService.createVideo({
+        videoUrl: input.url,
+        status: 'pending',
+        slug,
+        userId: ctx.session.user.id
       });
     }),
 
@@ -107,17 +114,61 @@ export const videoRouter = createTRPCRouter({
       });
       return video;
     }),
-  
+
   summarizeTranscription: protectedProcedure
+    .input(z.object({ 
+      videoId: z.string(),
+      transcription: z.string(),
+      summaryType: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const summary = await summarizeAndSaveSummary(input.videoId, input.transcription, input.summaryType)
+      console.log("summarizeTranscription is", summary)
+      return summary
+    }),
+
+   
+    // Creates a detailed description more than a summary.
+  describeTranscription: protectedProcedure
+    .input(z.object({ 
+      transcription: z.string(),
+      summaryType: z.string(),
+      captions: z.array(z.object({
+        startSeconds: z.number(),
+        endSeconds: z.number(),
+        text: z.string(),
+      })),
+      videoUrl: z.string().optional()
+    }))
+    .mutation(async ({ input }) => {
+      const description = await describeAndSave(input.transcription, input.summaryType, input.captions, input.videoUrl)
+      console.log("summarizeTranscription is", description)
+      return description
+    }),
+
+  getSetups: protectedProcedure
     .input(z.object({ 
       transcription: z.string(),
       summaryType: z.string()
     }))
     .mutation(async ({ input }) => {
-      const summary = await summarizeTranscription(input.transcription, input.summaryType)
+      const summary = await getSetups(input.transcription, input.summaryType)
       console.log("summarizeTranscription is", summary)
       return summary
     }),
+
+  getCount: publicProcedure.query(async ({ ctx }) => {
+    const count = await ctx.db.video.count({
+      where: {
+        users: {
+          some: {
+            userId: ctx.session?.user?.id
+          }
+        }
+      }
+    });
+    return count;
+  }),
 });
 
 export async function getVideoBySlug(slug: string) {

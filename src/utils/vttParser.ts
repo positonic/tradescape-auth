@@ -1,4 +1,4 @@
-interface Caption {
+export interface Caption {
   startTime: string;
   endTime: string;
   text: string;
