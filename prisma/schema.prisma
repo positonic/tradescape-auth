@@ -9,77 +9,230 @@ datasource db {
   extensions = [vector]
 }
 
+model Post {
+    id        Int      @id @default(autoincrement())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    createdBy   User   @relation(fields: [createdById], references: [id])
+    createdById String
+
+    @@index([name])
+}
+
+// Necessary for Next auth
+model Account {
+    id                       String  @id @default(cuid())
+    userId                   String
+    type                     String
+    provider                 String
+    providerAccountId        String
+    refresh_token            String? // @db.Text
+    access_token             String? // @db.Text
+    expires_at               Int?
+    token_type               String?
+    scope                    String?
+    id_token                 String? // @db.Text
+    session_state            String?
+    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    refresh_token_expires_in Int?
+
+    @@unique([provider, providerAccountId])
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+    id            String    @id @default(cuid())
+    name          String?
+    email         String?   @unique
+    emailVerified DateTime?
+    image         String?
+    accounts      Account[]
+    sessions      Session[]
+    posts         Post[]
+    projects      Project[]
+    actions       Action[]
+    userVideos    UserVideo[]
+    exercises     UserExercise[]
+    goals         Goal[]
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
+
+model Action {
+    id              String   @id @default(cuid())
+    name            String
+    description     String?
+    dueDate         DateTime?
+    status          String   @default("ACTIVE")
+    priority        String   @default("Quick")
+    project         Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    projectId       String?
+    createdBy       User     @relation(fields: [createdById], references: [id])
+    createdById     String
+
+    @@index([projectId])
+    @@index([createdById])
+}
+
+model Outcome {
+    id          String   @id @default(cuid())
+    description String
+    projects    Project[]  @relation("ProjectOutcomes")
+    goals       Goal[]     @relation("GoalOutcomes")
+}
+
+model Project {
+    id              String    @id @default(cuid())
+    name            String
+    slug            String   @unique
+    status          String    @default("ACTIVE")
+    priority        String    @default("NONE")
+    progress        Float     @default(0)
+    
+    // Dates
+    createdAt       DateTime    @default(now())
+    reviewDate      DateTime?
+    nextActionDate  DateTime?
+    
+    // Text fields
+    actions         Action[]
+    outcomes        Outcome[]   @relation("ProjectOutcomes")
+    
+    // User relation (same as your existing Post model)
+    createdBy       User        @relation(fields: [createdById], references: [id])
+    createdById     String
+
+    @@index([name])
+    @@index([status])
+    @@index([priority])
+}
+
 model Video {
   id            String   @id @default(uuid())
-  slug          String?
+  slug          String? @unique
   title         String?
-  videoUrl      String
+  videoUrl      String  @unique
+  summary       String?  @db.Text    // Added field for short summary
+  description   String?  @db.Text    // Added field for longer description
   transcription String?
   status        String
   createdAt     DateTime?    @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime?    @default(now()) @updatedAt @db.Timestamptz(6)
-  userId        String
   isSearchable  Boolean?     @default(false)
-  user          User         @relation(fields: [userId], references: [id])
+  users         UserVideo[]
   VideoChunk    VideoChunk[]
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+model UserVideo {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  video     Video    @relation(fields: [videoId], references: [id])
+  videoId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  videos        Video[]
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
 }
 
 model VideoChunk {
   id              Int                    @id @default(autoincrement())
   video_id        String?
   chunk_text      String
-  chunk_embedding Unsupported("vector(1536)") @map("chunk_embedding") // OpenAI embeddings are 1536 dimensions
+  //chunk_embedding Unsupported("vector(1536)") @map("chunk_embedding") // OpenAI embeddings are 1536 dimensions
   chunk_start     Int?                   // character position start
   chunk_end       Int?                   // character position end
   chunk_start_time Float?                // timestamp in seconds
   chunk_end_time   Float?                // timestamp in seconds
   created_at      DateTime?              @default(now()) @db.Timestamptz(6)
   Video           Video?                 @relation(fields: [video_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
 
-  @@index([chunk_embedding(type: Vector)]) // For pgvector
+model Week {
+  id        Int      @id @default(autoincrement())
+  startDate DateTime
+  endDate   DateTime
+  days      Day[]
+}
+
+model Day {
+  id          Int       @id @default(autoincrement())
+  date        DateTime
+  week        Week      @relation(fields: [weekId], references: [id])
+  weekId      Int
+  exercises   UserExercise[]
+  journals    Journal[]
+  
+  @@index([weekId])
+}
+
+model Exercise {
+  id           Int            @id @default(autoincrement())
+  title        String
+  description  String?
+  userExercises UserExercise[]
+}
+
+model UserExercise {
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  exercise    Exercise @relation(fields: [exerciseId], references: [id])
+  exerciseId  Int
+  day         Day      @relation(fields: [dayId], references: [id])
+  dayId       Int
+
+  @@index([userId])
+  @@index([exerciseId])
+  @@index([dayId])
+}
+
+model Goal {
+  id           Int         @id @default(autoincrement())
+  title        String
+  description  String?
+  dueDate      DateTime?
+  lifeDomain   LifeDomain  @relation(fields: [lifeDomainId], references: [id])
+  lifeDomainId Int
+  user         User        @relation(fields: [userId], references: [id])
+  userId       String
+  outcomes     Outcome[]   @relation("GoalOutcomes")
+
+  @@index([lifeDomainId])
+  @@index([userId])
+}
+
+model LifeDomain {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  goals       Goal[]
+}
+
+model Journal {
+  id          Int      @id @default(autoincrement())
+  content     String   @db.Text
+  day         Day      @relation(fields: [dayId], references: [id])
+  dayId       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([dayId])
 }
