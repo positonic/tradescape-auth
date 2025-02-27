@@ -133,9 +133,9 @@ const createAddVideoTool = (ctx: Context) => tool(
           slug,
           status: "pending",
           isSearchable: input.isSearchable,
-          user: {
-            connect: {
-              id: ctx.session.user.id
+          users: {
+            create: {
+              userId: ctx.session.user.id
             }
           }
         },

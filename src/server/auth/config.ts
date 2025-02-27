@@ -72,7 +72,7 @@ export const authConfig = {
     },
     session: ({ session, token }) => {
       if (token && (token.id || token.sub)) {
-        session.user.id = String(token.id ?? token.sub);
+        session.user.id = token.id?.toString() ?? token.sub?.toString() ?? '';
       }
       return {
         ...session,

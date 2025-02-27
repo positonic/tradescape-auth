@@ -1,5 +1,4 @@
 import { type PrismaClient } from "@prisma/client";
-import type { Caption } from "~/utils/vttParser";
 import type { TranscriptionSummary, TranscriptionSetups } from "~/types/transcription";
 import { VideoRepository } from "~/server/repositories/videoRepository";
 import { db } from "~/server/db";
@@ -215,7 +214,21 @@ const getPrompt = (summaryType: string): string => {
   return summaryType in prompts ? prompts[summaryType as keyof typeof prompts] : prompts.basic;
 };
 
-export async function summarizeTranscription(transcription: string, summaryType: string, captions?: {text: string, startSeconds: number, endSeconds: number}[], videoUrl?: string): Promise<TranscriptionSummary> {
+// Add type for OpenAI API response
+type OpenAIResponse = {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+};
+
+export async function summarizeTranscription(
+  transcription: string, 
+  summaryType: string, 
+  captions?: {text: string, startSeconds: number, endSeconds: number}[], 
+  videoUrl?: string
+): Promise<TranscriptionSummary | TranscriptionSetups> {
     console.log("transcription, summaryType, captions, videoUrl ", transcription, summaryType, captions, videoUrl)    
     const isDescription = summaryType === 'description';
 
@@ -273,16 +286,27 @@ export async function summarizeTranscription(transcription: string, summaryType:
         throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    const data = await response.json();
-    const content = summaryType === 'trade-setups' ? JSON.parse(data.choices[0].message.content) : data.choices[0].message;
+    const data = (await response.json()) as OpenAIResponse;
     
-    if (summaryType === 'trade-setups' && (!content.generalMarketContext || !Array.isArray(content.coins)) ){
-        throw new Error('Invalid response format from OpenAI');
+    if (!data?.choices?.[0]?.message?.content) {
+        throw new Error('Invalid or empty response from OpenAI');
     }
 
-    return content;
+   
+    let content;
+    if(summaryType === 'trade-setups' ) {
+      content = JSON.parse(data.choices[0].message.content) as TranscriptionSetups
+      if(!content.generalMarketContext || !Array.isArray(content.coins)) throw new Error('Invalid response format from OpenAI');
+    } else {
+      content = data.choices[0].message.content
+    }
+    return content as TranscriptionSummary | TranscriptionSetups;
 }
-export async function getSetups(transcription: string, summaryType: string): Promise<TranscriptionSetups> {
+
+export async function getSetups(
+  transcription: string, 
+  summaryType: string
+): Promise<TranscriptionSetups> {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -314,17 +338,18 @@ export async function getSetups(transcription: string, summaryType: string): Pro
 
     //console.log("createVideo: response is ", response)
 
-    const data = await response.json();
+    const data = (await response.json()) as OpenAIResponse;
     console.log("createVideo: data is ", data)
-    console.log("createVideo: 'description' data.choices[0].message is ", data.choices[0].message)
-    const content = JSON.parse(data.choices[0].message.content) 
+    console.log("createVideo: 'description' data.choices[0].message is ", data?.choices[0]?.message)
+    const content = JSON.parse(data?.choices[0]?.message?.content ?? '') as TranscriptionSetups;
     console.log("createVideo: content is ", content)
-    if (!content.generalMarketContext || !Array.isArray(content.coins) ){
+    if (!content.generalMarketContext || !Array.isArray(content.coins)) {
         throw new Error('Invalid response format from OpenAI');
     }
 
     return content;
 }
+
 export async function summarizeAndSaveSummary(
   videoId: string,
   transcription: string,
@@ -332,14 +357,10 @@ export async function summarizeAndSaveSummary(
   captions?: { text: string; startSeconds: number; endSeconds: number }[],
   videoUrl?: string
 ): Promise<string> {
-  // Get the summary using existing function
   const summary = await summarizeTranscription(transcription, summaryType, captions, videoUrl);
-  const content = summary.content;
-  // Use the existing db instance and create a repository
+  const content = typeof summary === 'string' ? summary : JSON.stringify(summary);
   const repository = new VideoRepository(db);
 
-  console.log("summarizeAndSaveSummary: content is ", content)
-  // Save the summary
   if (content) {
     await repository.saveSummary(videoId, content, summaryType);
   }
@@ -347,21 +368,16 @@ export async function summarizeAndSaveSummary(
   return content;
 }
 
-//input.transcription, input.summaryType, input.captions, input.vi
 export async function describeAndSave(
   transcription: string,
   summaryType: string,
   captions?: { text: string; startSeconds: number; endSeconds: number }[],
   videoUrl?: string
 ): Promise<string> {
-  // Get the summary using existing function
   const summary = await summarizeTranscription(transcription, summaryType, captions, videoUrl);
-  const content = summary.content;
-  // Use the existing db instance and create a repository
+  const content = typeof summary === 'string' ? summary : JSON.stringify(summary);
   const repository = new VideoRepository(db);
 
-  console.log("summarizeAndSaveSummary: content is ", content)
-  // Save the summary
   if (content) {
     await repository.saveSummary(undefined, content, summaryType, videoUrl);
   }
@@ -378,11 +394,11 @@ export class VideoService {
 
   async summarizeAndSave(videoId: string, transcription: string, summaryType: string) {
     const summary = await summarizeTranscription(transcription, summaryType);
+    const summaryContent = typeof summary === 'string' ? summary : JSON.stringify(summary);
     
-    // Save to database based on summary type
     return await this.repository.updateVideoContent(videoId, {
-      summary: summaryType === 'basic' ? summary.content : undefined,
-      description: summaryType === 'description' ? summary.content : undefined,
+      summary: summaryType === 'basic' ? summaryContent : undefined,
+      description: summaryType === 'description' ? summaryContent : undefined,
     });
   }
 
