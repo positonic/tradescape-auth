@@ -319,83 +319,120 @@ type OpenAIResponse = {
   }>;
 };
 
-/**
- * Works with first and second passes
- * @param transcription 
- * @param videoUrl 
- * @param captions 
- * @returns 
- */
+type PipelineContext = {
+  transcription: string;
+  videoUrl: string;
+  captions?: {text: string, startSeconds: number, endSeconds: number}[];
+  outline?: string;
+  result?: string;
+};
+
+class Pipeline {
+  private steps: ((context: PipelineContext) => Promise<PipelineContext>)[] = [];
+
+  addStep(step: (context: PipelineContext) => Promise<PipelineContext>) {
+    this.steps.push(step);
+    return this;
+  }
+
+  async execute(initialContext: PipelineContext): Promise<PipelineContext> {
+    return this.steps.reduce(
+      async (contextPromise, step) => step(await contextPromise),
+      Promise.resolve(initialContext)
+    );
+  }
+}
+
+async function generateOutline(context: PipelineContext): Promise<PipelineContext> {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4-turbo-preview",
+      messages: [
+        {
+          role: "system",
+          content: prompts.multiFirst.replace(/\{\{VIDEO_URL\}\}/g, context.videoUrl)
+        },
+        {
+          role: "user",
+          content: context.transcription
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+      response_format: { type: "text" },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI API request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return {
+    ...context,
+    outline: data.choices[0]?.message?.content ?? ''
+  };
+}
+
+async function enrichOutline(context: PipelineContext): Promise<PipelineContext> {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4-turbo-preview",
+      messages: [
+        {
+          role: "system",
+          content: prompts.multiSecond.replace(/\{\{VIDEO_URL\}\}/g, context.videoUrl)
+        },
+        {
+          role: "user",
+          content: context.outline
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+      response_format: { type: "text" },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI API request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return {
+    ...context,
+    result: data.choices[0]?.message?.content
+  };
+}
+
 async function multiPass(
   transcription: string,
   videoUrl: string,
   captions?: {text: string, startSeconds: number, endSeconds: number}[]
 ): Promise<string> {
-  // First pass - get outline
-  const firstPassResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4-turbo-preview",
-      messages: [
-        {
-          role: "system",
-          content: prompts.multiFirst.replace(/\{\{VIDEO_URL\}\}/g, videoUrl)
-        },
-        {
-          role: "user",
-          content: transcription
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1500,
-      response_format: { type: "text" },
-      //response_format: { type: "json_object" },
-    }),
+  const pipeline = new Pipeline();
+  
+  pipeline
+    .addStep(generateOutline)
+    .addStep(enrichOutline);
+
+  const result = await pipeline.execute({
+    transcription,
+    videoUrl,
+    captions
   });
 
-  if (!firstPassResponse.ok) {
-    throw new Error(`OpenAI API request failed: ${firstPassResponse.status}`);
-  }
-
-  const firstPassData = await firstPassResponse.json();
-  console.log("multiPass: firstPassData is ", firstPassData)
-  const outline = firstPassData.choices[0]?.message?.content ?? '';
-
-  // Second pass - enrich outline
-  const secondPassResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4-turbo-preview",
-      messages: [
-        {
-          role: "system",
-          content: prompts.multiSecond.replace(/\{\{VIDEO_URL\}\}/g, videoUrl)
-        },
-        {
-          role: "user",
-          content: outline
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1500,
-      response_format: { type: "text" },
-    }),
-  });
-
-  if (!secondPassResponse.ok) {
-    throw new Error(`OpenAI API request failed: ${secondPassResponse.status}`);
-  }
-
-  const secondPassData = await secondPassResponse.json();
-  return secondPassData.choices[0].message.content;
+  return result.result ?? '';
 }
 
 // Define a common interface for all summarization strategies
