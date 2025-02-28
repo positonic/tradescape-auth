@@ -15,6 +15,40 @@ interface MarkdownProps {
   children: ReactNode;
 }
 
+const YouTubeEmbed = ({ href, children }: { href: string; children: ReactNode }) => {
+  try {
+    const url = new URL(href);
+    if (!url.hostname.includes('youtube.com')) {
+      return <a href={href} className="text-blue-600 hover:underline">{children}</a>;
+    }
+
+    const videoId = url.searchParams.get('v');
+    let start = url.searchParams.get('t') || '';
+    if (start.endsWith('s')) {
+      start = start.slice(0, -1);
+    }
+    const embedUrl = `https://www.youtube.com/embed/${videoId}${start ? `?start=${start}` : ''}`;
+
+    return (
+      <>
+        <p className="font-medium mb-2">{children}:</p>
+        <div className="aspect-video my-4">
+          <iframe
+            className="w-full h-full"
+            src={embedUrl}
+            title="YouTube video player"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </>
+    );
+  } catch (error) {
+    return <a href={href} className="text-blue-600 hover:underline">{children}</a>;
+  }
+};
+
 const markdownComponents: Partial<Components> = {
   h2: ({ children, ...props }) => (
     <Title order={2} mt="md" mb="xs" {...props}>
@@ -39,7 +73,17 @@ const markdownComponents: Partial<Components> = {
     <Text size="sm" mb="md">
       {children}
     </Text>
-  )
+  ),
+  a: ({ href, children, ...props }) => {
+    if (href?.includes('youtube.com/watch')) {
+      return <YouTubeEmbed href={href}>{children}</YouTubeEmbed>;
+    }
+    return (
+      <a href={href} className="text-blue-600 hover:underline" {...props}>
+        {children}
+      </a>
+    );
+  }
 };
 
 export function ContentAccordion({ 
