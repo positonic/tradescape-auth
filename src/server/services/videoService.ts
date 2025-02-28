@@ -222,6 +222,88 @@ const prompts = {
   
   Transcript:{{TRANSCRIPT_WITH_SECONDS}}
   `,
+  'multiFirst': `Below is a transcript of a crypto trading video. Your task is to scan the transcript and create a structured outline that identifies high-level topics, key segments, and timestamps with clickable links. Use the following guidelines:
+
+1. **Topics to Identify:**
+   - Intro / Overview
+   - Individual market ticker discussions (e.g., cryptocurrencies, stocks, indices)
+   - Educational content
+   - Member questions
+   - Other significant topics or segments
+
+2. **Ticker Identification:**
+   Use this list of example tickers to help you flag segments discussing these or similar instruments: 
+   SPX, COIN, ARC, FARTCOIN, BONK, WIF, AVAAI, IREN, GOLD, PLTR, BONKGUY, ZEREBRO, MSTR, BERA, NVDA, ETHBTC, SOLBTC, etc.
+
+3. **Formatting Requirements:**
+   - For each segment, extract the topic name, the exact timestamp (displayed in MM:SS format), and a clickable link in the following format:  
+     [MM:SS]({{VIDEO_URL}}?t=N)
+   - Organize the outline in a structured markdown format
+   - Do not include any full analysis or detailed trade setups at this stage
+
+**Example Output Format:**
+
+### MARKET OVERVIEW
+[01:48]({{VIDEO_URL}}?t=108)
+- Key topics covered: Market sentiment, overall trends
+- Tickers mentioned: [BTC, ETH]
+
+### COIN ANALYSIS
+#### BTC
+[02:05]({{VIDEO_URL}}?t=125)
+- Discussion points: Price levels, trend analysis
+- Related tickers: [ETHBTC]
+
+### MEMBER QUESTIONS
+[04:58]({{VIDEO_URL}}?t=298)
+- Topic: Daily Close & Market Structure
+- Tickers discussed: [BTC, ETH]
+
+Now, please output only the structured outline in markdown format based on the provided transcript.`,
+  'multiSecond': `Enrich this outline with detailed trading analysis. For each segment:
+
+  1. Keep existing timestamps and structure
+  2. Add for each ticker:
+     - Key price levels
+     - Trading setup details
+     - Sentiment (bullish/bearish/neutral)
+     - Trade recommendations
+  `,
+  'multiFirstAlpha': `You are analyzing a crypto trading video transcript. Create a high-level outline with exact timestamps.
+
+  Common tickers to identify: SPX, COIN, ARC, FARTCOIN, BONK, WIF, AVAAI, IREN, GOLD, PLTR, BONKGUY, ZEREBRO, MSTR, BERA, NVDA, ETHBTC, SOLBTC
+
+  For each segment identify exact timestamp from transcript (format: [MM:SS]({{VIDEO_URL}}?t=N))
+  and a Brief topic description
+  
+  **Example Output Format:**
+  Format each segment as follows:
+  Topic type (Market Overview, Coin Analysis, Member Question, Education)
+     For "Market Overview" format as:
+       ###  Market Overview ([MM:SS]({{VIDEO_URL}}?t=N))
+        - Key points covered
+     For "Coin Analysis" format as:
+       ### [SYMBOL] ([MM:SS]({{VIDEO_URL}}?t=N))
+        - Key points covered
+     For "Member Question" format as:
+       ### Member Question ([MM:SS]({{VIDEO_URL}}?t=N))
+        - Question and response if trading relevant
+     For "Education" format as:
+       ### Education ([MM:SS]({{VIDEO_URL}}?t=N))
+        - Key points covered
+
+  `,
+
+  'multiSecondAlpha': `Enrich this outline with detailed trading analysis. For each segment:
+
+  1. Keep existing timestamps and structure
+  2. Add for each ticker:
+     - Key price levels
+     - Trading setup details
+     - Sentiment (bullish/bearish/neutral)
+     - Trade recommendations
+  
+  Maintain exact timestamp links: [MM:SS]({{VIDEO_URL}}?t=N)`
 } as const;
 
 const getPrompt = (summaryType: string): string => {
@@ -237,14 +319,116 @@ type OpenAIResponse = {
   }>;
 };
 
+async function multiPassOmega(
+  transcription: string,
+  videoUrl: string,
+  captions?: {text: string, startSeconds: number, endSeconds: number}[]
+): Promise<string> {
+
+}
+/**
+ * Works with first and second passes
+ * @param transcription 
+ * @param videoUrl 
+ * @param captions 
+ * @returns 
+ */
+async function multiPass(
+  transcription: string,
+  videoUrl: string,
+  captions?: {text: string, startSeconds: number, endSeconds: number}[]
+): Promise<string> {
+  // First pass - get outline
+  const firstPassResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4-turbo-preview",
+      messages: [
+        {
+          role: "system",
+          content: prompts.multiFirst.replace(/\{\{VIDEO_URL\}\}/g, videoUrl)
+        },
+        {
+          role: "user",
+          content: transcription
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+      response_format: { type: "text" },
+      //response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!firstPassResponse.ok) {
+    throw new Error(`OpenAI API request failed: ${firstPassResponse.status}`);
+  }
+
+  const firstPassData = await firstPassResponse.json();
+  console.log("multiPass: firstPassData is ", firstPassData)
+  const outline = firstPassData.choices[0].message.content;
+
+  // Second pass - enrich outline
+  const secondPassResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4-turbo-preview",
+      messages: [
+        {
+          role: "system",
+          content: prompts.multiSecond.replace(/\{\{VIDEO_URL\}\}/g, videoUrl)
+        },
+        {
+          role: "user",
+          content: outline
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+      response_format: { type: "text" },
+    }),
+  });
+
+  if (!secondPassResponse.ok) {
+    throw new Error(`OpenAI API request failed: ${secondPassResponse.status}`);
+  }
+
+  const secondPassData = await secondPassResponse.json();
+  return secondPassData.choices[0].message.content;
+}
+
 export async function summarizeTranscription(
-  transcription: string, 
-  summaryType: string, 
-  captions?: {text: string, startSeconds: number, endSeconds: number}[], 
+  transcription: string,
+  summaryType: string,
+  captions?: {text: string, startSeconds: number, endSeconds: number}[],
   videoUrl?: string
-): Promise<TranscriptionSummary | TranscriptionSetups> {
-    //console.log("transcription, summaryType, captions, videoUrl ", transcription, summaryType, captions, videoUrl)    
-    console.log("summarizeTranscription: summaryType is ", summaryType)
+//): Promise<TranscriptionSummary | TranscriptionSetups> {
+): Promise<any> {
+  const formattedVideoUrl = videoUrl?.includes('?v=') 
+    ? `${videoUrl}&t=` 
+    : `${videoUrl}?t=`;
+
+  // Token estimation
+  const maxTokens = 29900;
+  const estimatedTokens = Math.ceil(transcription.length / 4);
+  
+  if (estimatedTokens > maxTokens) {
+    const keepRatio = (maxTokens * 0.89) / estimatedTokens;
+    transcription = transcription.slice(0, Math.floor(transcription.length * keepRatio));
+  }
+
+  if (summaryType === 'description') {
+    return await multiPass(transcription, formattedVideoUrl, captions) as string;
+  }
+  console.log("summarizeTranscription: summaryType is ", summaryType)
     const isDescription = summaryType === 'description';
     console.log("summarizeTranscription: isDescription is ", isDescription)
     if(isDescription && (!captions || captions.length === 0 || !videoUrl)){
@@ -256,23 +440,18 @@ export async function summarizeTranscription(
         : "";
     const responseFormat = summaryType === 'trade-setups' ? { type: "json_object" } : { type: "text" }
     
-    // Format video URL to maintain proper query parameter structure
-    const formattedVideoUrl = videoUrl?.includes('?v=') 
-        ? `${videoUrl}&t=` 
-        : `${videoUrl}?t=`;
-    console.log("summarizeTranscription: formattedVideoUrl is ", formattedVideoUrl)
-
+    
     // Get prompt and replace the placeholder
     let prompt = getPrompt(summaryType);
     
-    if (isDescription) {
-      console.log("summarizeTranscription: isDescription is true")
-        prompt = prompt
-            .replace(/\{\{VIDEO_URL\}\}/g, formattedVideoUrl)
-            .replace('{{VIDEO_ID}}', videoUrl?.split('/').pop() ?? '')
-            .replace('{{TRANSCRIPT_WITH_SECONDS}}', formattedCaptions ? JSON.stringify(formattedCaptions) : '');
-    }
-    console.log("summarizeTranscription: prompt is ", prompt)
+    // if (isDescription) {
+    //   console.log("summarizeTranscription: isDescription is true")
+    //     prompt = prompt
+    //         .replace(/\{\{VIDEO_URL\}\}/g, formattedVideoUrl)
+    //         .replace('{{VIDEO_ID}}', videoUrl?.split('/').pop() ?? '')
+    //         .replace('{{TRANSCRIPT_WITH_SECONDS}}', formattedCaptions ? JSON.stringify(formattedCaptions) : '');
+    // }
+    // console.log("summarizeTranscription: prompt is ", prompt)
 
     // Estimate total tokens (4 chars ≈ 1 token)
     const promptTokens = Math.ceil(prompt.length / 4);
@@ -334,6 +513,7 @@ export async function summarizeTranscription(
       content = data.choices[0].message.content
     }
     return content as TranscriptionSummary | TranscriptionSetups;
+  // ... rest of existing function for other summary types
 }
 
 export async function getSetups(
