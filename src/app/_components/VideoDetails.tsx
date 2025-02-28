@@ -128,19 +128,7 @@ export function VideoDetails({
             allowFullScreen
           />
         </div>
-      </div>
-
-      {/* Right side - Accordion content */}
-      <div className="flex-1 overflow-y-auto">
-        {summary && <ContentAccordion title="Summary" content={summary} />}
-
-        {description && (
-          <ContentAccordion title="Description" content={description} />
-        )}
-        {transcription && (
-          <ContentAccordion title="Transcription" content={transcription} />
-        )}
-
+        <br/>
         {setups && (
           <Paper shadow="sm" p="md" radius="md" withBorder>
             <Title order={3} mb="md">
@@ -249,6 +237,20 @@ export function VideoDetails({
             ))}
           </Paper>
         )}
+      </div>
+
+      {/* Right side - Accordion content */}
+      <div className="flex-1 overflow-y-auto">
+        {summary && <ContentAccordion title="Summary" content={summary} />}
+
+        {description && (
+          <ContentAccordion title="Description" content={description} />
+        )}
+        {transcription && (
+          <ContentAccordion title="Transcription" content={transcription} />
+        )}
+
+       
 
         {/* Buttons */}
         <Group gap="md" mt="xl">
