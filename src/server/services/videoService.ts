@@ -145,15 +145,19 @@ const prompts = {
     'description': `You are a crypto trading analyst expert. Below is a transcript of a crypto trading video that you created. Please extract and structure the information using markdown formatting. The transcript includes timestamps that you should use to create clickable links to the video sections.
 
   IMPORTANT: The transcript is provided with timestamps in the format "(123.45) Some text here". You MUST use these exact timestamps from the transcript to create your section links. DO NOT use arbitrary timestamps. Each section should use the timestamp of the first relevant mention of that topic in the transcript.
-
+  
   1. Start with a "MARKET CONTEXT" section that captures the overall market sentiment and conditions discussed.
   Use the timestamp of the first market context discussion from the transcript.
   
-  2. For each cryptocurrency discussed, create a section with:
-     - The coin/token symbol in caps (e.g., "BTC", "ETH")
-     - A timestamp link using the EXACT timestamp when that coin is first mentioned in the transcript
-     - Format: [MM:SS]({{VIDEO_URL}}?t=N) where N is the exact number of seconds from the transcript
-     Example: If BTC is first mentioned at timestamp (123.45), use [02:03]({{VIDEO_URL}}?t=123)
+  2. For each market ticker discussed (cryptocurrency, stock, index, etc.), create a section with:
+     - The coin/token symbol in caps followed by a timestamp link (e.g., "BTC", "ETH")
+     - Crypto Currencies may be one of those in this list or beyond - SPX, COIN,ARC, FARTCOIN, BONK, WIF, AVAAI, IREN, GOLD, PLTR, BONKGUY, ZEREBRO, MSTR, BERA, NVDA, ETHBTC, SOLBTC, etc.
+     - Format must be exactly: #### SYMBOL ([MM:SS]({{VIDEO_URL}}?t=N)) where:
+       * SYMBOL is the coin symbol (e.g., BTC, ETH)
+       * MM:SS is the minutes:seconds format of the timestamp
+       * N is the exact number of seconds from the transcript
+     Example: If BTC is first mentioned at timestamp (123.45), write exactly:
+     #### BTC ([02:03]({{VIDEO_URL}}?t=123))
      - The key price levels discussed (support, resistance, targets)
      - The trading setup or analysis provided
      - The trader's sentiment (bullish, bearish, neutral)
@@ -161,8 +165,17 @@ const prompts = {
   
   3. Include relevant "MEMBER QUESTION" sections when they provide valuable trading insights or market wisdom.
      Use the exact timestamp when the question is asked in the transcript.
+      - Member questions timestamp link (e.g., "BTC", "ETH")
+     - Format must be exactly: ######## Member Question ([MM:SS]({{VIDEO_URL}}?t=N)) where:
+       * MM:SS is the minutes:seconds format of the timestamp
+       * N is the exact number of seconds from the transcript
+     Example:  
+     #### Member Question [02:03]({{VIDEO_URL}}?t=123)
 
   Rules:
+  - ALWAYS format section headers exactly as shown in the example
+  - DO NOT add extra text in the timestamp links
+  - DO NOT modify the link format
   - ALWAYS use the exact timestamps from the provided transcript - DO NOT make up timestamps
   - Each section MUST use the timestamp of when that topic is first mentioned in the transcript
   - Focus only on actionable trading information and meaningful market insights
@@ -173,14 +186,15 @@ const prompts = {
   - Include exact quotes when they provide important context or insight
   - Add timestamp links at the start of each major section using the exact seconds from the transcript
 
-  Format each section like this:
+  Format each section exactly like this:
 
-  ### MARKET CONTEXT ([02:03]({{VIDEO_URL}}?t=123))
-  [Overall market summary and conditions]
+  ### MARKET CONTEXT
+  [MM:SS]({{VIDEO_URL}}?t=N)
+  [Content here]
 
   ### COIN ANALYSIS
-  #### BTC ([05:30]({{VIDEO_URL}}?t=330))
-  [Analysis and trading setup details]
+  #### BTC ([MM:SS]({{VIDEO_URL}}?t=N))
+  [Analysis here]
 
   ### MEMBER QUESTIONS
   #### [Question] ([10:15]({{VIDEO_URL}}?t=615))
@@ -229,16 +243,14 @@ export async function summarizeTranscription(
   captions?: {text: string, startSeconds: number, endSeconds: number}[], 
   videoUrl?: string
 ): Promise<TranscriptionSummary | TranscriptionSetups> {
-    console.log("transcription, summaryType, captions, videoUrl ", transcription, summaryType, captions, videoUrl)    
+    //console.log("transcription, summaryType, captions, videoUrl ", transcription, summaryType, captions, videoUrl)    
+    console.log("summarizeTranscription: summaryType is ", summaryType)
     const isDescription = summaryType === 'description';
-
+    console.log("summarizeTranscription: isDescription is ", isDescription)
     if(isDescription && (!captions || captions.length === 0 || !videoUrl)){
         throw new Error('Captions and videoUrl are required for description summary type');
     }
 
-    if(isDescription) {
-
-    }
     const formattedCaptions = isDescription && captions 
         ? captions.map(caption => `(${caption.startSeconds.toFixed(2)}) ${caption.text}`).join(" ") 
         : "";
@@ -246,16 +258,37 @@ export async function summarizeTranscription(
     
     // Format video URL to maintain proper query parameter structure
     const formattedVideoUrl = videoUrl?.includes('?v=') 
-        ? videoUrl.replace('?v=', '?v=').split('&')[0]
-        : videoUrl;
-    
-    const prompt = isDescription
-        ? getPrompt(summaryType)
-            .replace('{{TRANSCRIPT_WITH_SECONDS}}', JSON.stringify(formattedCaptions))
-            .replace(/\{\{VIDEO_URL\}\}/g, formattedVideoUrl ? `${formattedVideoUrl}&t=` : '')
-        : getPrompt(summaryType);
+        ? `${videoUrl}&t=` 
+        : `${videoUrl}?t=`;
+    console.log("summarizeTranscription: formattedVideoUrl is ", formattedVideoUrl)
 
-    console.log("createVideo: summaryType is ", summaryType)
+    // Get prompt and replace the placeholder
+    let prompt = getPrompt(summaryType);
+    
+    if (isDescription) {
+      console.log("summarizeTranscription: isDescription is true")
+        prompt = prompt
+            .replace(/\{\{VIDEO_URL\}\}/g, formattedVideoUrl)
+            .replace('{{VIDEO_ID}}', videoUrl?.split('/').pop() ?? '')
+            .replace('{{TRANSCRIPT_WITH_SECONDS}}', formattedCaptions ? JSON.stringify(formattedCaptions) : '');
+    }
+    console.log("summarizeTranscription: prompt is ", prompt)
+
+    // Estimate total tokens (4 chars ≈ 1 token)
+    const promptTokens = Math.ceil(prompt.length / 4);
+    const transcriptionTokens = Math.ceil(transcription.length / 4);
+    const totalTokens = promptTokens + transcriptionTokens;
+    console.log("summarizeTranscription: totalTokens ", totalTokens)
+    // If we're over limit, truncate the transcription
+    if (totalTokens > 29900) {
+      console.log("summarizeTranscription: totalTokens > 29900 ")
+      
+      const availableTokens = 29900 - promptTokens - 1000; // 1000 token buffer
+        const keepRatio = availableTokens / transcriptionTokens;
+        transcription = transcription.slice(0, Math.floor(transcription.length * keepRatio));
+    }
+
+    console.log("summarizeTranscription: summaryType is ", summaryType)
     console.log("createVideo: responseFormat is ", responseFormat)
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
