@@ -49,6 +49,19 @@ export const videoRouter = createTRPCRouter({
       orderBy: { createdAt: "desc" },
     });
   }),
+  
+  getMyVideos: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.db.video.findMany({
+      where: {
+        users: {
+          some: {
+            userId: ctx.session.user.id
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }),
 
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
