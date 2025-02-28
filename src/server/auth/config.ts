@@ -41,7 +41,7 @@ export const authConfig = {
       authorization: {
         url: "https://discord.com/api/oauth2/authorize",
         params: {
-          scope: "identify email guilds",
+          scope: "identify guilds",
         },
       },
       allowDangerousEmailAccountLinking: true,

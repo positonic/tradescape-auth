@@ -7,7 +7,7 @@ import { IconBrandDiscord } from '@tabler/icons-react';
 export default function SignInButton() {
   return (
     <Button
-      onClick={() => signIn("discord", { callbackUrl: "/videos" }, 'scope=identify email guilds')}
+      onClick={() => signIn("discord", { callbackUrl: "/videos" }, 'scope=identify guilds')}
       leftSection={<IconBrandDiscord size={20} />}
       variant="filled"
       color="indigo"
