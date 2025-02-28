@@ -132,7 +132,7 @@ export function VideoDetails({
         />
       )}
 
-      {/* {setups && (
+      {setups && (
         <Paper shadow="sm" p="md" radius="md" withBorder>
           <Title order={3} mb="md">
             Setups
@@ -235,7 +235,7 @@ export function VideoDetails({
             </Paper>
           ))}
         </Paper>
-      )} */}
+      )}
 
       {captions.length > 0 && (
         <ContentAccordion 
@@ -273,14 +273,14 @@ export function VideoDetails({
           Create Description
         </Button>
 
-        {/* <Button
+        <Button
           loading={creatingSetups}
           disabled={!transcription || !isCompleted}
           onClick={handleGetSetups}
           title={"Create setups"}
         >
           Find setups
-        </Button> */}
+        </Button>
       </Group>
 
       
