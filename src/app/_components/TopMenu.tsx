@@ -19,12 +19,14 @@ export default async function TopMenu() {
         <button className="p-2 hover:bg-gray-100 rounded-full">
           <IconBell size={20} />
         </button>
+        <div className="flex items-center gap-2">
+          <Avatar size="sm" radius="xl" />
+        </div>
         <p className="text-center text-2xl text-white">
             {session && <span className="flex items-center gap-2 text-gray-700">
             {session && (
               <>
                 <span>{session.user?.name}</span>
-                <Avatar size="sm" radius="xl" />
               </>
             )}
         </span>}

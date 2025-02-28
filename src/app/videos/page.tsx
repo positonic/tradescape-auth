@@ -1,7 +1,8 @@
 import { auth } from "~/server/auth";
 import { VideosList } from "./components/VideosList";
 import VideoSearch from "~/app/_components/VideoSearch";
-import SignInButton from "./components/SignInButton";
+//import SignInButton from "../_components/SignInButton";
+import { LandingPage } from "~/app/_components/LandingPage";
 import HavenMemberBadge from "./components/HavenMemberBadge";
 
 export default async function VideosPage() {
@@ -10,7 +11,7 @@ export default async function VideosPage() {
   return (
     <div className="container mx-auto">
       <div className="flex justify-between items-center mb-6">
-        {!session && <SignInButton />}
+        {!session && <LandingPage />}
         {session?.user && (
           <div className="w-full">
             <HavenMemberBadge />

@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",
+    "@dqbd/tiktoken": "^1.0.20",
     "@langchain/anthropic": "^0.3.13",
     "@langchain/community": "^0.3.30",
     "@langchain/core": "^0.3.40",
