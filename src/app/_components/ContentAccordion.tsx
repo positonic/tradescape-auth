@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { Accordion, Paper, Title, Text } from '@mantine/core';
-import ReactMarkdown, { Components } from 'react-markdown';
-import { type ReactNode } from 'react';
+import { Accordion, Paper, Title, Text } from "@mantine/core";
+import ReactMarkdown, { Components } from "react-markdown";
+import { type ReactNode } from "react";
 
 interface ContentAccordionProps {
   title: string;
@@ -15,13 +15,19 @@ interface MarkdownProps {
   children: ReactNode;
 }
 
-const YouTubePlayer = ({ videoId, startTime }: { videoId: string; startTime?: string }) => {
-  const embedUrl = `https://www.youtube.com/embed/${videoId}${startTime ? `?start=${startTime}` : ''}`;
-  
+const YouTubePlayer = ({
+  videoId,
+  startTime,
+}: {
+  videoId: string;
+  startTime?: string;
+}) => {
+  const embedUrl = `https://www.youtube.com/embed/${videoId}${startTime ? `?start=${startTime}` : ""}`;
+
   return (
-    <div className="aspect-video sticky top-4">
+    <div className="sticky top-4 aspect-video">
       <iframe
-        className="w-full h-full"
+        className="h-full w-full"
         src={embedUrl}
         title="YouTube video player"
         frameBorder="0"
@@ -32,34 +38,48 @@ const YouTubePlayer = ({ videoId, startTime }: { videoId: string; startTime?: st
   );
 };
 
-const TimeStampLink = ({ href, children }: { href: string; children: ReactNode }) => {
+const TimeStampLink = ({
+  href,
+  children,
+}: {
+  href: string;
+  children: ReactNode;
+}) => {
   try {
     const url = new URL(href);
-    if (!url.hostname.includes('youtube.com')) {
-      return <a href={href} className="text-blue-600 hover:underline">{children}</a>;
+    if (!url.hostname.includes("youtube.com")) {
+      return (
+        <a href={href} className="text-blue-600 hover:underline">
+          {children}
+        </a>
+      );
     }
 
-    const videoId = url.searchParams.get('v');
-    let start = url.searchParams.get('t') || '';
-    if (start.endsWith('s')) {
+    const videoId = url.searchParams.get("v");
+    let start = url.searchParams.get("t") || "";
+    if (start.endsWith("s")) {
       start = start.slice(0, -1);
     }
 
     return (
-      <button 
+      <button
         onClick={() => {
-          const player = document.querySelector('iframe') as HTMLIFrameElement;
+          const player = document.querySelector("iframe") as HTMLIFrameElement;
           if (player) {
-            player.src = `https://www.youtube.com/embed/${videoId}?start=${start}`;
+            player.src = `https://www.youtube.com/embed/${videoId}?start=${start}&autoplay=1`;
           }
         }}
-        className="text-blue-600 hover:underline text-left"
+        className="text-left text-blue-600 hover:underline"
       >
         {children}
       </button>
     );
   } catch (error) {
-    return <a href={href} className="text-blue-600 hover:underline">{children}</a>;
+    return (
+      <a href={href} className="text-blue-600 hover:underline">
+        {children}
+      </a>
+    );
   }
 };
 
@@ -80,16 +100,22 @@ const markdownComponents: Partial<Components> = {
     </Title>
   ),
   ul: ({ children, ...props }) => (
-    <ul className="mb-4 list-disc pl-6" {...props}>{children}</ul>
+    <ul className="mb-4 list-disc pl-6" {...props}>
+      {children}
+    </ul>
   ),
-  li: ({ children, ...props }) => <li className="mb-2" {...props}>{children}</li>,
+  li: ({ children, ...props }) => (
+    <li className="mb-2" {...props}>
+      {children}
+    </li>
+  ),
   p: ({ children, ...props }: React.HTMLProps<HTMLParagraphElement>) => (
     <Text size="sm" mb="md">
       {children}
     </Text>
   ),
   a: ({ href, children, ...props }) => {
-    if (href?.includes('youtube.com/watch')) {
+    if (href?.includes("youtube.com/watch")) {
       return <TimeStampLink href={href}>{children}</TimeStampLink>;
     }
     return (
@@ -97,14 +123,14 @@ const markdownComponents: Partial<Components> = {
         {children}
       </a>
     );
-  }
+  },
 };
 
-export function ContentAccordion({ 
-  title, 
+export function ContentAccordion({
+  title,
   content,
   subtitle,
-  useMarkdown = true 
+  useMarkdown = true,
 }: ContentAccordionProps) {
   // Extract first video ID from content
   const firstVideoMatch = content.match(/youtube\.com\/watch\?v=([^&\s]+)/);
@@ -119,25 +145,16 @@ export function ContentAccordion({
         </Accordion.Control>
         <Accordion.Panel>
           <Paper shadow="sm" p="md" radius="md" withBorder className="w-full">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {firstVideoId && (
-                <div className="md:col-span-1">
-                  <YouTubePlayer videoId={firstVideoId} />
-                </div>
-              )}
-              <div className="md:col-span-1">
-                {useMarkdown ? (
-                  <ReactMarkdown components={markdownComponents}>
-                    {content}
-                  </ReactMarkdown>
-                ) : (
-                  <div className="space-y-4">{content}</div>
-                )}
-              </div>
-            </div>
+            {useMarkdown ? (
+              <ReactMarkdown components={markdownComponents}>
+                {content}
+              </ReactMarkdown>
+            ) : (
+              <div className="space-y-4">{content}</div>
+            )}
           </Paper>
         </Accordion.Panel>
       </Accordion.Item>
     </Accordion>
   );
-} 
+}

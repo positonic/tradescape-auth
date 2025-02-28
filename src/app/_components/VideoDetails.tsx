@@ -10,6 +10,7 @@ import {
   Table,
   Checkbox,
   Select,
+  Accordion,
 } from "@mantine/core";
 import { useState } from "react";
 import { api } from "~/trpc/react";
@@ -38,7 +39,9 @@ export function VideoDetails({
   const [creatingDescription, setCreatingDescription] = useState(false);
   const [creatingSummary, setCreatingSummary] = useState(false);
   const [summary, setSummary] = useState<string | null>(video.summary ?? null);
-  const [description, setDescription] = useState<string | null>(video.description ?? null);
+  const [description, setDescription] = useState<string | null>(
+    video.description ?? null,
+  );
   const [setups, setSetups] = useState<TranscriptionSetups | null>(null);
   const [selectedSetups, setSelectedSetups] = useState<string[]>([]);
   const [summaryType, setSummaryType] = useState<
@@ -68,17 +71,19 @@ export function VideoDetails({
   });
 
   // Description:
-  const createDescriptionMutation = api.video.describeTranscription.useMutation({
-    onSuccess: (newDescription) => {
-      console.log("createDescriptionMutation onSuccess", newDescription);
-      setDescription(newDescription);
-      setCreatingDescription(false);
+  const createDescriptionMutation = api.video.describeTranscription.useMutation(
+    {
+      onSuccess: (newDescription) => {
+        console.log("createDescriptionMutation onSuccess", newDescription);
+        setDescription(newDescription);
+        setCreatingDescription(false);
+      },
+      onError: (error) => {
+        console.error("Error generating summary:", error);
+        setCreatingDescription(false);
+      },
     },
-    onError: (error) => {
-      console.error("Error generating summary:", error);
-      setCreatingDescription(false);
-    },
-  });
+  );
 
   const handelCreateDescription = () => {
     setCreatingDescription(true);
@@ -117,173 +122,164 @@ export function VideoDetails({
   };
 
   return (
-    <div className="space-y-4">
-      {summary && (
-        <ContentAccordion 
-          title="Summary" 
-          content={summary} 
-        />
-      )}
+    <div className="flex gap-6">
+      {/* Left side - Video player */}
+      <div className="flex-[2]">
+        <div className="aspect-video w-full">
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}`}
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
 
-      {description && (
-        <ContentAccordion 
-          title="Description" 
-          content={description} 
-        />
-      )}
+      {/* Right side - Accordion content */}
+      <div className="flex-1 overflow-y-auto">
+        {summary && <ContentAccordion title="Summary" content={summary} />}
 
-      {setups && (
-        <Paper shadow="sm" p="md" radius="md" withBorder>
-          <Title order={3} mb="md">
-            Setups
-          </Title>
-          <Text size="sm" c="dimmed" mb="md">
-            {setups.coins?.length} coins analyzed
-          </Text>
-          <Text size="sm" mb="md">
-            {setups.generalMarketContext}
-          </Text>
+        {description && (
+          <ContentAccordion title="Description" content={description} />
+        )}
+        {transcription && (
+          <ContentAccordion title="Transcription" content={transcription} />
+        )}
 
-          {setups.coins?.map((coin) => (
-            <Paper
-              key={coin.coin}
-              shadow="xs"
-              p="sm"
-              radius="sm"
-              withBorder
-              mb="md"
-            >
-              <Title order={4} mb="xs">
-                {coin.coin}
-              </Title>
-              <Group gap="xs" mb="xs">
-                <Badge
-                  key={`${coin.coin}-${coin.sentiment}`}
-                  variant="light"
-                  color={
-                    coin.sentiment?.toLowerCase().includes("bullish")
-                      ? "green"
-                      : coin.sentiment?.toLowerCase().includes("bearish")
-                        ? "red"
-                        : "blue"
-                  }
-                >
-                  {coin.sentiment}
-                </Badge>
-              </Group>
-              <Text size="sm" mb="md">
-                {coin.marketContext}
-              </Text>
+        {setups && (
+          <Paper shadow="sm" p="md" radius="md" withBorder>
+            <Title order={3} mb="md">
+              Setups
+            </Title>
+            <Text size="sm" c="dimmed" mb="md">
+              {setups.coins?.length} coins analyzed
+            </Text>
+            <Text size="sm" mb="md">
+              {setups.generalMarketContext}
+            </Text>
 
-              <Table>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th key="position">Position</Table.Th>
-                    <Table.Th key="entry-triggers">Entry Triggers</Table.Th>
-                    <Table.Th key="entry-price">Entry Price</Table.Th>
-                    <Table.Th key="take-profit">Take Profit</Table.Th>
-                    <Table.Th key="stop-loss">Stop Loss</Table.Th>
-                    <Table.Th key="timeframe">Timeframe</Table.Th>
-                    <Table.Th key="actions" />
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {coin.tradeSetups?.map((setup) => (
-                    <Table.Tr
-                      key={`${coin.coin}-${setup.position}`}
-                      bg={
-                        selectedSetups.includes(
-                          `${coin.coin}-${setup.position}`,
-                        )
-                          ? "var(--mantine-color-blue-light)"
-                          : undefined
-                      }
-                    >
-                      <Table.Td key="position">{setup.position}</Table.Td>
-                      <Table.Td key="entry-triggers">
-                        {setup.entryTriggers}
-                      </Table.Td>
-                      <Table.Td key="entry-price">{setup.entryPrice}</Table.Td>
-                      <Table.Td key="take-profit">{setup.takeProfit}</Table.Td>
-                      <Table.Td key="stop-loss">{setup.stopLoss}</Table.Td>
-                      <Table.Td key="timeframe">{setup.timeframe}</Table.Td>
-                      <Table.Td key="actions">
-                        <Checkbox
-                          aria-label="Select setup"
-                          checked={selectedSetups.includes(
-                            `${coin.coin}-${setup.position}`,
-                          )}
-                          onChange={(event) =>
-                            setSelectedSetups(
-                              event.currentTarget.checked
-                                ? [
-                                    ...selectedSetups,
-                                    `${coin.coin}-${setup.position}`,
-                                  ]
-                                : selectedSetups.filter(
-                                    (id) =>
-                                      id !== `${coin.coin}-${setup.position}`,
-                                  ),
-                            )
-                          }
-                        />
-                      </Table.Td>
+            {setups.coins?.map((coin) => (
+              <Paper
+                key={coin.coin}
+                shadow="xs"
+                p="sm"
+                radius="sm"
+                withBorder
+                mb="md"
+              >
+                <Title order={4} mb="xs">
+                  {coin.coin}
+                </Title>
+                <Group gap="xs" mb="xs">
+                  <Badge
+                    key={`${coin.coin}-${coin.sentiment}`}
+                    variant="light"
+                    color={
+                      coin.sentiment?.toLowerCase().includes("bullish")
+                        ? "green"
+                        : coin.sentiment?.toLowerCase().includes("bearish")
+                          ? "red"
+                          : "blue"
+                    }
+                  >
+                    {coin.sentiment}
+                  </Badge>
+                </Group>
+                <Text size="sm" mb="md">
+                  {coin.marketContext}
+                </Text>
+
+                <Table>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th key="position">Position</Table.Th>
+                      <Table.Th key="entry-triggers">Entry Triggers</Table.Th>
+                      <Table.Th key="entry-price">Entry Price</Table.Th>
+                      <Table.Th key="take-profit">Take Profit</Table.Th>
+                      <Table.Th key="stop-loss">Stop Loss</Table.Th>
+                      <Table.Th key="timeframe">Timeframe</Table.Th>
+                      <Table.Th key="actions" />
                     </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Paper>
-          ))}
-        </Paper>
-      )}
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {coin.tradeSetups?.map((setup) => (
+                      <Table.Tr
+                        key={`${coin.coin}-${setup.position}`}
+                        bg={
+                          selectedSetups.includes(
+                            `${coin.coin}-${setup.position}`,
+                          )
+                            ? "var(--mantine-color-blue-light)"
+                            : undefined
+                        }
+                      >
+                        <Table.Td key="position">{setup.position}</Table.Td>
+                        <Table.Td key="entry-triggers">
+                          {setup.entryTriggers}
+                        </Table.Td>
+                        <Table.Td key="entry-price">
+                          {setup.entryPrice}
+                        </Table.Td>
+                        <Table.Td key="take-profit">
+                          {setup.takeProfit}
+                        </Table.Td>
+                        <Table.Td key="stop-loss">{setup.stopLoss}</Table.Td>
+                        <Table.Td key="timeframe">{setup.timeframe}</Table.Td>
+                        <Table.Td key="actions">
+                          <Checkbox
+                            aria-label="Select setup"
+                            checked={selectedSetups.includes(
+                              `${coin.coin}-${setup.position}`,
+                            )}
+                            onChange={(event) =>
+                              setSelectedSetups(
+                                event.currentTarget.checked
+                                  ? [
+                                      ...selectedSetups,
+                                      `${coin.coin}-${setup.position}`,
+                                    ]
+                                  : selectedSetups.filter(
+                                      (id) =>
+                                        id !== `${coin.coin}-${setup.position}`,
+                                    ),
+                              )
+                            }
+                          />
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Paper>
+            ))}
+          </Paper>
+        )}
 
-      {captions.length > 0 && (
-        <ContentAccordion 
-          title="Full Transcription" 
-          content={transcription} 
-          useMarkdown={false}
-        />
-      )}
-      
-      
-      <Group gap="md">
-        <br/>
-        <br/>
-        <br/>
-        <Button
-          loading={creatingSummary}
-          disabled={!transcription || !isCompleted}
-          onClick={handleCreateSummary}
-          title={"Create Summary"}
-        >
-          Create Summary
-        </Button>
-        <Button
-          loading={creatingDescription}
-          disabled={!transcription || !isCompleted}
-          onClick={handelCreateDescription}
-          title={
-            !transcription
-              ? "No transcription available"
-              : !isCompleted
-                ? "Video processing not completed"
-                : "Generate summary"
-          }
-        >
-          Create Description
-        </Button>
-
-        <Button
-          loading={creatingSetups}
-          disabled={!transcription || !isCompleted}
-          onClick={handleGetSetups}
-          title={"Create setups"}
-        >
-          Find setups
-        </Button>
-      </Group>
-
-      
+        {/* Buttons */}
+        <Group gap="md" mt="xl">
+          <Button
+            loading={creatingSummary}
+            disabled={!transcription || !isCompleted}
+            onClick={handleCreateSummary}
+          >
+            Create Summary
+          </Button>
+          <Button
+            loading={creatingDescription}
+            disabled={!transcription || !isCompleted}
+            onClick={handelCreateDescription}
+          >
+            Create Description
+          </Button>
+          <Button
+            loading={creatingSetups}
+            disabled={!transcription || !isCompleted}
+            onClick={handleGetSetups}
+          >
+            Find setups
+          </Button>
+        </Group>
+      </div>
     </div>
   );
 }
