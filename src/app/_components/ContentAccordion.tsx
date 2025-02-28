@@ -15,7 +15,24 @@ interface MarkdownProps {
   children: ReactNode;
 }
 
-const YouTubeEmbed = ({ href, children }: { href: string; children: ReactNode }) => {
+const YouTubePlayer = ({ videoId, startTime }: { videoId: string; startTime?: string }) => {
+  const embedUrl = `https://www.youtube.com/embed/${videoId}${startTime ? `?start=${startTime}` : ''}`;
+  
+  return (
+    <div className="aspect-video sticky top-4">
+      <iframe
+        className="w-full h-full"
+        src={embedUrl}
+        title="YouTube video player"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  );
+};
+
+const TimeStampLink = ({ href, children }: { href: string; children: ReactNode }) => {
   try {
     const url = new URL(href);
     if (!url.hostname.includes('youtube.com')) {
@@ -27,22 +44,19 @@ const YouTubeEmbed = ({ href, children }: { href: string; children: ReactNode })
     if (start.endsWith('s')) {
       start = start.slice(0, -1);
     }
-    const embedUrl = `https://www.youtube.com/embed/${videoId}${start ? `?start=${start}` : ''}`;
 
     return (
-      <>
-        <p className="font-medium mb-2">{children}:</p>
-        <div className="aspect-video my-4">
-          <iframe
-            className="w-full h-full"
-            src={embedUrl}
-            title="YouTube video player"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-      </>
+      <button 
+        onClick={() => {
+          const player = document.querySelector('iframe') as HTMLIFrameElement;
+          if (player) {
+            player.src = `https://www.youtube.com/embed/${videoId}?start=${start}`;
+          }
+        }}
+        className="text-blue-600 hover:underline text-left"
+      >
+        {children}
+      </button>
     );
   } catch (error) {
     return <a href={href} className="text-blue-600 hover:underline">{children}</a>;
@@ -76,7 +90,7 @@ const markdownComponents: Partial<Components> = {
   ),
   a: ({ href, children, ...props }) => {
     if (href?.includes('youtube.com/watch')) {
-      return <YouTubeEmbed href={href}>{children}</YouTubeEmbed>;
+      return <TimeStampLink href={href}>{children}</TimeStampLink>;
     }
     return (
       <a href={href} className="text-blue-600 hover:underline" {...props}>
@@ -92,6 +106,10 @@ export function ContentAccordion({
   subtitle,
   useMarkdown = true 
 }: ContentAccordionProps) {
+  // Extract first video ID from content
+  const firstVideoMatch = content.match(/youtube\.com\/watch\?v=([^&\s]+)/);
+  const firstVideoId = firstVideoMatch ? firstVideoMatch[1] : null;
+
   return (
     <Accordion>
       <Accordion.Item value={title.toLowerCase()}>
@@ -100,14 +118,23 @@ export function ContentAccordion({
           {subtitle}
         </Accordion.Control>
         <Accordion.Panel>
-          <Paper shadow="sm" p="md" radius="md" withBorder>
-            {useMarkdown ? (
-              <ReactMarkdown components={markdownComponents}>
-                {content}
-              </ReactMarkdown>
-            ) : (
-              <div className="space-y-4">{content}</div>
-            )}
+          <Paper shadow="sm" p="md" radius="md" withBorder className="w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {firstVideoId && (
+                <div className="md:col-span-1">
+                  <YouTubePlayer videoId={firstVideoId} />
+                </div>
+              )}
+              <div className="md:col-span-1">
+                {useMarkdown ? (
+                  <ReactMarkdown components={markdownComponents}>
+                    {content}
+                  </ReactMarkdown>
+                ) : (
+                  <div className="space-y-4">{content}</div>
+                )}
+              </div>
+            </div>
           </Paper>
         </Accordion.Panel>
       </Accordion.Item>
