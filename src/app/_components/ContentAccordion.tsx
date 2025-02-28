@@ -56,7 +56,7 @@ const TimeStampLink = ({
     }
 
     const videoId = url.searchParams.get("v");
-    let start = url.searchParams.get("t") || "";
+    let start = url.searchParams.get("t") ?? "";
     console.log("TimeStampLink: url", url);
     console.log("TimeStampLink: start", start);
     if (start.endsWith("s")) {
@@ -66,7 +66,7 @@ const TimeStampLink = ({
     return (
       <button
         onClick={() => {
-          const player = document.querySelector("iframe") as HTMLIFrameElement;
+          const player = document.querySelector("iframe")!;
           if (player) {
             player.src = `https://www.youtube.com/embed/${videoId}?start=${start}&autoplay=1`;
           }
@@ -111,7 +111,7 @@ const markdownComponents: Partial<Components> = {
       {children}
     </li>
   ),
-  p: ({ children, ...props }: React.HTMLProps<HTMLParagraphElement>) => (
+  p: ({ children }: React.HTMLProps<HTMLParagraphElement>) => (
     <Text size="sm" mb="md">
       {children}
     </Text>
@@ -135,8 +135,9 @@ export function ContentAccordion({
   useMarkdown = true,
 }: ContentAccordionProps) {
   // Extract first video ID from content
-  const firstVideoMatch = content.match(/youtube\.com\/watch\?v=([^&\s]+)/);
-  const firstVideoId = firstVideoMatch ? firstVideoMatch[1] : null;
+  const regex = /youtube\.com\/watch\?v=([^&\s]+)/;
+const firstVideoMatch = regex.exec(content);
+
 
   return (
     <Accordion>

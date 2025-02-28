@@ -1,7 +1,9 @@
 import { type PrismaClient } from "@prisma/client";
-import type { TranscriptionSummary, TranscriptionSetups } from "~/types/transcription";
+import type { TranscriptionSetups } from "~/types/transcription";
 import { VideoRepository } from "~/server/repositories/videoRepository";
 import { db } from "~/server/db";
+import type { Caption } from "~/utils/vttParser";
+
 // Define types based on Prisma schema
 type VideoCreateInput = {
   id?: string;
@@ -446,7 +448,7 @@ interface SummarizationStrategy {
 
 // Implement specific strategies
 class DescriptionSummarizer implements SummarizationStrategy {
-  async summarize(transcription: string, captions?: any[], videoUrl?: string): Promise<string> {
+  async summarize(transcription: string, captions?: Caption[], videoUrl?: string): Promise<string> {
     if (!captions?.length || !videoUrl) {
       throw new Error('Captions and videoUrl are required for description summary');
     }
@@ -528,7 +530,7 @@ export async function getSetups(
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+            "Authorization": `Bearer ${process.env.OPENAI_API_KEY ?? ''}`
         },
         body: JSON.stringify({
             model: "gpt-4-turbo-preview",

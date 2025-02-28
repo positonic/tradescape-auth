@@ -42,10 +42,7 @@ export function VideoDetails({
   );
   const [setups, setSetups] = useState<TranscriptionSetups | null>(null);
   const [selectedSetups, setSelectedSetups] = useState<string[]>([]);
-  const [summaryType, setSummaryType] = useState<
-    "basic" | "trade-setups" | "description"
-  >("basic");
-
+  
   const videoId = getVideoIdFromYoutubeUrl(videoUrl);
   if (!videoId) {
     throw new Error("Invalid YouTube URL");

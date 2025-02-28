@@ -7,7 +7,6 @@ import {
   Group,
 } from "@mantine/core";
 import "@mantine/core/styles.css";
-import Link from "next/link";
 import SignInButton from "~/app/_components/SignInButton";
 
 export async function LandingPage() {
