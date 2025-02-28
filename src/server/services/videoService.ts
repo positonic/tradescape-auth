@@ -310,7 +310,7 @@ const getPrompt = (summaryType: string): string => {
   return summaryType in prompts ? prompts[summaryType as keyof typeof prompts] : prompts.basic;
 };
 
-// Add type for OpenAI API response
+// Add proper typing for OpenAI API response
 type OpenAIResponse = {
   choices: Array<{
     message: {
@@ -372,7 +372,7 @@ async function generateOutline(context: PipelineContext): Promise<PipelineContex
     throw new Error(`OpenAI API request failed: ${response.status}`);
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as OpenAIResponse;
   return {
     ...context,
     outline: data.choices[0]?.message?.content ?? ''
@@ -408,7 +408,7 @@ async function enrichOutline(context: PipelineContext): Promise<PipelineContext>
     throw new Error(`OpenAI API request failed: ${response.status}`);
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as OpenAIResponse;
   return {
     ...context,
     result: data.choices[0]?.message?.content
@@ -553,13 +553,9 @@ export async function getSetups(
         throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    //console.log("createVideo: response is ", response)
-
     const data = (await response.json()) as OpenAIResponse;
-    console.log("createVideo: data is ", data)
-    console.log("createVideo: 'description' data.choices[0].message is ", data?.choices[0]?.message)
-    const content = JSON.parse(data?.choices[0]?.message?.content ?? '') as TranscriptionSetups;
-    console.log("createVideo: content is ", content)
+    const content = JSON.parse(data.choices[0]?.message?.content ?? '{}') as TranscriptionSetups;
+    
     if (!content.generalMarketContext || !Array.isArray(content.coins)) {
         throw new Error('Invalid response format from OpenAI');
     }
@@ -609,15 +605,21 @@ export class VideoService {
     this.repository = new VideoRepository(prisma);
   }
 
-  // Not used anywhere
-  async summarizeAndSave(videoId: string, transcription: string, summaryType: string) {
-    const summary = await summarizeTranscription(transcription, summaryType);
-    const summaryContent = typeof summary === 'string' ? summary : JSON.stringify(summary);
-    
-    return await this.repository.updateVideoContent(videoId, {
-      summary: summaryType === 'basic' ? summaryContent : undefined,
-      description: summaryType === 'description' ? summaryContent : undefined,
-    });
+  async summarizeAndSave(videoId: string, transcription: string, summaryType: string): Promise<unknown> {
+    try {
+      const summary = await summarizeTranscription(transcription, summaryType);
+      const summaryContent = typeof summary === 'string' ? summary : JSON.stringify(summary);
+      
+      return await this.repository.updateVideoContent(videoId, {
+        summary: summaryType === 'basic' ? summaryContent : undefined,
+        description: summaryType === 'description' ? summaryContent : undefined,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to summarize and save: ${error.message}`);
+      }
+      throw new Error('Failed to summarize and save: Unknown error');
+    }
   }
 
   async createVideo(data: VideoCreateInput) {
