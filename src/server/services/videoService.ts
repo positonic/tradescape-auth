@@ -152,12 +152,12 @@ const prompts = {
   2. For each market ticker discussed (cryptocurrency, stock, index, etc.), create a section with:
      - The coin/token symbol in caps followed by a timestamp link (e.g., "BTC", "ETH")
      - Crypto Currencies may be one of those in this list or beyond - SPX, COIN,ARC, FARTCOIN, BONK, WIF, AVAAI, IREN, GOLD, PLTR, BONKGUY, ZEREBRO, MSTR, BERA, NVDA, ETHBTC, SOLBTC, etc.
-     - Format must be exactly: #### SYMBOL ([MM:SS]({{VIDEO_URL}}?t=N)) where:
+     - Format must be exactly: #### SYMBOL ([MM:SS]({{VIDEO_URL}}&t=N)) where:
        * SYMBOL is the coin symbol (e.g., BTC, ETH)
        * MM:SS is the minutes:seconds format of the timestamp
        * N is the exact number of seconds from the transcript
      Example: If BTC is first mentioned at timestamp (123.45), write exactly:
-     #### BTC ([02:03]({{VIDEO_URL}}?t=123))
+     #### BTC ([02:03]({{VIDEO_URL}}&t=123))
      - The key price levels discussed (support, resistance, targets)
      - The trading setup or analysis provided
      - The trader's sentiment (bullish, bearish, neutral)
@@ -166,11 +166,11 @@ const prompts = {
   3. Include relevant "MEMBER QUESTION" sections when they provide valuable trading insights or market wisdom.
      Use the exact timestamp when the question is asked in the transcript.
       - Member questions timestamp link (e.g., "BTC", "ETH")
-     - Format must be exactly: ######## Member Question ([MM:SS]({{VIDEO_URL}}?t=N)) where:
+     - Format must be exactly: ######## Member Question ([MM:SS]({{VIDEO_URL}}&t=N)) where:
        * MM:SS is the minutes:seconds format of the timestamp
        * N is the exact number of seconds from the transcript
      Example:  
-     #### Member Question [02:03]({{VIDEO_URL}}?t=123)
+     #### Member Question [02:03]({{VIDEO_URL}}&t=123)
 
   Rules:
   - ALWAYS format section headers exactly as shown in the example
@@ -189,15 +189,15 @@ const prompts = {
   Format each section exactly like this:
 
   ### MARKET CONTEXT
-  [MM:SS]({{VIDEO_URL}}?t=N)
+  [MM:SS]({{VIDEO_URL}}&t=N)
   [Content here]
 
   ### COIN ANALYSIS
-  #### BTC ([MM:SS]({{VIDEO_URL}}?t=N))
+  #### BTC ([MM:SS]({{VIDEO_URL}}&t=N))
   [Analysis here]
 
   ### MEMBER QUESTIONS
-  #### [Question] ([10:15]({{VIDEO_URL}}?t=615))
+  #### [Question] ([10:15]({{VIDEO_URL}}&t=615))
   [Question and response if trading relevant]
 
   Rules:
@@ -237,25 +237,25 @@ const prompts = {
 
 3. **Formatting Requirements:**
    - For each segment, extract the topic name, the exact timestamp (displayed in MM:SS format), and a clickable link in the following format:  
-     [MM:SS]({{VIDEO_URL}}?t=N)
+     [MM:SS]({{VIDEO_URL}}&t=N)
    - Organize the outline in a structured markdown format
    - Do not include any full analysis or detailed trade setups at this stage
 
 **Example Output Format:**
 
 ### MARKET OVERVIEW
-[01:48]({{VIDEO_URL}}?t=108)
+[01:48]({{VIDEO_URL}}&t=108)
 - Key topics covered: Market sentiment, overall trends
 - Tickers mentioned: [BTC, ETH]
 
 ### COIN ANALYSIS
 #### BTC
-[02:05]({{VIDEO_URL}}?t=125)
+[02:05]({{VIDEO_URL}}&t=125)
 - Discussion points: Price levels, trend analysis
 - Related tickers: [ETHBTC]
 
 ### MEMBER QUESTIONS
-[04:58]({{VIDEO_URL}}?t=298)
+[04:58]({{VIDEO_URL}}&t=298)
 - Topic: Daily Close & Market Structure
 - Tickers discussed: [BTC, ETH]
 
@@ -273,23 +273,23 @@ Now, please output only the structured outline in markdown format based on the p
 
   Common tickers to identify: SPX, COIN, ARC, FARTCOIN, BONK, WIF, AVAAI, IREN, GOLD, PLTR, BONKGUY, ZEREBRO, MSTR, BERA, NVDA, ETHBTC, SOLBTC
 
-  For each segment identify exact timestamp from transcript (format: [MM:SS]({{VIDEO_URL}}?t=N))
+  For each segment identify exact timestamp from transcript (format: [MM:SS]({{VIDEO_URL}}&t=N))
   and a Brief topic description
   
   **Example Output Format:**
   Format each segment as follows:
   Topic type (Market Overview, Coin Analysis, Member Question, Education)
      For "Market Overview" format as:
-       ###  Market Overview ([MM:SS]({{VIDEO_URL}}?t=N))
+       ###  Market Overview ([MM:SS]({{VIDEO_URL}}&t=N))
         - Key points covered
      For "Coin Analysis" format as:
-       ### [SYMBOL] ([MM:SS]({{VIDEO_URL}}?t=N))
+       ### [SYMBOL] ([MM:SS]({{VIDEO_URL}}&t=N))
         - Key points covered
      For "Member Question" format as:
-       ### Member Question ([MM:SS]({{VIDEO_URL}}?t=N))
+       ### Member Question ([MM:SS]({{VIDEO_URL}}&t=N))
         - Question and response if trading relevant
      For "Education" format as:
-       ### Education ([MM:SS]({{VIDEO_URL}}?t=N))
+       ### Education ([MM:SS]({{VIDEO_URL}}&t=N))
         - Key points covered
 
   `,
@@ -303,7 +303,7 @@ Now, please output only the structured outline in markdown format based on the p
      - Sentiment (bullish/bearish/neutral)
      - Trade recommendations
   
-  Maintain exact timestamp links: [MM:SS]({{VIDEO_URL}}?t=N)`
+  Maintain exact timestamp links: [MM:SS]({{VIDEO_URL}}&t=N)`
 } as const;
 
 const getPrompt = (summaryType: string): string => {

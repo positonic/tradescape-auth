@@ -97,9 +97,10 @@ export const videoRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const slug = getVideoIdFromYoutubeUrl(input.url);
       const videoService = new VideoService(ctx.db);
-      
+      const videoId = getVideoIdFromYoutubeUrl(input.url);
+      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
       return await videoService.createVideo({
-        videoUrl: input.url,
+        videoUrl: videoUrl,
         status: 'pending',
         slug,
         userId: ctx.session.user.id

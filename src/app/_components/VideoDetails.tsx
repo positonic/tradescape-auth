@@ -9,8 +9,6 @@ import {
   Badge,
   Table,
   Checkbox,
-  Select,
-  Accordion,
 } from "@mantine/core";
 import { useState } from "react";
 import { api } from "~/trpc/react";

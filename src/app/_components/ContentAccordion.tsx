@@ -57,6 +57,8 @@ const TimeStampLink = ({
 
     const videoId = url.searchParams.get("v");
     let start = url.searchParams.get("t") || "";
+    console.log("TimeStampLink: url", url);
+    console.log("TimeStampLink: start", start);
     if (start.endsWith("s")) {
       start = start.slice(0, -1);
     }
@@ -132,9 +134,9 @@ export function ContentAccordion({
   subtitle,
   useMarkdown = true,
 }: ContentAccordionProps) {
-  const regex = /youtube\.com\/watch\?v=([^&\s]+)/;
-  const match = regex.exec(content);
-  const firstVideoId = match ? match[1] : null;
+  // Extract first video ID from content
+  const firstVideoMatch = content.match(/youtube\.com\/watch\?v=([^&\s]+)/);
+  const firstVideoId = firstVideoMatch ? firstVideoMatch[1] : null;
 
   return (
     <Accordion>
