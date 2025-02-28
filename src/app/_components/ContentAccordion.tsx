@@ -132,9 +132,9 @@ export function ContentAccordion({
   subtitle,
   useMarkdown = true,
 }: ContentAccordionProps) {
-  // Extract first video ID from content
-  const firstVideoMatch = content.match(/youtube\.com\/watch\?v=([^&\s]+)/);
-  const firstVideoId = firstVideoMatch ? firstVideoMatch[1] : null;
+  const regex = /youtube\.com\/watch\?v=([^&\s]+)/;
+  const match = regex.exec(content);
+  const firstVideoId = match ? match[1] : null;
 
   return (
     <Accordion>

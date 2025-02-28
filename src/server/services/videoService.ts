@@ -319,13 +319,6 @@ type OpenAIResponse = {
   }>;
 };
 
-async function multiPassOmega(
-  transcription: string,
-  videoUrl: string,
-  captions?: {text: string, startSeconds: number, endSeconds: number}[]
-): Promise<string> {
-
-}
 /**
  * Works with first and second passes
  * @param transcription 
@@ -370,7 +363,7 @@ async function multiPass(
 
   const firstPassData = await firstPassResponse.json();
   console.log("multiPass: firstPassData is ", firstPassData)
-  const outline = firstPassData.choices[0].message.content;
+  const outline = firstPassData.choices[0]?.message?.content ?? '';
 
   // Second pass - enrich outline
   const secondPassResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -405,115 +398,89 @@ async function multiPass(
   return secondPassData.choices[0].message.content;
 }
 
-export async function summarizeTranscription(
-  transcription: string,
-  summaryType: string,
-  captions?: {text: string, startSeconds: number, endSeconds: number}[],
-  videoUrl?: string
-//): Promise<TranscriptionSummary | TranscriptionSetups> {
-): Promise<any> {
-  const formattedVideoUrl = videoUrl?.includes('?v=') 
-    ? `${videoUrl}&t=` 
-    : `${videoUrl}?t=`;
+// Define a common interface for all summarization strategies
+interface SummarizationStrategy {
+  summarize(
+    transcription: string,
+    captions?: { text: string; startSeconds: number; endSeconds: number }[],
+    videoUrl?: string
+  ): Promise<string | TranscriptionSetups>;
+}
 
-  // Token estimation
-  const maxTokens = 29900;
-  const estimatedTokens = Math.ceil(transcription.length / 4);
-  
-  if (estimatedTokens > maxTokens) {
-    const keepRatio = (maxTokens * 0.89) / estimatedTokens;
-    transcription = transcription.slice(0, Math.floor(transcription.length * keepRatio));
-  }
-
-  if (summaryType === 'description') {
-    return await multiPass(transcription, formattedVideoUrl, captions) as string;
-  }
-  console.log("summarizeTranscription: summaryType is ", summaryType)
-    const isDescription = summaryType === 'description';
-    console.log("summarizeTranscription: isDescription is ", isDescription)
-    if(isDescription && (!captions || captions.length === 0 || !videoUrl)){
-        throw new Error('Captions and videoUrl are required for description summary type');
+// Implement specific strategies
+class DescriptionSummarizer implements SummarizationStrategy {
+  async summarize(transcription: string, captions?: any[], videoUrl?: string): Promise<string> {
+    if (!captions?.length || !videoUrl) {
+      throw new Error('Captions and videoUrl are required for description summary');
     }
+    return await multiPass(transcription, videoUrl, captions);
+  }
+}
 
-    const formattedCaptions = isDescription && captions 
-        ? captions.map(caption => `(${caption.startSeconds.toFixed(2)}) ${caption.text}`).join(" ") 
-        : "";
-    const responseFormat = summaryType === 'trade-setups' ? { type: "json_object" } : { type: "text" }
-    
-    
-    // Get prompt and replace the placeholder
-    let prompt = getPrompt(summaryType);
-    
-    // if (isDescription) {
-    //   console.log("summarizeTranscription: isDescription is true")
-    //     prompt = prompt
-    //         .replace(/\{\{VIDEO_URL\}\}/g, formattedVideoUrl)
-    //         .replace('{{VIDEO_ID}}', videoUrl?.split('/').pop() ?? '')
-    //         .replace('{{TRANSCRIPT_WITH_SECONDS}}', formattedCaptions ? JSON.stringify(formattedCaptions) : '');
-    // }
-    // console.log("summarizeTranscription: prompt is ", prompt)
+// class TradeSetupsSummarizer implements SummarizationStrategy {
+//   async summarize(transcription: string): Promise<TranscriptionSetups> {
+//     // ... implementation for trade setups
+//     const response = await this.callOpenAI(transcription, 'json_object');
+//     return JSON.parse(response) as TranscriptionSetups;
+//   }
+// }
 
-    // Estimate total tokens (4 chars ≈ 1 token)
-    const promptTokens = Math.ceil(prompt.length / 4);
-    const transcriptionTokens = Math.ceil(transcription.length / 4);
-    const totalTokens = promptTokens + transcriptionTokens;
-    console.log("summarizeTranscription: totalTokens ", totalTokens)
-    // If we're over limit, truncate the transcription
-    if (totalTokens > 29900) {
-      console.log("summarizeTranscription: totalTokens > 29900 ")
-      
-      const availableTokens = 29900 - promptTokens - 1000; // 1000 token buffer
-        const keepRatio = availableTokens / transcriptionTokens;
-        transcription = transcription.slice(0, Math.floor(transcription.length * keepRatio));
-    }
-
-    console.log("summarizeTranscription: summaryType is ", summaryType)
-    console.log("createVideo: responseFormat is ", responseFormat)
+class BasicSummarizer implements SummarizationStrategy {
+  async summarize(transcription: string): Promise<string> {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-            model: "gpt-4-turbo-preview",
-            messages: [
-                {
-                    role: "system",
-                    content: "You are a crypto trading analysis assistant that extracts structured trade ideas from video transcripts. You focus on identifying specific trade setups, entry/exit points, and market context for each cryptocurrency mentioned."
-                },
-                {
-                    role: "user",
-                    content: `${prompt}${transcription}`
-                }
-            ],
-            temperature: 0.7,
-            max_tokens: 1500,
-            response_format: responseFormat,
-        }),
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4-turbo-preview",
+        messages: [
+          {
+            role: "system",
+            content: "You are a crypto trading analysis assistant that extracts structured trade ideas from video transcripts."
+          },
+          {
+            role: "user",
+            content: `${getPrompt('basic')}${transcription}`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1500,
+        response_format: { type: "text" },
+      }),
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+      throw new Error(`OpenAI API request failed: ${response.status}`);
     }
 
-    const data = (await response.json()) as OpenAIResponse;
-    
-    if (!data?.choices?.[0]?.message?.content) {
-        throw new Error('Invalid or empty response from OpenAI');
-    }
+    const data = await response.json() as OpenAIResponse;
+    return data.choices[0]?.message?.content ?? '';
+  }
+}
 
-   
-    let content;
-    if(summaryType === 'trade-setups' ) {
-      content = JSON.parse(data.choices[0].message.content) as TranscriptionSetups
-      if(!content.generalMarketContext || !Array.isArray(content.coins)) throw new Error('Invalid response format from OpenAI');
-    } else {
-      content = data.choices[0].message.content
-    }
-    return content as TranscriptionSummary | TranscriptionSetups;
-  // ... rest of existing function for other summary types
+// Factory to get the appropriate strategy
+const getSummarizationStrategy = (summaryType: string): SummarizationStrategy => {
+  switch (summaryType) {
+    case 'description':
+      return new DescriptionSummarizer();
+    // case 'trade-setups':
+    //   return new TradeSetupsSummarizer();
+    default:
+      return new BasicSummarizer();
+  }
+};
+
+// Simplified main function
+export async function summarizeTranscription(
+  transcription: string,
+  summaryType: string,
+  captions?: { text: string; startSeconds: number; endSeconds: number }[],
+  videoUrl?: string
+): Promise<string | TranscriptionSetups> {
+  const strategy = getSummarizationStrategy(summaryType);
+  return await strategy.summarize(transcription, captions, videoUrl);
 }
 
 export async function getSetups(
@@ -605,6 +572,7 @@ export class VideoService {
     this.repository = new VideoRepository(prisma);
   }
 
+  // Not used anywhere
   async summarizeAndSave(videoId: string, transcription: string, summaryType: string) {
     const summary = await summarizeTranscription(transcription, summaryType);
     const summaryContent = typeof summary === 'string' ? summary : JSON.stringify(summary);
