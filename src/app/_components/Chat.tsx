@@ -30,6 +30,10 @@ export default function Chat() {
       content: `You are a personal assistant who helps manage traders using this system to manage their trades. 
                 You never give IDs to the user since those are just for you to keep track of. 
                 The current date is: ${new Date().toISOString().split('T')[0]}`
+    },
+    {
+      type: 'ai',
+      content: 'Hello! I\'m your AI assistant. How can I help you manage your tasks today?'
     }
   ]);
   const [input, setInput] = useState('');
@@ -107,7 +111,7 @@ export default function Chat() {
       <Paper shadow="md" radius="md" p="md" withBorder style={{ height: '600px' }}>
         <Stack h="100%">
           <ScrollArea h="500px" viewportRef={viewport}>
-            {messages.map((message, index) => (
+            {messages.filter((message: Message) => message.type !== 'system').map((message: Message, index: number) => (
               <Box
                 key={index}
                 mb="md"
