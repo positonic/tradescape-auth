@@ -12,9 +12,9 @@ import {
   Group, 
   Text,
   Box,
-  Space
+  ActionIcon
 } from '@mantine/core';
-import { IconSend } from '@tabler/icons-react';
+import { IconSend, IconMicrophone, IconMicrophoneOff } from '@tabler/icons-react';
 
 interface Message {
     type: 'system' | 'human' | 'ai' | 'tool';
@@ -27,8 +27,9 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'system',
-      content: `You are a personal assistant who helps manage traders using this system to manage their trades. 
+      content: `You are a personal assistant who helps manage tasks in our Task Management System. 
                 You never give IDs to the user since those are just for you to keep track of. 
+                When a user asks to create a task and you don't know the project to add it to for sure, clarify with the user.
                 The current date is: ${new Date().toISOString().split('T')[0]}`
     },
     {
@@ -37,16 +38,89 @@ export default function Chat() {
     }
   ]);
   const [input, setInput] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const viewport = useRef<HTMLDivElement>(null);
 
-  const chat = api.tools.chat.useMutation();
-
+  const utils = api.useUtils();
+  const chat = api.tools.chat.useMutation({
+    onSuccess: async () => {
+      // Invalidate all action-related queries to refresh counts
+      await Promise.all([
+        utils.action.getAll.invalidate(),
+        utils.action.getToday.invalidate()
+      ]);
+    }
+  });
+  const transcribeAudio = api.tools.transcribe.useMutation();
+//const transcribeAudio = api.tools.transcribeFox.useMutation(); 
   // Scroll to bottom when messages change
   useEffect(() => {
     if (viewport.current) {
       viewport.current.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+        
+        try {
+          // Convert blob to base64
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64Audio = typeof reader.result === 'string' 
+              ? reader.result.split(',')[1]
+              : '';
+            if (base64Audio) {
+              const result = await transcribeAudio.mutateAsync({ audio: base64Audio });
+              if (result.text) {
+                setInput(result.text);
+              }
+            }
+          };
+        } catch (error) {
+          console.error('Transcription error:', error);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      alert('Could not access microphone. Please check your permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleMicClick = async () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      await startRecording();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +138,9 @@ export default function Chat() {
 
       setMessages(prev => [...prev, { 
         type: 'ai', 
-        content: typeof response.response === 'string' ? response.response : JSON.stringify(response.response)
+        content: typeof response.response === 'string' 
+          ? response.response 
+          : JSON.stringify(response.response)
       }]);
     } catch (error) {
       console.error('Chat error:', error);
@@ -107,11 +183,19 @@ export default function Chat() {
   };
 
   return (
-    <>
-      <Paper shadow="md" radius="md" p="md" withBorder style={{ height: '600px' }}>
+      <Paper 
+        shadow="md" 
+        radius="sm"
+        p="md" 
+        w="100%"
+        style={{ 
+          height: '600px',
+          backgroundColor: '#ffffff'
+        }}
+      >
         <Stack h="100%">
           <ScrollArea h="500px" viewportRef={viewport}>
-            {messages.filter((message: Message) => message.type !== 'system').map((message: Message, index: number) => (
+            {messages.filter(message => message.type !== 'system').map((message, index) => (
               <Box
                 key={index}
                 mb="md"
@@ -125,7 +209,7 @@ export default function Chat() {
                     <Avatar 
                       size="md" 
                       radius="xl" 
-                      src="/ai-avatar.png"  // Add your AI avatar image
+                      src={null}
                       alt="AI"
                     />
                   )}
@@ -134,13 +218,13 @@ export default function Chat() {
                     radius="lg"
                     style={{
                       maxWidth: '70%',
-                      backgroundColor: message.type === 'human' ? '#228be6' : '#e9ecef',
+                      backgroundColor: message.type === 'human' ? '#228be6' : '#f1f3f5',
                     }}
                   >
                     <Text
                       size="sm"
                       style={{
-                        color: message.type === 'human' ? 'white' : 'black',
+                        color: message.type === 'human' ? 'white' : '#1A1B1E',
                         whiteSpace: 'pre-wrap',
                       }}
                     >
@@ -151,7 +235,7 @@ export default function Chat() {
                     <Avatar 
                       size="md" 
                       radius="xl" 
-                      src="/user-avatar.png"  // Add your user avatar image
+                      src={null}
                       alt="User"
                     />
                   )}
@@ -161,24 +245,48 @@ export default function Chat() {
           </ScrollArea>
 
           <form onSubmit={handleSubmit} style={{ marginTop: 'auto' }}>
-            <Group gap="xs">
+            <Group align="flex-end">
               <TextInput
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your message..."
                 style={{ flex: 1 }}
-                radius="xl"
-                size="md"
+                radius="sm"
+                size="lg"
+                styles={{
+                  input: {
+                    backgroundColor: '#ffffff',
+                    color: '#1A1B1E',
+                    '&::placeholder': {
+                      color: '#868e96'
+                    }
+                  }
+                }}
+                rightSectionWidth={100}
                 rightSection={
-                  <Button 
-                    type="submit" 
-                    radius="xl" 
-                    size="xs"
-                    variant="filled"
-                    style={{ marginRight: 4 }}
-                  >
-                    <IconSend size={16} />
-                  </Button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <ActionIcon
+                      onClick={handleMicClick}
+                      variant="subtle"
+                      color={isRecording ? "red" : "gray"}
+                      className={isRecording ? "animate-pulse" : ""}
+                      size="sm"
+                    >
+                      {isRecording ? (
+                        <IconMicrophoneOff size={16} />
+                      ) : (
+                        <IconMicrophone size={16} />
+                      )}
+                    </ActionIcon>
+                    <Button 
+                      type="submit" 
+                      radius="sm"
+                      size="sm"
+                      variant="filled"
+                    >
+                      <IconSend size={16} />
+                    </Button>
+                  </div>
                 }
               />
             </Group>
@@ -186,9 +294,5 @@ export default function Chat() {
         </Stack>
       </Paper>
 
-      <Space h="xl" />
-
-      
-    </>
   );
 }

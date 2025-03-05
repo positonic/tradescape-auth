@@ -53,6 +53,17 @@ const roadmapData: RoadmapSection[] = [
     title: "⚡ In Progress",
     items: [
       {
+        title: "Conversational market scanning",
+        description:
+          "Scan markets with your co-pilot who saves the setups for you.",
+      },
+      
+    ],
+  },
+  {
+    title: "⏳ Coming Soon",
+    items: [
+      {
         title: "Journaling, Day Planning, Morning & Evening Routines",
         description:
           "AI-assisted daily planning and structured routines for better productivity.",
@@ -63,13 +74,7 @@ const roadmapData: RoadmapSection[] = [
           "Currently working on deployment. Next steps include creating an ELIZA plugin for to-do and video functionality.",
       }
     ],
-  },
-  {
-    title: "⏳ Coming Soon",
-    items: [
-      
-    ],
-  },
+  }
 ];
 
 const RoadmapPage: NextPage = () => {
