@@ -15,7 +15,7 @@ interface TradeSetup {
 }
 
 interface CoinAnalysis {
-    coin: string;
+    coinSymbol: string;
     sentiment: 'bullish' | 'bearish' | 'neutral';
     marketContext: string;
     tradeSetups: TradeSetup[];

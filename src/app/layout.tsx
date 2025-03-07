@@ -7,6 +7,8 @@ import { TRPCReactProvider } from "~/trpc/react";
 import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 import Layout from "./_components/Layout";
+import { Notifications } from '@mantine/notifications';
+import '@mantine/notifications/styles.css';
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -20,6 +22,7 @@ export default function RootLayout({
     <html lang="en" className={GeistSans.variable}>
       <body>
         <MantineProvider>
+          <Notifications />
           <TRPCReactProvider>
             <Layout>{children}</Layout>
           </TRPCReactProvider>

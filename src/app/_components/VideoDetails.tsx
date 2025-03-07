@@ -17,6 +17,7 @@ import type { Video } from "~/types/video";
 import type { Caption } from "~/utils/vttParser";
 import { getVideoIdFromYoutubeUrl } from "~/utils/youtube";
 import { ContentAccordion } from "~/app/_components/ContentAccordion";
+import { TradeSetups } from "./TradeSetups";
 
 interface VideoDetailsProps {
   transcription: string;
@@ -130,112 +131,11 @@ export function VideoDetails({
         </div>
         <br/>
         {setups && (
-          <Paper shadow="sm" p="md" radius="md" withBorder>
-            <Title order={3} mb="md">
-              Setups
-            </Title>
-            <Text size="sm" c="dimmed" mb="md">
-              {setups.coins?.length} coins analyzed
-            </Text>
-            <Text size="sm" mb="md">
-              {setups.generalMarketContext}
-            </Text>
-
-            {setups.coins?.map((coin) => (
-              <Paper
-                key={coin.coin}
-                shadow="xs"
-                p="sm"
-                radius="sm"
-                withBorder
-                mb="md"
-              >
-                <Title order={4} mb="xs">
-                  {coin.coin}
-                </Title>
-                <Group gap="xs" mb="xs">
-                  <Badge
-                    key={`${coin.coin}-${coin.sentiment}`}
-                    variant="light"
-                    color={
-                      coin.sentiment?.toLowerCase().includes("bullish")
-                        ? "green"
-                        : coin.sentiment?.toLowerCase().includes("bearish")
-                          ? "red"
-                          : "blue"
-                    }
-                  >
-                    {coin.sentiment}
-                  </Badge>
-                </Group>
-                <Text size="sm" mb="md">
-                  {coin.marketContext}
-                </Text>
-
-                <Table>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th key="position">Position</Table.Th>
-                      <Table.Th key="entry-triggers">Entry Triggers</Table.Th>
-                      <Table.Th key="entry-price">Entry Price</Table.Th>
-                      <Table.Th key="take-profit">Take Profit</Table.Th>
-                      <Table.Th key="stop-loss">Stop Loss</Table.Th>
-                      <Table.Th key="timeframe">Timeframe</Table.Th>
-                      <Table.Th key="actions" />
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {coin.tradeSetups?.map((setup) => (
-                      <Table.Tr
-                        key={`${coin.coin}-${setup.position}`}
-                        bg={
-                          selectedSetups.includes(
-                            `${coin.coin}-${setup.position}`,
-                          )
-                            ? "var(--mantine-color-blue-light)"
-                            : undefined
-                        }
-                      >
-                        <Table.Td key="position">{setup.position}</Table.Td>
-                        <Table.Td key="entry-triggers">
-                          {setup.entryTriggers}
-                        </Table.Td>
-                        <Table.Td key="entry-price">
-                          {setup.entryPrice}
-                        </Table.Td>
-                        <Table.Td key="take-profit">
-                          {setup.takeProfit}
-                        </Table.Td>
-                        <Table.Td key="stop-loss">{setup.stopLoss}</Table.Td>
-                        <Table.Td key="timeframe">{setup.timeframe}</Table.Td>
-                        <Table.Td key="actions">
-                          <Checkbox
-                            aria-label="Select setup"
-                            checked={selectedSetups.includes(
-                              `${coin.coin}-${setup.position}`,
-                            )}
-                            onChange={(event) =>
-                              setSelectedSetups(
-                                event.currentTarget.checked
-                                  ? [
-                                      ...selectedSetups,
-                                      `${coin.coin}-${setup.position}`,
-                                    ]
-                                  : selectedSetups.filter(
-                                      (id) =>
-                                        id !== `${coin.coin}-${setup.position}`,
-                                    ),
-                              )
-                            }
-                          />
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              </Paper>
-            ))}
-          </Paper>
+          <TradeSetups
+            setups={setups}
+            selectedSetups={selectedSetups}
+            onSetupSelectionChange={setSelectedSetups}
+          />
         )}
       </div>
 

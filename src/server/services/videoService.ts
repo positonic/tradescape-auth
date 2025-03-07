@@ -53,7 +53,7 @@ type VideoUpdateInput = {
 const prompts = {
   'trade-setups': `Below is a transcript of a crypto trading video from an influencer. The transcript contains both trade ideas and non-trading commentary. Please extract a list of trade ideas for each crypto coin or token mentioned. For each coin/token, provide a structured output in JSON format with the following details:
   
-  - coin: The name (and symbol, if available) of the cryptocurrency.
+  - coinSymbol: symbol of the cryptocurrency (e.g., BTC, ETH, SOL, etc.).
   - sentiment: The overall sentiment expressed about the coin (bullish, bearish, or neutral).
   - marketContext: A brief summary of the overall market conditions or context mentioned.
   - tradeSetups: An array of trade setups suggested for that coin. Each trade setup should include:
@@ -92,7 +92,7 @@ const prompts = {
     generalMarketContext: "Potential short squeeze with resistance around 99k.",
     coins: [
       {
-          "coin": "BTC",
+          "coinSymbol": "BTC", //Always include the coin symbol in the coin object
           "sentiment": "bullish",
           "marketContext": "Potential short squeeze with resistance around 99k.",
           "tradeSetups": [
@@ -375,6 +375,7 @@ async function generateOutline(context: PipelineContext): Promise<PipelineContex
   }
 
   const data = (await response.json()) as OpenAIResponse;
+  console.log('jpf: Outline generated is ', data.choices[0]?.message?.content)
   return {
     ...context,
     outline: data.choices[0]?.message?.content ?? ''
@@ -511,7 +512,7 @@ const getSummarizationStrategy = (summaryType: string): SummarizationStrategy =>
   }
 };
 
-// Simplified main function
+// This is currently called from the api endpoint called when you click 'Create Description'
 export async function summarizeTranscription(
   transcription: string,
   summaryType: string,

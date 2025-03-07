@@ -8,11 +8,16 @@ import { createAddVideoTool } from "~/server/tools/addVideoTool";
 import { gmTool } from "~/server/tools/gmTool";
 import { createVideoSearchTool } from "~/server/tools/videoSearchTool";
 import { createActionTools } from "~/server/tools/actionTools";
+import { createTraderTools } from "~/server/tools/traderTools";
 import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
 import os from "os";
 import { createReadStream } from "fs";
+interface ToolCallResult {
+  result: any;
+  toolName: string;
+}
 
 const adderSchema = z.object({
     a: z.number(),
@@ -94,6 +99,9 @@ export const toolRouter = createTRPCRouter({
                 "- read_action: Retrieves an action's details by ID. Only use this when you have a specific action ID.\n" +
                 "- update_status_action: Updates the status of an existing action. Favoured over create_action for existing actions\n" +
                 "- delete_action: Removes an action from the system.\n" +
+                "- market_scan: Use this tool to analyze market setups from a video transcription. Required inputs:\n" +
+                "  * transcription: string - The video transcription text to analyze\n" +
+                "  Example: { \"transcription\": \"Looking at Bitcoin, the market is showing bullish signals...\" }\n" +
                 "- gm: When a user says `gm` we will initiate their morning routing by asking them questions to figure out how to win the morning and the day.\n\n" +
                 "IMPORTANT RULES:\n" +
                 "1. When users ask what to do or about tasks, use retrieve_actions with query_type='today'. This will show only ACTIVE tasks by default.\n" +
@@ -101,15 +109,16 @@ export const toolRouter = createTRPCRouter({
                 "3. To create tasks, you MUST use create_action with create: true\n" +
                 "4. Never try to create a task when asked to show or list tasks\n" +
                 "5. When asked about today's tasks, use retrieve_actions with query_type='today'\n" +
-                "After using a tool, always provide a natural language response explaining the result."
+                "After using a tool, always provide a natural language response explaining the result." +
+                "6. market_scan tool should take precedence over create_action tool"
             );
-            console.log('=== System message:', systemMessage.content);
+            //console.log('=== System message:', systemMessage.content);
             const tools = getTools(ctx);
-            console.log('=== Available tools:', tools.map(t => ({
-                name: t.name,
-                description: t.description,
-                schema: t.schema
-            })));
+            // console.log('=== Available tools:', tools.map(t => ({
+            //     name: t.name,
+            //     description: t.description,
+            //     schema: t.schema
+            // })));
             
             const llmWithTools = model.bindTools(tools);
 
@@ -148,6 +157,7 @@ export const toolRouter = createTRPCRouter({
                 });
                 
                 const actionTools = createActionTools(ctx);
+                const traderTools = createTraderTools(ctx);
                 let toolResult;
                 
                 try {
@@ -174,6 +184,12 @@ export const toolRouter = createTRPCRouter({
                         case "delete_action":
                             toolResult = await actionTools.deleteActionTool.invoke(toolCall.args as any);
                             break;
+                        case "market_scan":
+                            toolResult = await traderTools.marketScanTool.invoke(toolCall.args as any);
+                            break;
+                        // case "create_timeline":
+                        //     toolResult = await traderTools.timelineTool.invoke(toolCall.args as any);
+                        //     break;
                         case "retrieve_actions":
                             toolResult = await actionTools.retrieveActionsTool.invoke(toolCall.args as any);
                             break;
@@ -184,11 +200,14 @@ export const toolRouter = createTRPCRouter({
                             throw new Error(`Unknown tool: ${toolCall.name}`);
                     }
                     
+                    if(toolCall.name === "market_scan") {
+                        console.log("toolResult JSON is ", JSON.parse(toolResult));
+                    }
                     // Add tool result to messages
                     messages.push(new AIMessage({ content: "", tool_calls: [toolCall] }));
                     messages.push(new ToolMessage(toolResult, toolCall.id ?? ''));
                     
-                    return toolResult;
+                    return { result: toolResult, toolName: toolCall.name };
                 } catch (error) {
                     console.error('=== Tool execution error:', {
                         tool: toolCall.name,
@@ -200,12 +219,17 @@ export const toolRouter = createTRPCRouter({
             }));
             
             // Filter out null results and get final response
-            const validToolResults = toolResults.filter(Boolean);
+            const validToolResults: ToolCallResult[] = toolResults.filter(Boolean) as ToolCallResult[];
+            console.log('=== toolResults:', toolResults);
             if (validToolResults.length > 0) {
                 response = await llmWithTools.invoke(messages);
             }
-            
-            return { response: response.content };
+            console.log('=== Final AI response:', {
+                content: response.content,
+                tool_calls: response.tool_calls,
+                validToolResults: validToolResults.map(result => JSON.parse(validToolResults?.[0]?.result ?? '{}'))
+            });
+            return { response: response.content, validToolResults };
         } catch (error) {
             console.error('Error:', error);
             throw new Error(`AI chat error: ${error instanceof Error ? error.message : String(error)}`);

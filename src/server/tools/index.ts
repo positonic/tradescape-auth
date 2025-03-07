@@ -3,10 +3,11 @@ import { createVideoSearchTool } from './videoSearchTool';
 import { createAddVideoTool } from './addVideoTool';
 import { gmTool } from './gmTool';
 import { createActionTools } from "~/server/tools/actionTools";
-
+import { createTraderTools } from "~/server/tools/traderTools";
 
 export const getTools = (ctx: any) => {
   const actionTools = createActionTools(ctx);
+  const traderTools = createTraderTools(ctx);
   return [
     adderTool,
     gmTool(),
@@ -16,6 +17,7 @@ export const getTools = (ctx: any) => {
     actionTools.readActionTool,
     actionTools.updateActionTool,
     actionTools.deleteActionTool,
-    actionTools.retrieveActionsTool
+    actionTools.retrieveActionsTool,
+    traderTools.marketScanTool
   ]
 }
