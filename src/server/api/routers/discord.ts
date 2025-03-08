@@ -13,8 +13,8 @@ export const discordRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       const token = ctx.session?.token?.accessToken;
       
-      console.log("checkHavenMembership: session", ctx.session);
-      console.log("checkHavenMembership: token", token);
+      // console.log("checkHavenMembership: session", ctx.session);
+      // console.log("checkHavenMembership: token", token);
       
       if (!token) {
         return { isHavenMember: false };
@@ -32,7 +32,7 @@ export const discordRouter = createTRPCRouter({
         }
 
         const guilds = (await response.json()) as DiscordGuild[];
-        console.log("checkHavenMembership: guilds", guilds);
+        
         const HAVEN_GUILD_ID = process.env.HAVEN_GUILD_ID;
         const isHavenMember = guilds.some((guild) => guild.id === HAVEN_GUILD_ID);
 

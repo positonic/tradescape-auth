@@ -287,7 +287,7 @@ export default function Chat() {
     const setupsToSave = setups.flatMap((coin, coinIndex) => 
       coin.tradeSetups.map((setup: TradeSetup, setupIndex: number) => {
         const globalIndex = setupIndex; // You might need to adjust this based on your indexing logic
-        
+        console.log("xx: setup", setup);
         if (selectedSetups.includes(globalIndex)) {
           return {
             content: setup.transcriptExcerpt || `${setup.position} setup for ${coin.coinSymbol}`,
@@ -295,6 +295,7 @@ export default function Chat() {
             takeProfitPrice: setup.t1 ? parseFloat(setup.t1) : extractNumber(setup.takeProfit),
             stopPrice: setup.stopLossPrice || extractNumber(setup.stopLoss),
             timeframe: setup.timeframe || "Not specified",
+            direction: setup.position,
             //videoId: "temp-video-id", // TODO: Get from context
             pairId: 1, // TODO: Get or create pair ID based on coin.coinSymbol
           };

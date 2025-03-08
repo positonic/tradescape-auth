@@ -249,6 +249,7 @@ model Setup {
   stopPrice       Decimal?
   timeframe       String?  // e.g., "short_term", "long_term"
   confidence      Int?     // 1-5 scale
+  direction       String
   status          String   @default("active") // active, expired, completed
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
