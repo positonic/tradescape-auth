@@ -1,16 +1,18 @@
 import { z } from "zod";
 import { tool } from "@langchain/core/tools";
 import { PRIORITY_VALUES } from "~/types/priority";
+import type { Context } from "~/server/auth/types";
+import type { Action } from "@prisma/client";
 
 // Schemas for the Action CRUD operations
 const createActionSchema = z.object({
-  create: z.literal(true), // This forces the AI to explicitly declare creation
+  create: z.literal(true),
   name: z.string(),
   description: z.string(),
-  dueDate: z.string().optional(), // Date will be passed as ISO string
+  dueDate: z.string().optional(),
   status: z.enum(["ACTIVE", "COMPLETED", "CANCELLED"]).default("ACTIVE"),
   priority: z.enum(PRIORITY_VALUES).default("Quick"),
-  projectId: z.string().optional(), // Make projectId optional
+  projectId: z.string().optional(),
 });
 
 const readActionSchema = z.object({
@@ -36,12 +38,25 @@ const retrieveActionsSchema = z.object({
   include_completed: z.boolean().optional().default(false),
 });
 
-export const createActionTools = (ctx: any) => {
+interface WhereClause {
+  createdById: string;
+  status?: string;
+  dueDate?: {
+    gte: Date;
+    lte: Date;
+  };
+}
+
+export const createActionTools = (ctx: Context) => {
   const createActionTool = tool(
-    async (input): Promise<string> => {
+    async (input: z.infer<typeof createActionSchema>): Promise<string> => {
       try {
         if (!input) {
           throw new Error("Input is required");
+        }
+
+        if (!ctx.session?.user?.id) {
+          throw new Error("User not authenticated");
         }
 
         console.log('input is ', input);
@@ -74,13 +89,13 @@ export const createActionTools = (ctx: any) => {
     },
     {
       name: "create_action",
-      description: "Creates a new action item. MUST include create: true in the input. Example: { create: true, name: 'Task name', description: 'Task description' }",
+      description: "Creates a new action item. MUST include create: true in the input.",
       schema: createActionSchema
     }
   );
 
   const readActionTool = tool(
-    async (input): Promise<string> => {
+    async (input: z.infer<typeof readActionSchema>): Promise<string> => {
       try {
         const action = await ctx.db.action.findUnique({
           where: { id: input.id },
@@ -102,14 +117,17 @@ export const createActionTools = (ctx: any) => {
   );
 
   const updateActionTool = tool(
-    async (input): Promise<string> => {
+    async (input: z.infer<typeof updateActionSchema>): Promise<string> => {
       try {
         console.log('Update status action input is ', input);
-        console.log('IN updateActionTool');
         const action = await ctx.db.action.update({
           where: { id: input.id },
           data: {
             ...(input.status && { status: input.status }),
+            ...(input.name && { name: input.name }),
+            ...(input.description && { description: input.description }),
+            ...(input.dueDate && { dueDate: new Date(input.dueDate) }),
+            ...(input.priority && { priority: input.priority }),
           },
         });
         return `Successfully updated action "${action.name}"`;
@@ -126,7 +144,7 @@ export const createActionTools = (ctx: any) => {
   );
 
   const deleteActionTool = tool(
-    async (input): Promise<string> => {
+    async (input: z.infer<typeof deleteActionSchema>): Promise<string> => {
       try {
         await ctx.db.action.delete({
           where: { id: input.id },
@@ -145,24 +163,29 @@ export const createActionTools = (ctx: any) => {
   );
 
   const retrieveActionsTool = tool(
-    async (input): Promise<string> => {
+    async (input: z.infer<typeof retrieveActionsSchema>): Promise<string> => {
       try {
-        const where: any = { 
+        if (!ctx.session?.user?.id) {
+          throw new Error("User not authenticated");
+        }
+
+        const where: WhereClause = { 
           createdById: ctx.session.user.id,
-          // Default to ACTIVE status unless include_completed is true
           ...(input.include_completed ? {} : { status: 'ACTIVE' })
         };
         
         if (input.query_type === 'today') {
           const today = new Date();
-          const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-          const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-          where.dueDate = { gte: startOfDay, lte: endOfDay };
+          where.dueDate = {
+            gte: new Date(today.setHours(0, 0, 0, 0)),
+            lte: new Date(today.setHours(23, 59, 59, 999))
+          };
         } else if (input.query_type === 'date' && input.date) {
           const targetDate = new Date(input.date);
-          const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
-          const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
-          where.dueDate = { gte: startOfDay, lte: endOfDay };
+          where.dueDate = {
+            gte: new Date(targetDate.setHours(0, 0, 0, 0)),
+            lte: new Date(targetDate.setHours(23, 59, 59, 999))
+          };
         }
 
         console.log('Retrieve actions where clause:', where);
@@ -183,7 +206,7 @@ export const createActionTools = (ctx: any) => {
     },
     {
       name: "retrieve_actions",
-      description: "Retrieves actions from the system. Use query_type='today' for today's tasks, 'date' with a specific date, or 'all' for all tasks. By default, only shows ACTIVE tasks. Set include_completed=true to include completed tasks.",
+      description: "Retrieves actions from the system. Use query_type='today' for today's tasks, 'date' with a specific date, or 'all' for all tasks.",
       schema: retrieveActionsSchema
     }
   );

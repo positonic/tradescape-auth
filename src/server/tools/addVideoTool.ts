@@ -1,17 +1,24 @@
 import { z } from "zod";
 import { tool } from "@langchain/core/tools";
 import { getVideoIdFromYoutubeUrl } from "~/utils/youtube";
+import { type Context } from "~/server/auth/types";
+//import { createTraderTools } from "~/server/tools/traderTools";
+
 
 const addVideoSchema = z.object({
   videoUrl: z.string().url(),
   isSearchable: z.boolean().default(true),
 });
 
-export const createAddVideoTool = (ctx: any) => tool(
+export const createAddVideoTool = (ctx: Context) => tool(
   async (input): Promise<string> => {
     try {
+      if (!ctx.session) {
+        throw new Error("Authentication required");
+      }
+
       const slug = getVideoIdFromYoutubeUrl(input.videoUrl);
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
       const video = await ctx.db.video.create({
         data: {
@@ -20,7 +27,11 @@ export const createAddVideoTool = (ctx: any) => tool(
           slug: slug,
           status: "pending",
           isSearchable: input.isSearchable,
-          userId: ctx.session.user.id,
+          users: {
+            create: {
+              userId: ctx.session.user.id
+            }
+          }
         },
       });
 

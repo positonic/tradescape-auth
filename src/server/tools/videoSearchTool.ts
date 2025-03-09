@@ -1,21 +1,32 @@
 import { z } from "zod";
 import { tool } from "@langchain/core/tools";
 import { OpenAIEmbeddings } from "@langchain/openai";
+import type { Context } from "~/server/auth/types";
 
 const videoSearchSchema = z.object({
   query: z.string(),
   limit: z.number().optional().default(5),
 });
 
-export const createVideoSearchTool = (ctx: any) => tool(
-  async (input): Promise<string> => {
+interface VideoSearchResult {
+  chunkText: string;
+  videoId: string;
+  chunkStart: number;
+  chunkEnd: number;
+  slug: string;
+  id: string;
+  similarity: number;
+}
+
+export const createVideoSearchTool = (ctx: Context) => tool(
+  async (input: z.infer<typeof videoSearchSchema>): Promise<string> => {
     const embeddings = new OpenAIEmbeddings({
       openAIApiKey: process.env.OPENAI_API_KEY,
     });
 
     const queryEmbedding = await embeddings.embedQuery(input.query);
 
-    const results = await ctx.db.$queryRaw`
+    const results = await ctx.db.$queryRaw<VideoSearchResult[]>`
       SELECT 
         vc."chunk_text" as "chunkText",
         vc."video_id" as "videoId",
@@ -30,9 +41,11 @@ export const createVideoSearchTool = (ctx: any) => tool(
       LIMIT ${input.limit};
     `;
 
-    const formattedResults = results.map((r: any) => 
-      `Video ${r.slug} (${r.chunkStart}-${r.chunkEnd}): ${r.chunkText}`
-    ).join('\n');
+    const formattedResults = results
+      .map((result) => 
+        `Video ${result.slug} (${result.chunkStart}-${result.chunkEnd}): ${result.chunkText}`
+      )
+      .join('\n');
 
     return `Found the following relevant video segments:\n${formattedResults}`;
   },

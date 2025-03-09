@@ -3,9 +3,12 @@ import Link from "next/link";
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
 
-export default async function SetupPage({ params }: { params: { slug: string } }) {
+export default async function SetupPage({ params }: {
+  params: Promise<{ slug: string }>
+}) {
+  const slug = (await params).slug
   const session = await auth();
-  const setup = await api.setups.getById.call({}, { id: params.slug });
+  const setup = await api.setups.getById.call({}, { id: slug });
 
   // const getStatusColor = (status: string) => {
   //   switch (status.toLowerCase()) {

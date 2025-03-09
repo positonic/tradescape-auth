@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { tool } from "@langchain/core/tools";
 import { getSetups } from "~/server/services/videoService";
-import { TranscriptionSetups } from "~/types/transcription";
-import { DynamicStructuredTool } from "@langchain/core/tools";
-import { createTimeline } from "~/server/services/traderService";
+import type { TranscriptionSetups } from "~/types/transcription";
+import type { DynamicStructuredTool } from "@langchain/core/tools";
+import type { Context } from "~/server/auth/types";
+//import { createTimeline } from "~/server/services/traderService";
 
 // const createTraderToolSchema = z.object({
 //     symbol: z.string().describe("The trading symbol to scan (e.g., 'AAPL', 'BTC-USD')"),
@@ -22,7 +23,7 @@ interface TraderTools {
   marketScanTool: DynamicStructuredTool<typeof marketScanToolSchema>;
 }
 
-export const createTraderTools = (ctx: any): TraderTools => {
+export const createTraderTools = (_ctx: Context): TraderTools => {
     const marketScanTool = tool(
         async (input: { transcription: string }): Promise<string> => {
           try {
@@ -34,22 +35,43 @@ export const createTraderTools = (ctx: any): TraderTools => {
             const setups: TranscriptionSetups = await getSetups(input.transcription, 'trade-setups')
             console.log("summarizeTranscription is", setups)
             
-            return JSON.stringify(setups);
+            // Ensure the data matches the expected format
+            const validatedSetups: TranscriptionSetups = {
+              generalMarketContext: setups.generalMarketContext,
+              coins: setups.coins.map(coin => ({
+                coinSymbol: coin.coinSymbol,
+                sentiment: coin.sentiment,
+                marketContext: coin.marketContext,
+                tradeSetups: coin.tradeSetups.map(setup => ({
+                  position: setup.position,
+                  entryTriggers: setup.entryTriggers,
+                  entryPrice: setup.entryPrice,
+                  timeframe: setup.timeframe,
+                  takeProfit: setup.takeProfit,
+                  t1: setup.t1 ?? '',
+                  t2: setup.t2 ?? '',
+                  t3: setup.t3 ?? '',
+                  stopLoss: setup.stopLoss,
+                  stopLossPrice: typeof setup.stopLossPrice === 'number' ? setup.stopLossPrice : 0,
+                  invalidation: setup.invalidation,
+                  confidenceLevel: setup.confidenceLevel,
+                  transcriptExcerpt: setup.transcriptExcerpt
+                }))
+              }))
+            };
+            
+            return JSON.stringify(validatedSetups);
           } catch (error) {
-            console.error('Error creating action:', {
+            console.error('Error scanning market:', {
               error: error instanceof Error ? error.message : String(error),
               input
             });
-            
-            if (error instanceof Error && error.message.includes('foreign key')) {
-              return `Created action "${input?.transcription ?? 'unknown'}" without a project association`;
-            }
-            throw new Error(`Failed to create action: ${error instanceof Error ? error.message : String(error)}`);
+            throw new Error(`Failed to scan market: ${error instanceof Error ? error.message : String(error)}`);
           }
         },
         {
           name: "market_scan",
-          description: "Analyzes audio / video transcriptions for trading setups and market patterns. Input must include a transcription string. Example: { transcription: 'In this video, we're looking at Bitcoin's price action...' }",
+          description: "Analyzes audio/video transcriptions for trading setups and market patterns.",
           schema: marketScanToolSchema
         }
       );

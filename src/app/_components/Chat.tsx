@@ -12,8 +12,7 @@ import {
   Group, 
   Text,
   Box,
-  ActionIcon,
-  Notification
+  ActionIcon
 } from '@mantine/core';
 import { TradeSetups } from '~/app/_components/TradeSetups';
 import { IconSend, IconMicrophone, IconMicrophoneOff, IconCheck } from '@tabler/icons-react';
@@ -31,15 +30,19 @@ interface MarketScanResult {
   generalMarketContext: string;
   coins: Array<{
     coinSymbol: string;
-    sentiment: string;
+    sentiment: 'bullish' | 'bearish' | 'neutral';
     marketContext: string;
     tradeSetups: Array<{
-      position: string;
+      position: 'long' | 'short' | 'abstain';
       entryTriggers: string;
       entryPrice: string;
       timeframe: string;
       takeProfit: string;
+      t1: string;
+      t2: string;
+      t3: string;
       stopLoss: string;
+      stopLossPrice: number;
       invalidation: string;
       confidenceLevel: string;
       transcriptExcerpt: string;
@@ -47,7 +50,7 @@ interface MarketScanResult {
   }>;
 }
 
-interface TradeSetup {
+interface CoinSetup {
   position: string;
   entryTriggers: string;
   entryPrice: string;
@@ -59,6 +62,23 @@ interface TradeSetup {
   invalidation: string;
   confidenceLevel: string;
   transcriptExcerpt: string;
+}
+
+interface CoinData {
+  coinSymbol: string;
+  sentiment: string;
+  marketContext: string;
+  tradeSetups: CoinSetup[];
+}
+
+interface ChatToolResult {
+  toolName: string;
+  result: string;
+}
+
+interface ChatResponse {
+  validToolResults?: ChatToolResult[];
+  response: string | Record<string, unknown>;
 }
 
 export default function Chat() {
@@ -82,34 +102,31 @@ export default function Chat() {
   const chunksRef = useRef<Blob[]>([]);
   const viewport = useRef<HTMLDivElement>(null);
   const [selectedSetups, setSelectedSetups] = useState<number[]>([]);
-  const [setups, setSetups] = useState<any[]>([]);
+  const [setups, setSetups] = useState<CoinData[]>([]);
   
-  const utils = api.useUtils();
   const chat = api.tools.chat.useMutation({
     onSuccess: async (results) => {
-      console.log('chat.onSuccess', results);
-      const marketScanResult = results.validToolResults?.find(result => result.toolName === 'market_scan');
+      const marketScanResult = results.validToolResults?.find(
+        (result): result is ChatToolResult => 
+          result && 
+          typeof result.toolName === 'string' && 
+          result.toolName === 'market_scan' &&
+          typeof result.result === 'string'
+      );
       if (marketScanResult) {
-        const tradeSetupsResult = JSON.parse(marketScanResult.result);
-        const tradeSetups = tradeSetupsResult?.coins?.map((coin: any) => ({
-          coinSymbol: coin.coinSymbol,
-          sentiment: coin.sentiment,
-          marketContext: coin.marketContext,
-          tradeSetups: coin.tradeSetups
-        }));
-        console.log("setup coins is ", tradeSetups);
-        setSetups(tradeSetups);
-        // setMessages(prev => [...prev, {
-        //   type: 'ai',
-        //   content: `Created ${tradeSetups?.coins?.length} trade setups`,
-        //   tradeSetups: tradeSetups
-        // }]);
+        try {
+          const tradeSetupsResult = JSON.parse(marketScanResult.result) as { coins: CoinData[] };
+          const tradeSetups = tradeSetupsResult.coins?.map((coin: CoinData) => ({
+            coinSymbol: coin.coinSymbol,
+            sentiment: coin.sentiment,
+            marketContext: coin.marketContext,
+            tradeSetups: coin.tradeSetups
+          }));
+          setSetups(tradeSetups ?? []);
+        } catch (e) {
+          console.error('Failed to parse trade setups:', e);
+        }
       }
-      // Invalidate all action-related queries to refresh counts
-      await Promise.all([
-        utils.action.getAll.invalidate(),
-        utils.action.getToday.invalidate()
-      ]);
     }
   });
   const transcribeAudio = api.tools.transcribe.useMutation();
@@ -201,28 +218,27 @@ export default function Chat() {
       const response = await chat.mutateAsync({
         message: input,
         history: messages
-      });
+      }) as ChatResponse;
 
-      // Find market scan result if it exists
       const marketScanResult = response.validToolResults?.find(
-        result => result.toolName === 'market_scan'
+        (result): result is ChatToolResult => 
+          typeof result.toolName === 'string' && 
+          result.toolName === 'market_scan'
       );
 
       let tradeSetups: MarketScanResult | null = null;
       let agentResponse = "";
       if (marketScanResult) {
         try {
-          tradeSetups = JSON.parse(marketScanResult.result);
-          agentResponse = `Created ${tradeSetups?.coins?.length} trade setups`;
-          console.log('x: tradeSetups', tradeSetups);
-          console.log('x: agentResponse', agentResponse);
+          tradeSetups = JSON.parse(marketScanResult.result) as MarketScanResult;
+          agentResponse = `Created ${tradeSetups?.coins?.length ?? 0} trade setups`;
         } catch (e) {
           console.error('Failed to parse trade setups:', e);
         }
       } else {
         agentResponse = typeof response.response === 'string' 
-        ? response.response 
-        : JSON.stringify(response.response)
+          ? response.response 
+          : JSON.stringify(response.response);
       }
 
       setMessages(prev => [...prev, { 
@@ -274,38 +290,30 @@ export default function Chat() {
 
   const handleSaveSetups = () => {
     if (!selectedSetups.length) return;
-    console.log("x: selectedSetups", selectedSetups);
-    console.log("x: setups", setups);
 
-    // Helper function to extract first number from string
     const extractNumber = (str: string): number | null => {
-      const match = str.match(/\d+/);
-      return match ? parseFloat(match[0]) : null;
+      const regex = /\d+/;
+      const result = regex.exec(str);
+      return result ? parseFloat(result[0]) : null;
     };
 
-    // Flatten and transform setups
-    const setupsToSave = setups.flatMap((coin, coinIndex) => 
-      coin.tradeSetups.map((setup: TradeSetup, setupIndex: number) => {
-        const globalIndex = setupIndex; // You might need to adjust this based on your indexing logic
-        console.log("xx: setup", setup);
-        if (selectedSetups.includes(globalIndex)) {
+    const setupsToSave = setups.flatMap((coin) => 
+      coin.tradeSetups.map((setup: CoinSetup, setupIndex: number) => {
+        if (selectedSetups.includes(setupIndex)) {
           return {
-            content: setup.transcriptExcerpt || `${setup.position} setup for ${coin.coinSymbol}`,
+            content: setup.transcriptExcerpt ?? `${setup.position} setup for ${coin.coinSymbol}`,
             entryPrice: extractNumber(setup.entryPrice),
             takeProfitPrice: setup.t1 ? parseFloat(setup.t1) : extractNumber(setup.takeProfit),
-            stopPrice: setup.stopLossPrice || extractNumber(setup.stopLoss),
-            timeframe: setup.timeframe || "Not specified",
+            stopPrice: setup.stopLossPrice ?? extractNumber(setup.stopLoss),
+            timeframe: setup.timeframe ?? "Not specified",
             direction: setup.position,
-            //videoId: "temp-video-id", // TODO: Get from context
-            pairId: 1, // TODO: Get or create pair ID based on coin.coinSymbol
+            pairId: 1,
           };
         }
         return null;
       })
     ).filter((setup): setup is NonNullable<typeof setup> => setup !== null);
 
-    console.log("setupsToSave is ", setupsToSave);
-    // Save each setup
     Promise.all(setupsToSave.map(setup => saveSetups.mutateAsync(setup)))
       .then(() => {
         notifications.show({
@@ -315,13 +323,12 @@ export default function Chat() {
           icon: <IconCheck size={16} />,
         });
       })
-      .catch((error) => {
+      .catch((error: Error) => {
         notifications.show({
           title: 'Error',
-          message: error.message || 'Failed to save trade setups',
+          message: error.message ?? 'Failed to save trade setups',
           color: 'red',
         });
-        console.error('Error saving setups:', error);
       });
   };
 
@@ -454,7 +461,7 @@ export default function Chat() {
           {selectedSetups.length > 0 && (
             <Button
               onClick={handleSaveSetups}
-              loading={saveSetups.isLoading}
+              loading={saveSetups.isPending}
               mb="md"
               variant="filled"
               color="blue"

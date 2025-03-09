@@ -42,7 +42,7 @@ export function VideoDetails({
     video.description ?? null,
   );
   const [setups, setSetups] = useState<TranscriptionSetups | null>(null);
-  const [selectedSetups, setSelectedSetups] = useState<string[]>([]);
+  const [selectedSetups, setSelectedSetups] = useState<number[]>([]);
   
   const videoId = getVideoIdFromYoutubeUrl(videoUrl);
   if (!videoId) {

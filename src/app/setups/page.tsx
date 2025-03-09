@@ -5,7 +5,6 @@ import {
   Paper, 
   Title, 
   Table, 
-  Group, 
   Badge,
   Text,
   Skeleton 
@@ -43,10 +42,10 @@ export default function SetupsPage() {
               <Table.Td>
                 <Link href={`/setup/${setup.id}`}>{setup.direction}</Link>
               </Table.Td>
-              <Table.Td>{setup.entryPrice?.toString() || '-'}</Table.Td>
-              <Table.Td>{setup.takeProfitPrice?.toString() || '-'}</Table.Td>
-              <Table.Td>{setup.stopPrice?.toString() || '-'}</Table.Td>
-              <Table.Td>{setup.timeframe || '-'}</Table.Td>
+              <Table.Td>{setup.entryPrice?.toString() ?? 'Not specified'}</Table.Td>
+              <Table.Td>{setup.takeProfitPrice?.toString() ?? 'Not specified'}</Table.Td>
+              <Table.Td>{setup.stopPrice?.toString() ?? '-'}</Table.Td>
+              <Table.Td>{setup.timeframe ?? 'Not specified'}</Table.Td>
               <Table.Td>
                 <Badge 
                   color={setup.status === 'active' ? 'blue' : 'gray'}

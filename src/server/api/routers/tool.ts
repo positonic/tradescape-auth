@@ -2,7 +2,6 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { ChatOpenAI } from "@langchain/openai";
 import { SystemMessage, AIMessage, HumanMessage, ToolMessage } from "@langchain/core/messages";
-import { tool } from "@langchain/core/tools";
 import { getTools } from "~/server/tools";
 import { createAddVideoTool } from "~/server/tools/addVideoTool";
 import { gmTool } from "~/server/tools/gmTool";
@@ -14,27 +13,66 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { createReadStream } from "fs";
+
 interface ToolCallResult {
-  result: any;
+  result: string | Record<string, unknown>;
   toolName: string;
 }
 
-const adderSchema = z.object({
-    a: z.number(),
-    b: z.number(),
-  });
-  const adderTool = tool(
-    async (input): Promise<string> => {
-      const sum = input.a + input.b;
-      console.log('in Adder!!! sum is ', sum);
-      return `The sum of ${input.a} and ${input.b} is ${sum}`;
-    },
-    {
-      name: "adder",
-      description: "Adds two numbers together",
-      schema: adderSchema,
-    }
-  );
+// Define interfaces for each tool's arguments
+interface VideoSearchArgs {
+  query: string;
+  limit?: number;
+}
+
+interface VideoArgs {
+  videoUrl: string;
+  isSearchable?: boolean;
+}
+
+interface CreateActionArgs {
+  description: string;
+  create: true;
+  name: string;
+  status?: "ACTIVE" | "COMPLETED" | "CANCELLED";
+  priority?: "Quick" | "Scheduled" | "1st Priority" | "2nd Priority" | "3rd Priority" | "4th Priority" | "5th Priority" | "Errand" | "Remember" | "Watch" | "Someday Maybe";
+  dueDate?: string;
+  projectId?: string;
+}
+
+interface ActionIdArgs {
+  id: string;
+}
+
+interface ActionUpdateArgs extends ActionIdArgs {
+  status?: "ACTIVE" | "COMPLETED" | "CANCELLED";
+  description?: string;
+  name?: string;
+  priority?: "Quick" | "Scheduled" | "1st Priority" | "2nd Priority" | "3rd Priority" | "4th Priority" | "5th Priority" | "Errand" | "Remember" | "Watch" | "Someday Maybe";
+  dueDate?: string;
+}
+
+interface TranscriptionArgs {
+  transcription: string;
+}
+
+interface QueryArgs {
+  query_type: "date" | "today" | "all";
+  date?: string;
+  include_completed?: boolean;
+}
+
+// Add at the top with other interfaces
+interface ToolResponse {
+  text?: string;
+  result?: string;
+  [key: string]: unknown;
+}
+
+// Add interface for Lemonfox response
+interface LemonfoxResponse {
+  text: string;
+}
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
@@ -72,7 +110,6 @@ export const toolRouter = createTRPCRouter({
 
             const systemMessage = new SystemMessage(
                 "Tools are equivalent to actions in this system. You have access to the following tools:\n" +
-                "- adder: Adds two numbers together. Use this when asked to perform addition.\n" +
                 "- video_search: Search through video transcripts semantically. Use this when asked about video content or to find specific topics in videos.\n" +
                 "- retrieve_actions: Retrieves actions from the system. Examples:\n" +
                 `  * For today's active tasks: { "query_type": "today" }\n` +
@@ -146,7 +183,7 @@ export const toolRouter = createTRPCRouter({
             
             // Handle tool calls
             const toolResults = await Promise.all(response.tool_calls.map(async (toolCall) => {
-                if(!toolCall || !toolCall?.args) {
+                if (!toolCall?.args) {
                     console.log('=== Invalid tool call:', toolCall);
                     return null;
                 }
@@ -158,54 +195,51 @@ export const toolRouter = createTRPCRouter({
                 
                 const actionTools = createActionTools(ctx);
                 const traderTools = createTraderTools(ctx);
-                let toolResult;
+                let toolResult: ToolResponse;
                 
                 try {
                     console.log('********* toolCall is ', toolCall);
                     switch(toolCall.name) {
-                        case "adder":
-                            toolResult = await adderTool.invoke(toolCall.args as any);
-                            break;
                         case "video_search":
-                            toolResult = await createVideoSearchTool(ctx).invoke(toolCall.args as any);
+                            toolResult = await createVideoSearchTool(ctx).invoke(toolCall.args as VideoSearchArgs) as ToolResponse;
                             break;
                         case "add_video":
-                            toolResult = await createAddVideoTool(ctx).invoke(toolCall.args as any);
+                            toolResult = await createAddVideoTool(ctx).invoke(toolCall.args as VideoArgs) as ToolResponse;
                             break;
                         case "create_action":
-                            toolResult = await actionTools.createActionTool.invoke(toolCall.args as any);
+                            toolResult = await actionTools.createActionTool.invoke(toolCall.args as CreateActionArgs) as ToolResponse;
                             break;
                         case "read_action":
-                            toolResult = await actionTools.readActionTool.invoke(toolCall.args as any);
+                            toolResult = await actionTools.readActionTool.invoke(toolCall.args as ActionIdArgs) as ToolResponse;
                             break;
                         case "update_status_action":
-                            toolResult = await actionTools.updateActionTool.invoke(toolCall.args as any);
+                            toolResult = await actionTools.updateActionTool.invoke(toolCall.args as ActionUpdateArgs) as ToolResponse;
                             break;
                         case "delete_action":
-                            toolResult = await actionTools.deleteActionTool.invoke(toolCall.args as any);
+                            toolResult = await actionTools.deleteActionTool.invoke(toolCall.args as ActionIdArgs) as ToolResponse;
                             break;
                         case "market_scan":
-                            toolResult = await traderTools.marketScanTool.invoke(toolCall.args as any);
+                            toolResult = await traderTools.marketScanTool.invoke(toolCall.args as TranscriptionArgs) as ToolResponse;
                             break;
                         // case "create_timeline":
                         //     toolResult = await traderTools.timelineTool.invoke(toolCall.args as any);
                         //     break;
                         case "retrieve_actions":
-                            toolResult = await actionTools.retrieveActionsTool.invoke(toolCall.args as any);
+                            toolResult = await actionTools.retrieveActionsTool.invoke(toolCall.args as QueryArgs) as ToolResponse;
                             break;
                         case "gm":
-                            toolResult = await gmTool().invoke(toolCall.args as any);
+                            toolResult = await gmTool().invoke(toolCall.args as VideoArgs) as ToolResponse;
                             break;
                         default:
                             throw new Error(`Unknown tool: ${toolCall.name}`);
                     }
                     
                     if(toolCall.name === "market_scan") {
-                        console.log("toolResult JSON is ", JSON.parse(toolResult));
+                        console.log("toolResult JSON is ", JSON.parse(toolResult.result ?? toolResult.text ?? ''));
                     }
                     // Add tool result to messages
                     messages.push(new AIMessage({ content: "", tool_calls: [toolCall] }));
-                    messages.push(new ToolMessage(toolResult, toolCall.id ?? ''));
+                    messages.push(new ToolMessage(String(toolResult.result ?? toolResult.text ?? ''), toolCall.id ?? ''));
                     
                     return { result: toolResult, toolName: toolCall.name };
                 } catch (error) {
@@ -224,11 +258,11 @@ export const toolRouter = createTRPCRouter({
             if (validToolResults.length > 0) {
                 response = await llmWithTools.invoke(messages);
             }
-            console.log('=== Final AI response:', {
-                content: response.content,
-                tool_calls: response.tool_calls,
-                validToolResults: validToolResults.map(result => JSON.parse(validToolResults?.[0]?.result ?? '{}'))
-            });
+            // console.log('=== Final AI response:', {
+            //     content: response.content,
+            //     tool_calls: response.tool_calls,
+            //     validToolResults: validToolResults.map(result => JSON.parse(validToolResults?.[0]?.result ?? '{}'))
+            // });
             return { response: response.content, validToolResults };
         } catch (error) {
             console.error('Error:', error);
@@ -251,7 +285,7 @@ export const toolRouter = createTRPCRouter({
         // Clean up the temporary file
         await fs.promises.unlink(tmpFilePath);
         
-        return { text: transcription };
+        return { text: String(transcription) };
       } catch (error) {
         console.error('Error during transcription:', error);
         throw error;
@@ -279,7 +313,7 @@ export const toolRouter = createTRPCRouter({
           throw new Error(`Lemonfox API error: ${response.statusText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as LemonfoxResponse;
         return { text: data.text };
       } catch (error) {
         console.error('Error during Lemonfox transcription:', error);

@@ -4,8 +4,9 @@ import { createAddVideoTool } from './addVideoTool';
 import { gmTool } from './gmTool';
 import { createActionTools } from "~/server/tools/actionTools";
 import { createTraderTools } from "~/server/tools/traderTools";
+import type { Context } from "~/server/auth/types";
 
-export const getTools = (ctx: any) => {
+export const getTools = (ctx: Context) => {
   const actionTools = createActionTools(ctx);
   const traderTools = createTraderTools(ctx);
   return [
