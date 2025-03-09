@@ -35,7 +35,7 @@ export const createTraderTools = (_ctx: Context): TraderTools => {
             const setups: TranscriptionSetups = await getSetups(input.transcription, 'trade-setups')
             console.log("summarizeTranscription is", setups)
             
-            if (!setups || !setups.coins) {
+            if (!setups?.coins) {
                 return JSON.stringify({
                     generalMarketContext: "",
                     coins: []

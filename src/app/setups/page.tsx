@@ -21,7 +21,6 @@ export default function SetupsPage() {
   return (
     <Paper p="md" radius="sm">
       <Title order={2} mb="lg">Trade Setups</Title>
-      
       <Table>
         <Table.Thead>
           <Table.Tr>
@@ -38,7 +37,7 @@ export default function SetupsPage() {
         <Table.Tbody>
           {setups?.map((setup) => (
             <Table.Tr key={setup.id}>
-              <Table.Td>{setup.pair.symbol}</Table.Td>
+              <Table.Td>{setup.coin?.symbol}</Table.Td>
               <Table.Td>
                 <Link 
                   href={`/setup/${setup.id}`}

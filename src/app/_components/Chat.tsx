@@ -132,9 +132,9 @@ export default function Chat() {
   });
   const transcribeAudio = api.tools.transcribe.useMutation();
 //const transcribeAudio = api.tools.transcribeFox.useMutation(); 
+  const getPairBySymbol = api.setups.getPairBySymbol.useMutation();
   const saveSetups = api.setups.create.useMutation({
     onSuccess: () => {
-      // Clear selected setups after saving
       setSelectedSetups([]);
     },
   });
@@ -298,28 +298,54 @@ export default function Chat() {
       return result ? parseFloat(result[0]) : null;
     };
 
-    const setupsToSave = setups.flatMap((coin) => 
-      coin.tradeSetups.map((setup: CoinSetup, setupIndex: number) => {
-        if (selectedSetups.includes(setupIndex)) {
-          return {
-            content: setup.transcriptExcerpt ?? `${setup.position} setup for ${coin.coinSymbol}`,
-            entryPrice: extractNumber(setup.entryPrice),
-            takeProfitPrice: setup.t1 ? parseFloat(setup.t1) : extractNumber(setup.takeProfit),
-            stopPrice: setup.stopLossPrice ?? extractNumber(setup.stopLoss),
-            timeframe: setup.timeframe ?? "Not specified",
-            direction: setup.position,
-            pairId: 1,
-          };
-        }
-        return null;
-      })
-    ).filter((setup): setup is NonNullable<typeof setup> => setup !== null);
+    Promise.all(
+      setups.flatMap((coin) =>
+        coin.tradeSetups.map(async (setup: CoinSetup, setupIndex: number) => {
+          if (selectedSetups.includes(setupIndex)) {
+            try {
+              // Get the pair ID for this coin
+              const pair = await getPairBySymbol.mutateAsync({ 
+                symbol: coin.coinSymbol 
+              });
 
-    Promise.all(setupsToSave.map(setup => saveSetups.mutateAsync(setup)))
+              if (!pair) {
+                throw new Error(`No pair found for ${coin.coinSymbol}`);
+              }
+
+              return {
+                content: setup.transcriptExcerpt ?? `${setup.position} setup for ${coin.coinSymbol}`,
+                entryPrice: extractNumber(setup.entryPrice),
+                takeProfitPrice: setup.t1 ? parseFloat(setup.t1) : extractNumber(setup.takeProfit),
+                stopPrice: setup.stopLossPrice ?? extractNumber(setup.stopLoss),
+                timeframe: setup.timeframe ?? "Not specified",
+                direction: setup.position,
+                pairId: pair.id,
+              };
+            } catch (error) {
+              console.error(`Failed to get pair for ${coin.coinSymbol}:`, error);
+              notifications.show({
+                title: 'Error',
+                message: `Failed to get trading pair for ${coin.coinSymbol}`,
+                color: 'red',
+              });
+              return null;
+            }
+          }
+          return null;
+        })
+      )
+    )
+      .then((setupPromises) => {
+        return Promise.all(
+          setupPromises
+            .filter((setup): setup is NonNullable<typeof setup> => setup !== null)
+            .map(setup => saveSetups.mutateAsync(setup))
+        );
+      })
       .then(() => {
         notifications.show({
           title: 'Success',
-          message: `Successfully saved ${setupsToSave.length} trade setup${setupsToSave.length > 1 ? 's' : ''}`,
+          message: `Successfully saved ${selectedSetups.length} trade setup${selectedSetups.length > 1 ? 's' : ''}`,
           color: 'green',
           icon: <IconCheck size={16} />,
         });
