@@ -40,7 +40,12 @@ export default function SetupsPage() {
             <Table.Tr key={setup.id}>
               <Table.Td>{setup.pair.symbol}</Table.Td>
               <Table.Td>
-                <Link href={`/setup/${setup.id}`}>{setup.direction}</Link>
+                <Link 
+                  href={`/setup/${setup.id}`}
+                  className="text-blue-500 hover:text-blue-700 underline"
+                >
+                  {setup.direction}
+                </Link>
               </Table.Td>
               <Table.Td>{setup.entryPrice?.toString() ?? 'Not specified'}</Table.Td>
               <Table.Td>{setup.takeProfitPrice?.toString() ?? 'Not specified'}</Table.Td>
