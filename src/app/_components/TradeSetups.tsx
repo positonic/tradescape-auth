@@ -24,7 +24,7 @@ export function TradeSetups({
         {setups.generalMarketContext}
       </Text>
 
-      {setups.coins?.map((coin) => (
+      {setups.coins?.map((coin, coinIndex) => (
         <Paper
           key={coin.coinSymbol}
           shadow="xs"
@@ -68,38 +68,50 @@ export function TradeSetups({
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {coin.tradeSetups?.map((setup, index) => (
-                <Table.Tr
-                  key={`${coin.coinSymbol}-${setup.position}-${index}`}
-                  bg={
-                    selectedSetups.includes(index)
-                      ? "var(--mantine-color-blue-light)"
-                      : undefined
-                  }
-                >
-                  <Table.Td>{setup.position}</Table.Td>
-                  <Table.Td>{setup.entryTriggers}</Table.Td>
-                  <Table.Td>{setup.entryPrice}</Table.Td>
-                  <Table.Td>{setup.takeProfit}</Table.Td>
-                  <Table.Td>{setup.stopLoss}</Table.Td>
-                  <Table.Td>{setup.timeframe}</Table.Td>
-                  <Table.Td>
-                    <Checkbox
-                      aria-label="Select setup"
-                      checked={selectedSetups.includes(index)}
-                      onChange={(event) =>
-                        onSetupSelectionChange(
-                          event.currentTarget.checked
-                            ? [...selectedSetups, index]
-                            : selectedSetups.filter(
-                                (id) => id !== index
-                              )
-                        )
-                      }
-                    />
-                  </Table.Td>
-                </Table.Tr>
-              ))}
+              {coin.tradeSetups?.map((setup, setupIndex) => {
+                const globalIndex = coinIndex * 1000 + setupIndex; // Create unique index for each setup
+                return (
+                  <Table.Tr
+                    key={`${coin.coinSymbol}-${setup.position}-${setupIndex}`}
+                    bg={
+                      selectedSetups.includes(globalIndex)
+                        ? "var(--mantine-color-blue-light)"
+                        : undefined
+                    }
+                  >
+                    <Table.Td>{setup.position}</Table.Td>
+                    <Table.Td>{setup.entryTriggers}</Table.Td>
+                    <Table.Td>{setup.entryPrice}</Table.Td>
+                    <Table.Td>{setup.takeProfit}</Table.Td>
+                    <Table.Td>{setup.stopLoss}</Table.Td>
+                    <Table.Td>{setup.timeframe}</Table.Td>
+                    <Table.Td>
+                      <Checkbox
+                        aria-label="Select setup"
+                        checked={selectedSetups.includes(globalIndex)}
+                        onChange={(event) => {
+                          const isChecked = event.currentTarget.checked;
+                          console.log('--- Checkbox Change Debug ---');
+                          console.log('Checkbox checked:', isChecked);
+                          console.log('Current globalIndex:', globalIndex);
+                          console.log('Current selectedSetups:', selectedSetups);
+                          console.log('Parent coin symbol:', coin.coinSymbol);
+                          console.log('Setup index within coin:', setupIndex);
+                          
+                          const newSelectedSetups = isChecked
+                            ? Array.from(new Set([...selectedSetups, globalIndex]))
+                            : selectedSetups.filter((id) => id !== globalIndex);
+                          
+                          console.log('New selectedSetups:', newSelectedSetups);
+                          console.log('------------------------');
+                          
+                          onSetupSelectionChange(newSelectedSetups);
+                        }}
+                      />
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
             </Table.Tbody>
           </Table>
         </Paper>

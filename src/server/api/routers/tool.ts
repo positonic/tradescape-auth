@@ -235,7 +235,16 @@ export const toolRouter = createTRPCRouter({
                     }
                     
                     if(toolCall.name === "market_scan") {
-                        console.log("toolResult JSON is ", JSON.parse(toolResult.result ?? toolResult.text ?? ''));
+                        try {
+                            const resultText = toolResult.result ?? toolResult.text ?? '';
+                            if (resultText) {
+                                console.log("toolResult JSON is ", JSON.parse(resultText));
+                            } else {
+                                console.warn("Empty market scan result");
+                            }
+                        } catch (parseError) {
+                            console.error("Failed to parse market scan result:", parseError);
+                        }
                     }
                     // Add tool result to messages
                     messages.push(new AIMessage({ content: "", tool_calls: [toolCall] }));

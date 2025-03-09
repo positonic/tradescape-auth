@@ -14,6 +14,7 @@ import {
   Box,
   ActionIcon
 } from '@mantine/core';
+import Link from 'next/link';
 import { TradeSetups } from '~/app/_components/TradeSetups';
 import { IconSend, IconMicrophone, IconMicrophoneOff, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -407,6 +408,9 @@ export default function Chat() {
                       selectedSetups={selectedSetups}
                       onSetupSelectionChange={setSelectedSetups}
                     />
+                    <br/>
+                    Select any setups you would like to save using the checkboxes above.<br/><br/>
+                    <Link href="/setups" className="text-blue-500 hover:text-blue-700 underline">View all setups here</Link>
                   </Box>
                 )}
               </Box>
