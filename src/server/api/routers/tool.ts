@@ -117,25 +117,25 @@ export const toolRouter = createTRPCRouter({
                 `  * For specific date: { "query_type": "date", "date": "${today}" }\n` +
                 `  * For all tasks: { "query_type": "all" }\n` +
                 `Available projects: ${projectsJson}\n` +
-                "- create_action: Creates a new action item. MUST include create: true flag. Example:\n" +
-                "  { \"create\": true, \"name\": \"Task name\", \"description\": \"Task description\", \"projectId\": \"project-id\" }\n" +
-                "  If a user mentions a project by name, try to match it to one of the available projects above and pass the projectId to the create_action tool.\n" +
-                "  IMPORTANT: When users mention ANY activities they've already completed (including calls, meetings, exercise, etc.), you MUST ALWAYS create a completed action using create_action with these parameters:\n" +
-                "  - status: \"COMPLETED\"\n" +
-                "  - name: The activity in past tense\n" +
-                "  - description: Details about the activity\n" +
-                "  - dueDate: Today's date (unless a specific date is mentioned)\n" +
-                "  - projectId: For exercise activities, use the exercise project ID \"cm7q7bjf80000zu1r77bdcqdj\"\n" +
-                `  Examples:\n` +
-                `  For "I went for a run for 2.3 hours" use:\n` +
-                `  { \"create\": true, \"name\": \"Completed a 2.3 hour run\", \"description\": \"Went for a run that lasted 2.3 hours\", \"status\": \"COMPLETED\", \"dueDate\": \"${today}\", \"projectId\": \"cm7q7bjf80000zu1r77bdcqdj\"}\n` +
-                `  For "I called my mom for 12 mins" use:\n` +
-                `  { \"create\": true, \"name\": \"Called mom for 12 minutes\", \"description\": \"Had a phone call with mom that lasted 12 minutes\", \"status\": \"COMPLETED\", \"dueDate\": \"${today}\" }\n` +
-                "  Note: Always create the action even if no project is specified. The projectId is optional.\n" +
+                // "- create_action: Creates a new action item. MUST include create: true flag. Example:\n" +
+                // "  { \"create\": true, \"name\": \"Task name\", \"description\": \"Task description\", \"projectId\": \"project-id\" }\n" +
+                // "  If a user mentions a project by name, try to match it to one of the available projects above and pass the projectId to the create_action tool.\n" +
+                // "  IMPORTANT: When users mention ANY activities they've already completed (including calls, meetings, exercise, etc.), you MUST ALWAYS create a completed action using create_action with these parameters:\n" +
+                // "  - status: \"COMPLETED\"\n" +
+                // "  - name: The activity in past tense\n" +
+                // "  - description: Details about the activity\n" +
+                // "  - dueDate: Today's date (unless a specific date is mentioned)\n" +
+                // "  - projectId: For exercise activities, use the exercise project ID \"cm7q7bjf80000zu1r77bdcqdj\"\n" +
+                // `  Examples:\n` +
+                // `  For "I went for a run for 2.3 hours" use:\n` +
+                // `  { \"create\": true, \"name\": \"Completed a 2.3 hour run\", \"description\": \"Went for a run that lasted 2.3 hours\", \"status\": \"COMPLETED\", \"dueDate\": \"${today}\", \"projectId\": \"cm7q7bjf80000zu1r77bdcqdj\"}\n` +
+                // `  For "I called my mom for 12 mins" use:\n` +
+                // `  { \"create\": true, \"name\": \"Called mom for 12 minutes\", \"description\": \"Had a phone call with mom that lasted 12 minutes\", \"status\": \"COMPLETED\", \"dueDate\": \"${today}\" }\n` +
+                // "  Note: Always create the action even if no project is specified. The projectId is optional.\n" +
                 "- add_video: Adds a YouTube video to the database. Use this when users want to analyze or process a video.\n" +
-                "- read_action: Retrieves an action's details by ID. Only use this when you have a specific action ID.\n" +
-                "- update_status_action: Updates the status of an existing action. Favoured over create_action for existing actions\n" +
-                "- delete_action: Removes an action from the system.\n" +
+               // "- read_action: Retrieves an action's details by ID. Only use this when you have a specific action ID.\n" +
+               // "- update_status_action: Updates the status of an existing action. Favoured over create_action for existing actions\n" +
+                //"- delete_action: Removes an action from the system.\n" +
                 "- market_scan: Use this tool to analyze market setups from a video transcription. Required inputs:\n" +
                 "  * transcription: string - The video transcription text to analyze\n" +
                 "  Example: { \"transcription\": \"Looking at Bitcoin, the market is showing bullish signals...\" }\n" +
@@ -143,11 +143,12 @@ export const toolRouter = createTRPCRouter({
                 "IMPORTANT RULES:\n" +
                 "1. When users ask what to do or about tasks, use retrieve_actions with query_type='today'. This will show only ACTIVE tasks by default.\n" +
                 "2. Only include completed tasks when specifically requested using include_completed=true\n" +
-                "3. To create tasks, you MUST use create_action with create: true\n" +
+                //"3. To create tasks, you MUST use create_action with create: true\n" +
                 "4. Never try to create a task when asked to show or list tasks\n" +
                 "5. When asked about today's tasks, use retrieve_actions with query_type='today'\n" +
                 "After using a tool, always provide a natural language response explaining the result." +
-                "6. market_scan tool should take precedence over create_action tool"
+                "6. market_scan tool should take precedence over create_action tool" +
+                "7. When a user mentions a coin, use market_scan tool to get the setup for that coin."
             );
             //console.log('=== System message:', systemMessage.content);
             const tools = getTools(ctx);
@@ -193,7 +194,7 @@ export const toolRouter = createTRPCRouter({
                     args: JSON.stringify(toolCall.args, null, 2)
                 });
                 
-                const actionTools = createActionTools(ctx);
+                //const actionTools = createActionTools(ctx);
                 const traderTools = createTraderTools(ctx);
                 let toolResult: ToolResponse;
                 
@@ -206,27 +207,27 @@ export const toolRouter = createTRPCRouter({
                         case "add_video":
                             toolResult = await createAddVideoTool(ctx).invoke(toolCall.args as VideoArgs) as ToolResponse;
                             break;
-                        case "create_action":
-                            toolResult = await actionTools.createActionTool.invoke(toolCall.args as CreateActionArgs) as ToolResponse;
-                            break;
-                        case "read_action":
-                            toolResult = await actionTools.readActionTool.invoke(toolCall.args as ActionIdArgs) as ToolResponse;
-                            break;
-                        case "update_status_action":
-                            toolResult = await actionTools.updateActionTool.invoke(toolCall.args as ActionUpdateArgs) as ToolResponse;
-                            break;
-                        case "delete_action":
-                            toolResult = await actionTools.deleteActionTool.invoke(toolCall.args as ActionIdArgs) as ToolResponse;
-                            break;
+                        // case "create_action":
+                        //     toolResult = await actionTools.createActionTool.invoke(toolCall.args as CreateActionArgs) as ToolResponse;
+                        //     break;
+                        // case "read_action":
+                        //     toolResult = await actionTools.readActionTool.invoke(toolCall.args as ActionIdArgs) as ToolResponse;
+                        //     break;
+                        // case "update_status_action":
+                        //     toolResult = await actionTools.updateActionTool.invoke(toolCall.args as ActionUpdateArgs) as ToolResponse;
+                        //     break;
+                        // case "delete_action":
+                        //     toolResult = await actionTools.deleteActionTool.invoke(toolCall.args as ActionIdArgs) as ToolResponse;
+                        //     break;
                         case "market_scan":
                             toolResult = await traderTools.marketScanTool.invoke(toolCall.args as TranscriptionArgs) as ToolResponse;
                             break;
                         // case "create_timeline":
                         //     toolResult = await traderTools.timelineTool.invoke(toolCall.args as any);
                         //     break;
-                        case "retrieve_actions":
-                            toolResult = await actionTools.retrieveActionsTool.invoke(toolCall.args as QueryArgs) as ToolResponse;
-                            break;
+                        // case "retrieve_actions":
+                        //     toolResult = await actionTools.retrieveActionsTool.invoke(toolCall.args as QueryArgs) as ToolResponse;
+                        //     break;
                         case "gm":
                             toolResult = await gmTool().invoke(toolCall.args as VideoArgs) as ToolResponse;
                             break;
@@ -305,8 +306,12 @@ export const toolRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       try {
         const formData = new FormData();
-        console.log('input.audio', input.audio);
-        formData.append('file', new Blob([await fs.promises.readFile(input.audio)]));
+        // Convert base64 to blob directly
+        const base64Data = input.audio;
+        const binaryData = Buffer.from(base64Data, 'base64');
+        const audioBlob = new Blob([binaryData], { type: 'audio/webm' });
+        
+        formData.append('file', audioBlob, 'audio.webm');
         formData.append('language', 'english');
         formData.append('response_format', 'json');
 

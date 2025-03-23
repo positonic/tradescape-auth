@@ -14,11 +14,11 @@ export const getTools = (ctx: Context) => {
     gmTool(),
     createVideoSearchTool(ctx),
     createAddVideoTool(ctx),
-    actionTools.createActionTool,
-    actionTools.readActionTool,
-    actionTools.updateActionTool,
-    actionTools.deleteActionTool,
-    actionTools.retrieveActionsTool,
+    // actionTools.createActionTool,
+    // actionTools.readActionTool,
+    // actionTools.updateActionTool,
+    // actionTools.deleteActionTool,
+    // actionTools.retrieveActionsTool,
     traderTools.marketScanTool
   ]
 }

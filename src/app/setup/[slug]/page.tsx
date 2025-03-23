@@ -1,8 +1,9 @@
-import { Paper, Title, Text, Group, Badge, Card, Image, Stack, Divider, SimpleGrid } from '@mantine/core';
+import { Paper, Title, Text, Group, Badge, Card, Image, Stack, Divider, SimpleGrid, Button } from '@mantine/core';
 import Link from "next/link";
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
-import { IconCalendar, IconChartCandle, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
+import { IconCalendar, IconChartCandle, IconArrowUp, IconArrowDown, IconVolume } from '@tabler/icons-react';
+import { TextToSpeech } from './_components/TextToSpeech';
 
 export default async function SetupPage({ params }: {
   params: Promise<{ slug: string }>
@@ -123,7 +124,10 @@ export default async function SetupPage({ params }: {
               <SimpleGrid cols={{ base: 1, md: 12 }} spacing="md">
                 <div style={{ gridColumn: 'span 8' }}>
                   <Card shadow="sm" p="lg" radius="md" withBorder>
-                    <Title order={3} mb="md">Setup Details</Title>
+                    <Group justify="space-between" mb="md">
+                      <Title order={3}>Setup Details</Title>
+                      <TextToSpeech text={setup.content} />
+                    </Group>
                     <Text size="lg" mb="xl">
                       {setup.content}
                     </Text>

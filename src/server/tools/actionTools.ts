@@ -89,7 +89,7 @@ export const createActionTools = (ctx: Context) => {
     },
     {
       name: "create_action",
-      description: "Creates a new action item. MUST include create: true in the input.",
+      description: "Creates a new action item. MUST include create: true in the input. Example: { create: true, name: 'Task name', description: 'Task description' }",
       schema: createActionSchema
     }
   );

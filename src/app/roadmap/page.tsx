@@ -18,6 +18,21 @@ const roadmapData: RoadmapSection[] = [
     title: "🚀 Live Now",
     items: [
       {
+        title: "Record voice with agent in a 'market scan' session",
+        description:
+          "Record your voice and scan a few markets",
+          embed: (
+            <div style={{ position: 'relative', paddingBottom: '62.43%', height: 0 }}>
+              <iframe 
+                src="https://www.loom.com/share/768dbd019de14abeb11fbcc044e1159c?sid=58e72991-0c85-4f3f-a1e5-bed240b8b9b7"
+                frameBorder="0"
+                allowFullScreen
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+              />
+            </div>
+          ),
+      },
+      {
         title: "Crypto analysis Video Transcription & Actionable Insights",
         description:
           "Provide a YouTube URL, transcribe its content, and take action on the transcription.",

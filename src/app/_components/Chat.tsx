@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { TradeSetups } from '~/app/_components/TradeSetups';
 import { IconSend, IconMicrophone, IconMicrophoneOff, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { TextToSpeech } from '~/app/_components/TextToSpeech';
 
 interface Message {
     type: 'system' | 'human' | 'ai' | 'tool';
@@ -130,8 +131,8 @@ export default function Chat() {
       }
     }
   });
-  const transcribeAudio = api.tools.transcribe.useMutation();
-//const transcribeAudio = api.tools.transcribeFox.useMutation(); 
+  //const transcribeAudio = api.tools.transcribe.useMutation();
+  const transcribeAudio = api.tools.transcribeFox.useMutation(); 
   const getPairBySymbol = api.setups.getPairBySymbol.useMutation();
   const saveSetups = api.setups.create.useMutation({
     onSuccess: () => {
@@ -417,6 +418,11 @@ export default function Chat() {
                     >
                       {renderMessageContent(message.content)}
                     </Text>
+                    {message.type === 'ai' && (
+                      <Group justify="flex-end" mt="xs">
+                        <TextToSpeech text={message.content} />
+                      </Group>
+                    )}
                   </Paper>
                   {message.type === 'human' && (
                     <Avatar 
