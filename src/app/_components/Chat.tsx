@@ -19,6 +19,7 @@ import { TradeSetups } from '~/app/_components/TradeSetups';
 import { IconSend, IconMicrophone, IconMicrophoneOff, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { TextToSpeech } from '~/app/_components/TextToSpeech';
+import { VoiceInput } from './VoiceInput';
 
 interface Message {
     type: 'system' | 'human' | 'ai' | 'tool';
@@ -105,6 +106,7 @@ export default function Chat() {
   const viewport = useRef<HTMLDivElement>(null);
   const [selectedSetups, setSelectedSetups] = useState<number[]>([]);
   const [setups, setSetups] = useState<CoinData[]>([]);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   
   const chat = api.tools.chat.useMutation({
     onSuccess: async (results) => {
@@ -360,6 +362,26 @@ export default function Chat() {
       });
   };
 
+  const handleVoiceInput = async (base64Audio: string) => {
+    setIsProcessingVoice(true);
+    try {
+      const result = await transcribeAudio.mutateAsync({ audio: base64Audio });
+      if (result.text) {
+        setInput(result.text);
+        // Automatically submit after transcription
+        handleSubmit(new Event('submit') as any);
+      }
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to process voice input. Please try again.',
+        color: 'red'
+      });
+    } finally {
+      setIsProcessingVoice(false);
+    }
+  };
+
   return (
       <Paper 
         shadow="md" 
@@ -507,51 +529,40 @@ export default function Chat() {
           )}
 
           <form onSubmit={handleSubmit} style={{ marginTop: 'auto' }}>
-            <Group align="flex-end">
-              <TextInput
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
-                style={{ flex: 1 }}
-                radius="sm"
-                size="lg"
-                styles={{
-                  input: {
-                    backgroundColor: '#ffffff',
-                    color: '#1A1B1E',
-                    '&::placeholder': {
-                      color: '#868e96'
-                    }
-                  }
-                }}
-                rightSectionWidth={100}
-                rightSection={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <ActionIcon
-                      onClick={handleMicClick}
-                      variant="subtle"
-                      color={isRecording ? "red" : "gray"}
-                      className={isRecording ? "animate-pulse" : ""}
-                      size="sm"
-                    >
-                      {isRecording ? (
-                        <IconMicrophoneOff size={16} />
-                      ) : (
-                        <IconMicrophone size={16} />
-                      )}
-                    </ActionIcon>
-                    <Button 
-                      type="submit" 
-                      radius="sm"
-                      size="sm"
-                      variant="filled"
-                    >
-                      <IconSend size={16} />
-                    </Button>
-                  </div>
-                }
+            <Stack spacing="md">
+              <VoiceInput 
+                onTranscriptionComplete={handleVoiceInput}
+                isProcessing={isProcessingVoice}
               />
-            </Group>
+              <Group align="flex-end">
+                <TextInput
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Type your message..."
+                  style={{ flex: 1 }}
+                  radius="sm"
+                  size="lg"
+                  styles={{
+                    input: {
+                      backgroundColor: '#ffffff',
+                      color: '#1A1B1E',
+                      '&::placeholder': {
+                        color: '#868e96'
+                      }
+                    }
+                  }}
+                />
+                <Button 
+                  type="submit" 
+                  radius="sm"
+                  size="lg"
+                  variant="filled"
+                  loading={isAiThinking}
+                >
+                  <IconSend size={16} />
+                </Button>
+              </Group>
+            </Stack>
           </form>
         </Stack>
       </Paper>
