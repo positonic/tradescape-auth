@@ -32,6 +32,7 @@ export const setupsRouter = createTRPCRouter({
         videoId: z.string().nullish(),
         pairId: z.number(),
         direction: z.string(),
+        privacy: z.enum(['public', 'private']).default('private'),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -63,8 +64,9 @@ export const setupsRouter = createTRPCRouter({
       const setup = await ctx.db.setup.create({
         data: {
           ...input,
+          userId: ctx.session.user.id,
           status: "active",
-          coinId: coin?.id, // Link to coin if found
+          coinId: coin?.id,
         },
         include: {
           pair: true,
@@ -77,6 +79,43 @@ export const setupsRouter = createTRPCRouter({
 
   getAll: protectedProcedure.query(async ({ ctx }) => {
     const setups = await ctx.db.setup.findMany({
+      include: {
+        pair: true,
+        video: true,
+        coin: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return setups;
+  }),
+
+  getPublic: protectedProcedure.query(async ({ ctx }) => {
+    const setups = await ctx.db.setup.findMany({
+      where: {
+        privacy: 'public'
+      },
+      include: {
+        pair: true,
+        video: true,
+        coin: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return setups;
+  }),
+
+  getPrivate: protectedProcedure.query(async ({ ctx }) => {
+    const setups = await ctx.db.setup.findMany({
+      where: {
+        AND: [
+          { privacy: 'private' },
+          { userId: ctx.session.user.id } // Add userId to Setup model
+        ]
+      },
       include: {
         pair: true,
         video: true,
@@ -107,6 +146,11 @@ export const setupsRouter = createTRPCRouter({
 
       if (!setup) {
         throw new Error('Setup not found');
+      }
+
+      // Check if user has permission to view this setup
+      if (setup.privacy === 'private' && setup.userId !== ctx.session.user.id) {
+        throw new Error('Not authorized to view this setup');
       }
 
       return setup;
