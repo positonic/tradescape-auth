@@ -90,26 +90,27 @@ export function AudioVisualizer({
     };
 
     const draw = () => {
-      if (!audioState.analyser) return;
+      const context = ctx;
+      if (!audioState.analyser || !context) return;
 
       const bufferLength = audioState.analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
       audioState.analyser.getByteFrequencyData(dataArray);
 
-      ctx.clearRect(0, 0, width, height);
+      context.clearRect(0, 0, width, height);
 
       const barCount = Math.min(bufferLength, Math.floor(width / (barWidth + barSpacing)));
       const totalWidth = barCount * (barWidth + barSpacing);
       const startX = (width - totalWidth) / 2;
 
-      ctx.fillStyle = createGradient();
+      context.fillStyle = createGradient();
 
       for (let i = 0; i < barCount; i++) {
         const barHeight = (dataArray[i] / 255.0) * height;
         const x = startX + i * (barWidth + barSpacing);
         const y = height - barHeight;
 
-        ctx.fillRect(x, y, barWidth, barHeight);
+        context.fillRect(x, y, barWidth, barHeight);
       }
 
       animationFrameId.current = requestAnimationFrame(draw);

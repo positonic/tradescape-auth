@@ -8,14 +8,20 @@ import { AudioVisualizer } from './AudioVisualizer';
 interface VoiceInputProps {
   onTranscriptionComplete: (text: string) => void;
   isProcessing: boolean;
+  onAudioEnabled?: (enabled: boolean) => void;
 }
 
-export function VoiceInput({ onTranscriptionComplete, isProcessing }: VoiceInputProps) {
+export function VoiceInput({ onTranscriptionComplete, isProcessing, onAudioEnabled }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Notify parent component when audio is enabled/disabled
+  useEffect(() => {
+    onAudioEnabled?.(audioEnabled);
+  }, [audioEnabled, onAudioEnabled]);
 
   useEffect(() => {
     return () => {
@@ -123,6 +129,7 @@ export function VoiceInput({ onTranscriptionComplete, isProcessing }: VoiceInput
             checked={audioEnabled}
             onChange={(event) => setAudioEnabled(event.currentTarget.checked)}
             size="md"
+            description="AI will respond with voice"
           />
         </Box>
 

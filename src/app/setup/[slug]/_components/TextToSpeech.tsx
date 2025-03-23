@@ -10,6 +10,7 @@ interface TextToSpeechProps {
 }
 
 export function TextToSpeech({ text }: TextToSpeechProps) {
+  console.log("TextToSpeech 2", text);
   const [isPlaying, setIsPlaying] = useState(false);
 
   const handlePlay = async () => {

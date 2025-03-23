@@ -20,6 +20,7 @@ import { IconSend, IconMicrophone, IconMicrophoneOff, IconCheck } from '@tabler/
 import { notifications } from '@mantine/notifications';
 import { TextToSpeech } from '~/app/_components/TextToSpeech';
 import { VoiceInput } from './VoiceInput';
+import { speakText } from './utils/tts';
 
 interface Message {
     type: 'system' | 'human' | 'ai' | 'tool';
@@ -107,6 +108,7 @@ export default function Chat() {
   const [selectedSetups, setSelectedSetups] = useState<number[]>([]);
   const [setups, setSetups] = useState<CoinData[]>([]);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
   
   const chat = api.tools.chat.useMutation({
     onSuccess: async (results) => {
@@ -250,6 +252,11 @@ export default function Chat() {
         content: agentResponse,
         tradeSetups: tradeSetups
       }]);
+
+      // Automatically speak the AI's response if audio is enabled
+      if (audioEnabled) {
+        await speakText(agentResponse);
+      }
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, { 
@@ -442,7 +449,9 @@ export default function Chat() {
                     </Text>
                     {message.type === 'ai' && (
                       <Group justify="flex-end" mt="xs">
-                        <TextToSpeech text={message.content} />
+                        {audioEnabled && (
+                          <TextToSpeech text={message.content} />
+                        )}
                       </Group>
                     )}
                   </Paper>
@@ -529,10 +538,11 @@ export default function Chat() {
           )}
 
           <form onSubmit={handleSubmit} style={{ marginTop: 'auto' }}>
-            <Stack spacing="md">
+            <Stack gap="md">
               <VoiceInput 
                 onTranscriptionComplete={handleVoiceInput}
                 isProcessing={isProcessingVoice}
+                onAudioEnabled={setAudioEnabled}
               />
               <Group align="flex-end">
                 <TextInput
