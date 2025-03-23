@@ -63,12 +63,8 @@ export const createTraderTools = (_ctx: Context): TraderTools => {
                   invalidation: setup.invalidation,
                   confidenceLevel: setup.confidenceLevel,
                   transcriptExcerpt: setup.transcriptExcerpt
-                })),
-                userId: _ctx.session.user.id,
-                privacy: 'private'
-              })),
-              userId: _ctx.session.user.id,
-              privacy: 'private'
+                }))
+              }))
             };
             
             return JSON.stringify(validatedSetups);
