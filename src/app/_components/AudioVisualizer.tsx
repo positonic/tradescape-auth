@@ -10,6 +10,7 @@ interface AudioVisualizerProps {
   fftSize?: number;
   minDecibels?: number;
   maxDecibels?: number;
+  stream: MediaStream;
 }
 
 interface AudioState {
@@ -35,6 +36,7 @@ export function AudioVisualizer({
   fftSize = 512,
   minDecibels = -75,
   maxDecibels = -30,
+  stream,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [audioState, setAudioState] = useState<AudioState>({
@@ -49,51 +51,65 @@ export function AudioVisualizer({
 
     const initializeAudio = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('🎹 Visualizer Init: Starting initialization');
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         const audioContext = new AudioContextClass();
         const analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
+        console.log('🎹 Visualizer Init: Created audio context and analyser');
 
         analyser.fftSize = fftSize;
         analyser.smoothingTimeConstant = smoothingTimeConstant;
         analyser.minDecibels = minDecibels;
         analyser.maxDecibels = maxDecibels;
+        console.log('🎹 Visualizer Init: Configured analyser node');
 
         source.connect(analyser);
         if (isActive) {
           setAudioState({ audioContext, analyser, source });
+          console.log('🎹 Visualizer Init: Setup complete');
         }
       } catch (error) {
-        console.error('Error initializing audio:', error);
+        console.error('🎹 Visualizer Error: Failed to initialize:', error);
       }
     };
 
     void initializeAudio();
 
     return () => {
+      console.log('🎹 Visualizer Cleanup: Starting cleanup');
       isActive = false;
       
       // Clean up audio resources
       if (audioState.source) {
+        console.log('🎹 Visualizer Cleanup: Disconnecting audio source');
         audioState.source.disconnect();
       }
       
       // Close audio context if it exists and is not already closed
       const ctx = audioState.audioContext;
       if (ctx && ctx.state !== 'closed') {
-        // Using void to handle the promise
+        console.log('🎹 Visualizer Cleanup: Closing AudioContext');
         void ctx.close().catch(error => {
-          console.error('Error closing audio context:', error);
+          console.error('🎹 Visualizer Error: Failed to close audio context:', error);
         });
       }
 
       // Cancel any pending animation frame
       if (animationFrameId.current !== null) {
+        console.log('🎹 Visualizer Cleanup: Canceling animation frame');
         cancelAnimationFrame(animationFrameId.current);
       }
+
+      // Reset audio state
+      setAudioState({
+        audioContext: null,
+        analyser: null,
+        source: null,
+      });
+      console.log('🎹 Visualizer Cleanup: Complete');
     };
-  }, [fftSize, smoothingTimeConstant, minDecibels, maxDecibels]);
+  }, [stream, fftSize, smoothingTimeConstant, minDecibels, maxDecibels]);
 
   useEffect(() => {
     if (!canvasRef.current || !audioState.analyser) return;

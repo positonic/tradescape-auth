@@ -151,65 +151,80 @@ export default function Chat() {
     }
   }, [messages]);
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
+  // const startRecording = async () => {
+  //   try {
+  //     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  //     const mediaRecorder = new MediaRecorder(stream);
+  //     mediaRecorderRef.current = mediaRecorder;
+  //     chunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
+  //     mediaRecorder.ondataavailable = (e) => {
+  //       if (e.data.size > 0) {
+  //         chunksRef.current.push(e.data);
+  //       }
+  //     };
 
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        stream.getTracks().forEach(track => track.stop());
+  //     mediaRecorder.onstop = async () => {
+  //       const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+  //       stream.getTracks().forEach(track => track.stop());
         
-        try {
-          // Convert blob to base64
-          const reader = new FileReader();
-          reader.readAsDataURL(audioBlob);
-          reader.onloadend = async () => {
-            const base64Audio = typeof reader.result === 'string' 
-              ? reader.result.split(',')[1]
-              : '';
-            if (base64Audio) {
-              const result = await transcribeAudio.mutateAsync({ audio: base64Audio });
-              if (result.text) {
-                setInput(result.text);
-              }
-            }
-          };
-        } catch (error) {
-          console.error('Transcription error:', error);
-        }
-      };
+  //       try {
+  //         // Convert blob to base64
+  //         const reader = new FileReader();
+  //         reader.readAsDataURL(audioBlob);
+  //         reader.onloadend = async () => {
+  //           const base64Audio = typeof reader.result === 'string' 
+  //             ? reader.result.split(',')[1]
+  //             : '';
+  //           if (base64Audio) {
+  //             const result = await transcribeAudio.mutateAsync({ audio: base64Audio });
+  //             if (result.text) {
+  //               setInput(result.text);
+  //             }
+  //           }
+  //         };
+  //       } catch (error) {
+  //         console.error('Transcription error:', error);
+  //       }
+  //     };
 
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (err) {
-      console.error('Error accessing microphone:', err);
-      alert('Could not access microphone. Please check your permissions.');
-    }
-  };
+  //     mediaRecorder.start();
+  //     setIsRecording(true);
+  //   } catch (err) {
+  //     console.error('Error accessing microphone:', err);
+  //     alert('Could not access microphone. Please check your permissions.');
+  //   }
+  // };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      // Stop the media recorder
       mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+
+      // Stop all tracks in the stream
+      if (chunksRef.current) {
+        chunksRef.current = [];
+      }
+
       setIsRecording(false);
     }
   };
 
-  const handleMicClick = async () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      await startRecording();
-    }
-  };
+  // Clean up resources when component unmounts
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
+      }
+      if (chunksRef.current) {
+        chunksRef.current = [];
+      }
+    };
+  }, []);
+
+  
 
   const handleVoiceInput = async (base64Audio: string) => {
     setIsProcessingVoice(true);
