@@ -7,7 +7,7 @@ import {
   Table, 
   Badge,
   Text,
-  Skeleton 
+  Skeleton
 } from '@mantine/core';
 import Link from "next/link";
 
@@ -21,7 +21,7 @@ export default function SetupsPage() {
   return (
     <Paper p="md" radius="sm">
       <Title order={2} mb="lg">Trade Setups</Title>
-      <Table>
+      <Table highlightOnHover>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Pair</Table.Th>
@@ -36,15 +36,16 @@ export default function SetupsPage() {
         </Table.Thead>
         <Table.Tbody>
           {setups?.map((setup) => (
-            <Table.Tr key={setup.id}>
+            <Table.Tr 
+              key={setup.id}
+              style={{ cursor: 'pointer' }}
+              onClick={() => window.location.href = `/setup/${setup.id}`}
+            >
               <Table.Td>{setup.coin?.symbol}</Table.Td>
               <Table.Td>
-                <Link 
-                  href={`/setup/${setup.id}`}
-                  className="text-blue-500 hover:text-blue-700 underline"
-                >
+                <span className="text-blue-500">
                   {setup.direction}
-                </Link>
+                </span>
               </Table.Td>
               <Table.Td>{setup.entryPrice?.toString() ?? 'Not specified'}</Table.Td>
               <Table.Td>{setup.takeProfitPrice?.toString() ?? 'Not specified'}</Table.Td>
@@ -60,7 +61,6 @@ export default function SetupsPage() {
               <Table.Td>
                 {new Date(setup.createdAt).toLocaleDateString()}
               </Table.Td>
-             
             </Table.Tr>
           ))}
           {!setups?.length && (
