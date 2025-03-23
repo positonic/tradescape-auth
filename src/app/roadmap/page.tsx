@@ -52,9 +52,30 @@ const roadmapData: RoadmapItem[] = [
     ]
   },
   {
+    title: "Shared Setups",
+    description: "Essential trading setup management and analysis.",
+    status: "inProgress",
+    icon: IconChartLine,
+    features: [
+      "Share your setups with other users",
+      "Role-based access",
+    ]
+  },
+  {
+    title: "Setup alerts",
+    description: "Create alerts to activate / invalidate setups",
+    status: "upcoming",
+    icon: IconChartBar,
+    features: [
+      "Context within which to activate / invalidate setups",
+      "Price and moving average alerts",
+      "Candle close alerts"
+    ]
+  },
+  {
     title: "Advanced Analytics",
     description: "Comprehensive trading performance analysis.",
-    status: "inProgress",
+    status: "upcoming",
     icon: IconChartBar,
     features: [
       "Performance metrics",
@@ -63,18 +84,18 @@ const roadmapData: RoadmapItem[] = [
       "Pattern recognition"
     ]
   },
-  {
-    title: "Team Trading",
-    description: "Collaborative trading features for teams.",
-    status: "upcoming",
-    icon: IconUsers,
-    features: [
-      "Shared setups",
-      "Team performance tracking",
-      "Role-based access",
-      "Communication tools"
-    ]
-  }
+  // {
+  //   title: "Team Trading",
+  //   description: "Collaborative trading features for teams.",
+  //   status: "upcoming",
+  //   icon: IconUsers,
+  //   features: [
+  //     "Shared setups",
+  //     "Team performance tracking",
+  //     "Role-based access",
+  //     "Communication tools"
+  //   ]
+  // }
 ];
 
 const getStatusIcon = (status: RoadmapItem["status"]) => {
