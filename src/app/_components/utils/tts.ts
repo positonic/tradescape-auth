@@ -1,8 +1,7 @@
-import { ElevenLabsClient } from "elevenlabs";
 import { notifications } from '@mantine/notifications';
 
 export async function speakText(text: string) {
-  let apiKey = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
   
   if (!apiKey) {
     notifications.show({
@@ -45,9 +44,9 @@ export async function speakText(text: string) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
+      const errorData = await response.json().catch(() => null) as { error?: { message?: string } } | null;
       throw new Error(
-        `ElevenLabs API error: ${response.status}${errorData ? ' - ' + JSON.stringify(errorData) : ''}`
+        `ElevenLabs API error: ${response.status}${errorData?.error?.message ? ' - ' + errorData.error.message : ''}`
       );
     }
 
@@ -63,7 +62,7 @@ export async function speakText(text: string) {
     });
 
     // Handle any errors during playback
-    audio.addEventListener('error', (e) => {
+    audio.addEventListener('error', (e: Event) => {
       console.error('Audio playback error:', e);
       URL.revokeObjectURL(audioUrl);
       notifications.show({
@@ -78,7 +77,7 @@ export async function speakText(text: string) {
     console.error('Error playing audio:', error);
     notifications.show({
       title: 'Error',
-      message: error instanceof Error ? error.message : 'Failed to play audio',
+      message: error instanceof Error ? error.message : String(error),
       color: 'red',
     });
   }

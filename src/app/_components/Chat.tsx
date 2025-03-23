@@ -211,18 +211,37 @@ export default function Chat() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const handleVoiceInput = async (base64Audio: string) => {
+    setIsProcessingVoice(true);
+    try {
+      const result = await transcribeAudio.mutateAsync({ audio: base64Audio });
+      if (result.text) {
+        setInput(result.text);
+        // Submit the transcribed text directly without event
+        void submitMessage(result.text);
+      }
+    } catch (error: unknown) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to process voice input. Please try again.',
+        color: 'red'
+      });
+    } finally {
+      setIsProcessingVoice(false);
+    }
+  };
 
-    const userMessage: Message = { type: 'human', content: input };
+  const submitMessage = async (message: string) => {
+    if (!message.trim()) return;
+
+    const userMessage: Message = { type: 'human', content: message };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsAiThinking(true);
 
     try {
       const response = await chat.mutateAsync({
-        message: input,
+        message: message,
         history: messages
       }) as ChatResponse;
 
@@ -253,7 +272,6 @@ export default function Chat() {
         tradeSetups: tradeSetups
       }]);
 
-      // Automatically speak the AI's response if audio is enabled
       if (audioEnabled) {
         await speakText(agentResponse);
       }
@@ -266,6 +284,11 @@ export default function Chat() {
     } finally {
       setIsAiThinking(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void submitMessage(input);
   };
 
   const renderMessageContent = (content: string) => {
@@ -367,26 +390,6 @@ export default function Chat() {
           color: 'red',
         });
       });
-  };
-
-  const handleVoiceInput = async (base64Audio: string) => {
-    setIsProcessingVoice(true);
-    try {
-      const result = await transcribeAudio.mutateAsync({ audio: base64Audio });
-      if (result.text) {
-        setInput(result.text);
-        // Automatically submit after transcription
-        handleSubmit(new Event('submit') as any);
-      }
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to process voice input. Please try again.',
-        color: 'red'
-      });
-    } finally {
-      setIsProcessingVoice(false);
-    }
   };
 
   return (

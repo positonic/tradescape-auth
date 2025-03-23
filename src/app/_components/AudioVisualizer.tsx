@@ -12,6 +12,19 @@ interface AudioVisualizerProps {
   maxDecibels?: number;
 }
 
+interface AudioState {
+  audioContext: AudioContext | null;
+  analyser: AnalyserNode | null;
+  source: MediaStreamAudioSourceNode | null;
+}
+
+// Add type for webkitAudioContext
+declare global {
+  interface Window {
+    webkitAudioContext: typeof AudioContext;
+  }
+}
+
 export function AudioVisualizer({
   width,
   height,
@@ -24,11 +37,7 @@ export function AudioVisualizer({
   maxDecibels = -30,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [audioState, setAudioState] = useState<{
-    audioContext: AudioContext | null;
-    analyser: AnalyserNode | null;
-    source: MediaStreamAudioSourceNode | null;
-  }>({
+  const [audioState, setAudioState] = useState<AudioState>({
     audioContext: null,
     analyser: null,
     source: null,
@@ -36,10 +45,12 @@ export function AudioVisualizer({
   const animationFrameId = useRef<number | null>(null);
 
   useEffect(() => {
+    let isActive = true;
+
     const initializeAudio = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         const audioContext = new AudioContextClass();
         const analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
@@ -50,22 +61,35 @@ export function AudioVisualizer({
         analyser.maxDecibels = maxDecibels;
 
         source.connect(analyser);
-        setAudioState({ audioContext, analyser, source });
+        if (isActive) {
+          setAudioState({ audioContext, analyser, source });
+        }
       } catch (error) {
         console.error('Error initializing audio:', error);
       }
     };
 
-    initializeAudio();
+    void initializeAudio();
 
     return () => {
+      isActive = false;
+      
+      // Clean up audio resources
       if (audioState.source) {
         audioState.source.disconnect();
       }
-      if (audioState.audioContext) {
-        audioState.audioContext.close();
+      
+      // Close audio context if it exists and is not already closed
+      const ctx = audioState.audioContext;
+      if (ctx && ctx.state !== 'closed') {
+        // Using void to handle the promise
+        void ctx.close().catch(error => {
+          console.error('Error closing audio context:', error);
+        });
       }
-      if (animationFrameId.current) {
+
+      // Cancel any pending animation frame
+      if (animationFrameId.current !== null) {
         cancelAnimationFrame(animationFrameId.current);
       }
     };
@@ -106,7 +130,8 @@ export function AudioVisualizer({
       context.fillStyle = createGradient();
 
       for (let i = 0; i < barCount; i++) {
-        const barHeight = (dataArray[i] / 255.0) * height;
+        const value = dataArray[i] ?? 0;
+        const barHeight = (value / 255.0) * height;
         const x = startX + i * (barWidth + barSpacing);
         const y = height - barHeight;
 
@@ -119,7 +144,7 @@ export function AudioVisualizer({
     draw();
 
     return () => {
-      if (animationFrameId.current) {
+      if (animationFrameId.current !== null) {
         cancelAnimationFrame(animationFrameId.current);
       }
     };

@@ -54,9 +54,11 @@ export function VoiceInput({ onTranscriptionComplete, isProcessing, onAudioEnabl
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
-          const base64Audio = reader.result?.toString().split(',')[1];
-          if (base64Audio) {
-            onTranscriptionComplete(base64Audio);
+          if (reader.result && typeof reader.result === 'string') {
+            const base64Audio = reader.result.split(',')[1];
+            if (base64Audio) {
+              onTranscriptionComplete(base64Audio);
+            }
           }
         };
       };
