@@ -186,62 +186,80 @@ export function VoiceInput({
         radius="lg"
         style={{ backgroundColor: "#f8f9fa" }}
       >
-        <Box style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <Tooltip
-            label={
-              isRecording
-                ? "Click to stop recording"
-                : "Click to start recording"
-            }
-            position="top"
-          >
-            <ActionIcon
-              size="xl"
-              radius="xl"
-              variant={isRecording ? "filled" : "light"}
-              color={isRecording ? "red" : "blue"}
-              onClick={isRecording ? stopRecording : startRecording}
-              loading={isProcessing}
-              style={{
-                transition: "all 0.2s ease",
-                transform: isRecording ? "scale(1.1)" : "scale(1)",
-              }}
+        <Box style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <Text size="sm" c="dimmed" mb="xs">
+            Click the microphone icon to start recording your voice, then click again to stop.
+          </Text>
+          
+          <Box style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <Tooltip
+              label={
+                isRecording
+                  ? "Click to finish recording"
+                  : "Click to start recording your voice message"
+              }
+              position="top"
+              maw={200}
             >
-              {isRecording ? (
-                <IconWaveSine
-                  size={24}
-                  style={{ animation: "pulse 1s infinite" }}
+              <ActionIcon
+                size="xl"
+                radius="xl"
+                variant={isRecording ? "filled" : "light"}
+                color={isRecording ? "red" : "blue"}
+                onClick={isRecording ? stopRecording : startRecording}
+                loading={isProcessing}
+                style={{
+                  transition: "all 0.2s ease",
+                  transform: isRecording ? "scale(1.1)" : "scale(1)",
+                }}
+              >
+                {isRecording ? (
+                  <Box style={{ position: 'relative' }}>
+                    <IconWaveSine
+                      size={24}
+                      style={{ animation: "pulse 1s infinite" }}
+                    />
+                    <Text size="xs" style={{ position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>
+                      Recording...
+                    </Text>
+                  </Box>
+                ) : (
+                  <IconMicrophone size={24} />
+                )}
+              </ActionIcon>
+            </Tooltip>
+
+            <Box style={{ width: "180px", height: "24px", marginTop: "4px" }}>
+              {isRecording && streamRef.current && (
+                <AudioVisualizer
+                  width={180}
+                  height={24}
+                  gradientColors={["#e7f5ff", "#228be6"]}
+                  barWidth={2}
+                  barSpacing={1}
+                  minDecibels={-75}
+                  maxDecibels={-30}
+                  smoothingTimeConstant={0.6}
+                  fftSize={512}
+                  stream={streamRef.current}
                 />
-              ) : (
-                <IconMicrophone size={24} />
               )}
-            </ActionIcon>
-          </Tooltip>
+            </Box>
 
-          <Box style={{ width: "180px", height: "24px", marginTop: "4px" }}>
-            {isRecording && streamRef.current && (
-              <AudioVisualizer
-                width={180}
-                height={24}
-                gradientColors={["#e7f5ff", "#228be6"]}
-                barWidth={2}
-                barSpacing={1}
-                minDecibels={-75}
-                maxDecibels={-30}
-                smoothingTimeConstant={0.6}
-                fftSize={512}
-                stream={streamRef.current}
+            <Tooltip
+              label="When enabled, AI will respond to you with voice"
+              position="top"
+              maw={200}
+            >
+              <Switch
+                label="Enable voice responses"
+                checked={audioEnabled}
+                onChange={(event) => setAudioEnabled(event.currentTarget.checked)}
+                size="md"
+                description="AI will respond with voice"
               />
-            )}
+            </Tooltip>
           </Box>
-
-          <Switch
-            label="Enable voice responses"
-            checked={audioEnabled}
-            onChange={(event) => setAudioEnabled(event.currentTarget.checked)}
-            size="md"
-            description="AI will respond with voice"
-          />
         </Box>
 
         <style jsx global>{`
