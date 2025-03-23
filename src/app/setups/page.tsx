@@ -9,7 +9,6 @@ import {
   Text,
   Skeleton
 } from '@mantine/core';
-import Link from "next/link";
 
 export default function SetupsPage() {
   const { data: setups, isLoading } = api.setups.getAll.useQuery();

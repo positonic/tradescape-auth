@@ -1,136 +1,234 @@
-import { NextPage } from "next";
-import React from "react";
-import { Container, Stack, Title, Text, Card } from "@mantine/core";
+"use client";
+
+import { Container, Title, Timeline, Text, Card, ThemeIcon, Badge, Stack } from "@mantine/core";
+import { 
+  IconCheck, 
+  IconProgressCheck,
+  IconLock,
+  IconBrain,
+  IconCalendarStats,
+  IconUsers,
+  IconShieldLock,
+  IconDatabase,
+  IconMicrophone,
+  IconChartLine,
+  IconChartBar
+} from "@tabler/icons-react";
+import { motion } from "framer-motion";
 
 interface RoadmapItem {
   title: string;
   description: string;
-  embed?: React.ReactNode;
+  status: "completed" | "inProgress" | "upcoming";
+  features: string[];
+  icon: React.ElementType;
+  video?: string;
 }
 
-interface RoadmapSection {
-  title: string;
-  items: RoadmapItem[];
-}
-
-const roadmapData: RoadmapSection[] = [
+const roadmapData: RoadmapItem[] = [
   {
-    title: "🚀 Live Now",
-    items: [
-      {
-        title: "Record voice with agent in a 'market scan' session",
-        description:
-          "Record your voice and scan a few markets",
-          embed: (
-            <div style={{ position: 'relative', paddingBottom: '62.43%', height: 0 }}>
-              <iframe 
-                src="https://www.loom.com/share/768dbd019de14abeb11fbcc044e1159c?sid=58e72991-0c85-4f3f-a1e5-bed240b8b9b7"
-                frameBorder="0"
-                allowFullScreen
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-              />
-            </div>
-          ),
-      },
-      {
-        title: "Crypto analysis Video Transcription & Actionable Insights",
-        description:
-          "Provide a YouTube URL, transcribe its content, and take action on the transcription.",
-          embed: (
-            <div style={{ position: 'relative', paddingBottom: '62.43%', height: 0 }}>
-              <iframe 
-                src="https://www.loom.com/embed/e38cc17d51184d4880583ecaacdc9ea8?sid=50036dcf-4dfc-42d1-aecf-aa7b788689e6"
-                frameBorder="0"
-                allowFullScreen
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-              />
-            </div>
-          ),
-      },
-      {
-        title: "Natural Language Task Management with LLM Agents",
-        description:
-          "Users can ask the AI to create tasks using natural language (e.g., 'Today I want to call my mum, go shopping, and rent a car'). Tasks are placed in relevant projects at the right time and place.",
-        embed: (
-          <div style={{ position: 'relative', paddingBottom: '62.43%', height: 0 }}>
-            <iframe 
-              src="https://www.loom.com/embed/cd1e3584aac1429fa448ef67723591f7?sid=90418359-b813-423f-8e84-7786bf59dd53"
-              frameBorder="0"
-              allowFullScreen
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-            />
-          </div>
-        ),
-      },
+    title: "Voice-Enabled Trade Analysis",
+    description: "Record and analyze trading setups using voice commands.",
+    status: "completed",
+    icon: IconMicrophone,
+    features: [
+      "Voice recording for trade analysis",
+      "Automatic setup detection",
+      "Real-time audio visualization",
+      "Direct storage to user account"
     ],
+    video: ""
   },
   {
-    title: "⚡ In Progress",
-    items: [
-      {
-        title: "Conversational market scanning",
-        description:
-          "Scan markets with your co-pilot who saves the setups for you.",
-      },
-      
-    ],
+    title: "Core Trading Features",
+    description: "Essential trading setup management and analysis.",
+    status: "completed",
+    icon: IconChartLine,
+    features: [
+      "Setup creation and tracking",
+      "Price level management",
+      "Trade status monitoring",
+      "Basic analytics"
+    ]
   },
   {
-    title: "⏳ Coming Soon",
-    items: [
-      {
-        title: "Journaling, Day Planning, Morning & Evening Routines",
-        description:
-          "AI-assisted daily planning and structured routines for better productivity.",
-      },
-      {
-        title: "ELIZA Integration",
-        description:
-          "Currently working on deployment. Next steps include creating an ELIZA plugin for to-do and video functionality.",
-      }
-    ],
+    title: "Advanced Analytics",
+    description: "Comprehensive trading performance analysis.",
+    status: "inProgress",
+    icon: IconChartBar,
+    features: [
+      "Performance metrics",
+      "Win rate analysis",
+      "Risk management tools",
+      "Pattern recognition"
+    ]
+  },
+  {
+    title: "Team Trading",
+    description: "Collaborative trading features for teams.",
+    status: "upcoming",
+    icon: IconUsers,
+    features: [
+      "Shared setups",
+      "Team performance tracking",
+      "Role-based access",
+      "Communication tools"
+    ]
   }
 ];
 
-const RoadmapPage: NextPage = () => {
-  return (
-    <Container size="lg" py="xl">
-      <Title order={1} mb="md" ta="center">
-        🚀 Product Roadmap
-      </Title>
-
-      <Stack gap="xl">
-        {roadmapData.map((section) => (
-          <div key={section.title}>
-            <Title order={2} mb="md">
-              {section.title}
-            </Title>
-            
-            <Stack gap="md">
-              {section.items.map((item) => (
-                <Card key={item.title} withBorder>
-                  <Text size="lg" fw={500} mb="xs">
-                    {item.title}
-                  </Text>
-                  <Text c="dimmed" mb={item.embed ? "md" : 0}>
-                    {item.description}
-                  </Text>
-                  {item.embed}
-                </Card>
-              ))}
-            </Stack>
-          </div>
-        ))}
-
-        <div className="mt-12 text-center">
-          <p className="text-lg">
-            🚀 **Get Involved:** Join discussions on **[GitHub](https://github.com/positonic/ai-todo/discussions)** to help shape the
-            roadmap and influence upcoming features.
-          </p>
-        </div>
-      </Stack>
-    </Container>
-  );
+const getStatusIcon = (status: RoadmapItem["status"]) => {
+  switch (status) {
+    case "completed":
+      return IconCheck;
+    case "inProgress":
+      return IconProgressCheck;
+    case "upcoming":
+      return IconLock;
+  }
 };
 
-export default RoadmapPage;
+const getStatusColor = (status: RoadmapItem["status"]) => {
+  switch (status) {
+    case "completed":
+      return "green";
+    case "inProgress":
+      return "violet";
+    case "upcoming":
+      return "gray";
+  }
+};
+
+const getStatusBadge = (status: RoadmapItem["status"]) => {
+  switch (status) {
+    case "completed":
+      return "Completed";
+    case "inProgress":
+      return "In Progress";
+    case "upcoming":
+      return "Coming Soon";
+  }
+};
+
+export default function RoadmapPage() {
+  return (
+    <Container size="lg" py="xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center mb-12"
+      >
+        <Title
+          className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent mb-4"
+        >
+          Product Roadmap
+        </Title>
+        <Text c="dimmed" size="xl" className="max-w-3xl mx-auto">
+          Track our journey from idea to reality. See what we&apos;ve built and what&apos;s coming next.
+        </Text>
+      </motion.div>
+
+      <Timeline active={3} bulletSize={32} lineWidth={2} color="violet">
+        {roadmapData.map((item, index) => (
+          <Timeline.Item
+            key={item.title}
+            bullet={
+              <ThemeIcon
+                size={32}
+                radius="xl"
+                color={getStatusColor(item.status)}
+                variant={item.status === "upcoming" ? "light" : "filled"}
+              >
+                <item.icon size={18} />
+              </ThemeIcon>
+            }
+          >
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+            >
+              <Card withBorder className="mb-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <Text size="lg" fw={500} className="mb-1">
+                      {item.title}
+                    </Text>
+                    <Text size="sm" c="dimmed">
+                      {item.description}
+                    </Text>
+                  </div>
+                  <Badge
+                    color={getStatusColor(item.status)}
+                    variant={item.status === "upcoming" ? "light" : "filled"}
+                    size="lg"
+                  >
+                    {getStatusBadge(item.status)}
+                  </Badge>
+                </div>
+
+                <Stack gap="xs">
+                  {item.features.map((feature, fIndex) => (
+                    <motion.div
+                      key={feature}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: (index * 0.1) + (fIndex * 0.05) }}
+                    >
+                      <Text size="sm" className="flex items-start gap-2">
+                        <IconCheck 
+                          size={16} 
+                          className={item.status === "upcoming" ? "text-gray-500" : "text-violet-400"} 
+                        />
+                        {feature}
+                      </Text>
+                    </motion.div>
+                  ))}
+                </Stack>
+
+                {item.video && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: (index * 0.1) + 0.3 }}
+                    className="mt-4"
+                  >
+                    <div className="relative pt-[62.5%]">
+                      <iframe
+                        src={item.video}
+                        className="absolute inset-0 w-full h-full rounded-md"
+                        frameBorder="0"
+                        allowFullScreen
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </Card>
+            </motion.div>
+          </Timeline.Item>
+        ))}
+      </Timeline>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 1 }}
+        className="mt-12 text-center"
+      >
+        <Text c="dimmed">
+          🚀 Want to influence our roadmap? Join the discussion on{" "}
+          <Text
+            component="a"
+            href="https://github.com/positonic/ai-todo/discussions"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-violet-400 hover:text-violet-300 transition-colors"
+          >
+            GitHub
+          </Text>
+        </Text>
+      </motion.div>
+    </Container>
+  );
+}
