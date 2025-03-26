@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { TRPCError } from '@trpc/server';
 
 // Keep in-memory store for development/debugging
 const transcriptionStore: Record<string, string[]> = {};
@@ -11,8 +12,22 @@ const logStore = () => {
   console.log('🎙️ =====================================================\n');
 };
 
+// Middleware to check API key
+const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
+  const apiKey = ctx.headers.get('x-api-key');
+  
+  if (!apiKey || apiKey !== process.env.TRANSCRIPTION_API_KEY) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Invalid API key',
+    });
+  }
+  
+  return next();
+});
+
 export const transcriptionRouter = createTRPCRouter({
-  startSession: publicProcedure
+  startSession: apiKeyMiddleware
     .mutation(async ({ ctx }) => {
       // Create record in database using ctx.db instead of prisma
       const session = await ctx.db.transcriptionSession.create({
@@ -33,7 +48,7 @@ export const transcriptionRouter = createTRPCRouter({
       };
     }),
 
-  saveTranscription: publicProcedure
+  saveTranscription: apiKeyMiddleware
     .input(z.object({
       id: z.string(), // Changed from sessionId to id
       transcription: z.string(),
