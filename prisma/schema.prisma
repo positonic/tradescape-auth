@@ -66,6 +66,7 @@ model User {
     userPairs     UserPair[]
     exchangeUsers ExchangeUser[]
     setups        Setup[]
+    transcriptionSessions TranscriptionSession[]
 }
 
 model VerificationToken {
@@ -327,5 +328,18 @@ model ExchangeUser {
   lastTradesSyncTime DateTime?
   user       User     @relation(fields: [userId], references: [id])
   exchange   Exchange @relation(fields: [exchangeId], references: [id])
+}
+
+model TranscriptionSession {
+  id            String   @id @default(cuid())
+  sessionId     String   @unique // This will store our session_${timestamp} identifier
+  transcription String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+
+  @@index([sessionId])
+  @@index([userId])
 }
  
