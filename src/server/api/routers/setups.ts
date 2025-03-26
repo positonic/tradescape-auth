@@ -22,19 +22,16 @@ export const setupsRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure
-    .input(
-      z.object({
-        content: z.string(),
-        entryPrice: z.number().nullish(),
-        takeProfitPrice: z.number().nullish(),
-        stopPrice: z.number().nullish(),
-        timeframe: z.string().nullish(),
-        videoId: z.string().nullish(),
-        pairId: z.number(),
-        direction: z.string(),
-        privacy: z.enum(['public', 'private']).default('private'),
-      })
-    )
+    .input(z.object({
+      content: z.string(),
+      entryPrice: z.number().nullish(),
+      takeProfitPrice: z.number().nullish(),
+      stopPrice: z.number().nullish(),
+      timeframe: z.string().nullish(),
+      direction: z.string(),
+      pairId: z.number(),
+      privacy: z.string().default('private'),
+    }))
     .mutation(async ({ ctx, input }) => {
       console.log("input is ", input);
       
@@ -77,6 +74,57 @@ export const setupsRouter = createTRPCRouter({
       return setup;
     }),
 
+  createFromTranscription: protectedProcedure
+    .input(z.object({
+      transcriptionId: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const session = await ctx.db.transcriptionSession.findUnique({
+        where: { id: input.transcriptionId }
+      });
+
+      if (!session?.transcription) {
+        throw new Error('No transcription found');
+      }
+
+      // Get setups from transcription
+      const setupsData = await getSetups(session.transcription, 'trade-setups');
+      
+      // Create setups for each trade setup found
+      const createdSetups = [];
+      
+      for (const coin of setupsData.coins) {
+        for (const setup of coin.tradeSetups) {
+          // Find or create the pair
+          const pair = await ctx.db.pair.upsert({
+            where: { symbol: coin.coinSymbol },
+            create: { symbol: coin.coinSymbol },
+            update: {},
+          });
+
+          // Create the setup
+          const createdSetup = await ctx.db.setup.create({
+            data: {
+              content: setup.transcriptExcerpt,
+              direction: setup.position,
+              entryPrice: setup.entryPrice ? parseFloat(setup.entryPrice) : null,
+              takeProfitPrice: setup.t1 ? parseFloat(setup.t1) : null,
+              stopPrice: setup.stopLossPrice ?? null,
+              timeframe: setup.timeframe ?? null,
+              status: "active",
+              privacy: "private",
+              pairId: pair.id,
+              userId: ctx.session.user.id,
+            },
+          });
+
+          createdSetups.push(createdSetup);
+        }
+      }
+
+      return createdSetups;
+    }),
+
   getAll: protectedProcedure.query(async ({ ctx }) => {
     const setups = await ctx.db.setup.findMany({
       include: {
@@ -113,7 +161,7 @@ export const setupsRouter = createTRPCRouter({
       where: {
         AND: [
           { privacy: 'private' },
-          { userId: ctx.session.user.id } // Add userId to Setup model
+          { userId: ctx.session.user.id }
         ]
       },
       include: {

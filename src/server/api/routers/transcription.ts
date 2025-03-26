@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, publicProcedure, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from '@trpc/server';
+import { getSetups } from "~/server/services/videoService";
 
 // Keep in-memory store for development/debugging
 const transcriptionStore: Record<string, string[]> = {};
@@ -16,24 +17,47 @@ const logStore = () => {
 const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
   const apiKey = ctx.headers.get('x-api-key');
   
-  if (!apiKey || apiKey !== process.env.TRANSCRIPTION_API_KEY) {
+  if (!apiKey) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
-      message: 'Invalid API key',
+      message: 'API key is required',
     });
   }
+
+  console.log('AA apiKey', apiKey);
+  // Find the verification token and associated user
+  const verificationToken = await ctx.db.verificationToken.findFirst({
+    where: {
+      token: apiKey
+    },
+  });
+  console.log('AA verificationToken', verificationToken);
   
-  return next();
+  if (!verificationToken) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Invalid or expired API key',
+    });
+  }
+
+  // Add the user to the context for use in the procedures
+  return next({
+    ctx: {
+      ...ctx,
+      userId: verificationToken.userId,
+    },
+  });
 });
 
 export const transcriptionRouter = createTRPCRouter({
   startSession: apiKeyMiddleware
     .mutation(async ({ ctx }) => {
-      // Create record in database using ctx.db instead of prisma
+      // Create record in database using ctx.db
       const session = await ctx.db.transcriptionSession.create({
         data: {
           sessionId: `session_${Date.now()}`, // Keep this as a reference
           transcription: "", // Start with empty transcription
+          userId: ctx.userId, // Add the userId from the middleware
         },
       });
       
@@ -50,7 +74,7 @@ export const transcriptionRouter = createTRPCRouter({
 
   saveTranscription: apiKeyMiddleware
     .input(z.object({
-      id: z.string(), // Changed from sessionId to id
+      id: z.string(),
       transcription: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -58,7 +82,7 @@ export const transcriptionRouter = createTRPCRouter({
       
       // Update database using ctx.db
       await ctx.db.transcriptionSession.update({
-        where: { id }, // Use the database ID
+        where: { id },
         data: { 
           transcription,
           updatedAt: new Date(),
@@ -73,11 +97,104 @@ export const transcriptionRouter = createTRPCRouter({
       
       console.log('\n🎙️ Saved transcription for session:', id);
       logStore();
-      
+
       return {
         success: true,
         id,
         savedAt: new Date().toISOString(),
       };
+    }),
+
+  getSessions: protectedProcedure
+    .query(async ({ ctx }) => {
+      return ctx.db.transcriptionSession.findMany({
+        where: {
+          userId: ctx.session.user.id
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+    }),
+
+  getById: protectedProcedure
+    .input(z.object({
+      id: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      const session = await ctx.db.transcriptionSession.findUnique({
+        where: { id: input.id },
+        include: { user: true }
+      });
+
+      if (!session) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Session not found'
+        });
+      }
+
+      if (session.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not authorized to view this session'
+        });
+      }
+
+      return session;
+    }),
+
+  createSetups: protectedProcedure
+    .input(z.object({
+      transcriptionId: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const session = await ctx.db.transcriptionSession.findUnique({
+        where: { id: input.transcriptionId }
+      });
+
+      if (!session?.transcription) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'No transcription found'
+        });
+      }
+
+      // Get setups from transcription
+      const setupsData = await getSetups(session.transcription, 'trade-setups');
+      
+      // Create setups for each trade setup found
+      const createdSetups = [];
+      
+      for (const coin of setupsData.coins) {
+        for (const setup of coin.tradeSetups) {
+          // Find or create the pair
+          const pair = await ctx.db.pair.upsert({
+            where: { symbol: coin.coinSymbol },
+            create: { symbol: coin.coinSymbol },
+            update: {},
+          });
+
+          // Create the setup
+          const createdSetup = await ctx.db.setup.create({
+            data: {
+              content: setup.transcriptExcerpt,
+              direction: setup.position,
+              entryPrice: setup.entryPrice ? parseFloat(setup.entryPrice) : null,
+              takeProfitPrice: setup.t1 ? parseFloat(setup.t1) : null,
+              stopPrice: setup.stopLossPrice ?? null,
+              timeframe: setup.timeframe ?? null,
+              status: "active",
+              privacy: "private",
+              pairId: pair.id,
+              userId: ctx.session.user.id,
+            },
+          });
+
+          createdSetups.push(createdSetup);
+        }
+      }
+
+      return createdSetups;
     }),
 }); 

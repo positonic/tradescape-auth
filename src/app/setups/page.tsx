@@ -9,16 +9,36 @@ import {
   Text,
   Skeleton,
   Tabs,
-  Group
+  Group,
+  Button,
 } from '@mantine/core';
 import { useRouter } from 'next/navigation';
+import { notifications } from '@mantine/notifications';
 
 export default function SetupsPage() {
   const { data: publicSetups, isLoading: publicLoading } = api.setups.getPublic.useQuery();
   const { data: privateSetups, isLoading: privateLoading } = api.setups.getPrivate.useQuery();
+  const { data: transcriptionSessions, isLoading: transcriptionsLoading } = api.transcription.getSessions.useQuery();
   const router = useRouter();
 
-  if (publicLoading || privateLoading) {
+  const createSetupsMutation = api.setups.createFromTranscription.useMutation({
+    onSuccess: () => {
+      notifications.show({
+        title: 'Success',
+        message: 'Setups created successfully',
+        color: 'green',
+      });
+    },
+    onError: (error) => {
+      notifications.show({
+        title: 'Error',
+        message: error.message,
+        color: 'red',
+      });
+    }
+  });
+
+  if (publicLoading || privateLoading || transcriptionsLoading) {
     return <Skeleton height={400} />;
   }
 
@@ -43,9 +63,9 @@ export default function SetupsPage() {
             style={{ cursor: 'pointer' }}
             onClick={() => router.push(`/setup/${setup.id}`)}
           >
-            <Table.Td>{setup.coin?.symbol}</Table.Td>
+            <Table.Td>{setup.pair.symbol}</Table.Td>
             <Table.Td>
-              <span className="text-blue-500">
+              <span className={setup.direction.toLowerCase() === 'long' ? 'text-green-500' : 'text-red-500'}>
                 {setup.direction}
               </span>
             </Table.Td>
@@ -81,6 +101,57 @@ export default function SetupsPage() {
     </Table>
   );
 
+  const renderTranscriptionsTable = () => (
+    <Table highlightOnHover>
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Session ID</Table.Th>
+          <Table.Th>Created</Table.Th>
+          <Table.Th>Updated</Table.Th>
+          <Table.Th>Actions</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {transcriptionSessions?.map((session) => (
+          <Table.Tr 
+            key={session.id}
+            style={{ cursor: 'pointer' }}
+            onClick={() => router.push(`/transcription/${session.id}`)}
+          >
+            <Table.Td>{session.sessionId}</Table.Td>
+            <Table.Td>{new Date(session.createdAt).toLocaleDateString()}</Table.Td>
+            <Table.Td>{new Date(session.updatedAt).toLocaleDateString()}</Table.Td>
+            <Table.Td onClick={(e) => e.stopPropagation()}>
+              <Button
+                size="xs"
+                onClick={() => {
+                  if (session.transcription) {
+                    createSetupsMutation.mutate({
+                      transcriptionId: session.id
+                    });
+                  }
+                }}
+                loading={createSetupsMutation.isPending}
+                disabled={!session.transcription}
+              >
+                Create Setups
+              </Button>
+            </Table.Td>
+          </Table.Tr>
+        ))}
+        {!transcriptionSessions?.length && (
+          <Table.Tr>
+            <Table.Td colSpan={4}>
+              <Text ta="center" c="dimmed">
+                No transcription sessions found
+              </Text>
+            </Table.Td>
+          </Table.Tr>
+        )}
+      </Table.Tbody>
+    </Table>
+  );
+
   return (
     <Paper p="md" radius="sm">
       <Title order={2} mb="lg">Trade Setups</Title>
@@ -88,6 +159,7 @@ export default function SetupsPage() {
         <Tabs.List>
           <Tabs.Tab value="private">My Setups</Tabs.Tab>
           <Tabs.Tab value="public">Public Setups</Tabs.Tab>
+          <Tabs.Tab value="transcriptions">Transcriptions</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="private" pt="md">
@@ -96,8 +168,9 @@ export default function SetupsPage() {
         <Tabs.Panel value="public" pt="md">
           {renderSetupsTable(publicSetups)}
         </Tabs.Panel>
-
-        
+        <Tabs.Panel value="transcriptions" pt="md">
+          {renderTranscriptionsTable()}
+        </Tabs.Panel>
       </Tabs>
     </Paper>
   );
