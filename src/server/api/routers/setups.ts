@@ -1,5 +1,26 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { TRPCError } from "@trpc/server";
+import { getSetups } from "~/server/services/videoService";
+
+// First, define the types for the response
+type TradeSetup = {
+  transcriptExcerpt: string;
+  position: 'long' | 'short';
+  entryPrice: string;
+  t1: string;
+  stopLossPrice: number;
+  timeframe: string;
+};
+
+type Coin = {
+  coinSymbol: string;
+  tradeSetups: TradeSetup[];
+};
+
+type SetupResponse = {
+  coins: Coin[];
+};
 
 export const setupsRouter = createTRPCRouter({
   getPairBySymbol: protectedProcedure
@@ -76,7 +97,7 @@ export const setupsRouter = createTRPCRouter({
 
   createFromTranscription: protectedProcedure
     .input(z.object({
-      transcriptionId: z.string()
+      transcriptionId: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
       const session = await ctx.db.transcriptionSession.findUnique({
@@ -84,16 +105,29 @@ export const setupsRouter = createTRPCRouter({
       });
 
       if (!session?.transcription) {
-        throw new Error('No transcription found');
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'No transcription found'
+        });
       }
 
-      // Get setups from transcription
-      const setupsData = await getSetups(session.transcription, 'trade-setups');
+      // Get setups from transcription with type assertion
+      const setupsData = await getSetups(session.transcription, 'trade-setups') as SetupResponse;
       
+      // Validate the response structure
+      if (!setupsData || !Array.isArray(setupsData.coins)) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Invalid response format from setup parser'
+        });
+      }
+
       // Create setups for each trade setup found
       const createdSetups = [];
       
       for (const coin of setupsData.coins) {
+        if (!coin.tradeSetups || !Array.isArray(coin.tradeSetups)) continue;
+
         for (const setup of coin.tradeSetups) {
           // Find or create the pair
           const pair = await ctx.db.pair.upsert({
@@ -102,15 +136,15 @@ export const setupsRouter = createTRPCRouter({
             update: {},
           });
 
-          // Create the setup
+          // Create the setup with type-safe values
           const createdSetup = await ctx.db.setup.create({
             data: {
-              content: setup.transcriptExcerpt,
+              content: setup.transcriptExcerpt || '',
               direction: setup.position,
               entryPrice: setup.entryPrice ? parseFloat(setup.entryPrice) : null,
               takeProfitPrice: setup.t1 ? parseFloat(setup.t1) : null,
-              stopPrice: setup.stopLossPrice ?? null,
-              timeframe: setup.timeframe ?? null,
+              stopPrice: setup.stopLossPrice || null,
+              timeframe: setup.timeframe || null,
               status: "active",
               privacy: "private",
               pairId: pair.id,

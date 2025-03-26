@@ -40,11 +40,20 @@ const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
     });
   }
 
-  // Add the user to the context for use in the procedures
+  // Type-safe error handling
+  const userId = verificationToken.userId;
+  if (!userId) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'No user associated with this API key',
+    });
+  }
+
+  // Add the user id to the context
   return next({
     ctx: {
       ...ctx,
-      userId: verificationToken.userId,
+      userId, // Now type-safe
     },
   });
 });
@@ -52,12 +61,15 @@ const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
 export const transcriptionRouter = createTRPCRouter({
   startSession: apiKeyMiddleware
     .mutation(async ({ ctx }) => {
+      // Type-safe userId access
+      const userId = ctx.userId;
+      
       // Create record in database using ctx.db
       const session = await ctx.db.transcriptionSession.create({
         data: {
           sessionId: `session_${Date.now()}`, // Keep this as a reference
           transcription: "", // Start with empty transcription
-          userId: ctx.userId, // Add the userId from the middleware
+          userId, // Now type-safe
         },
       });
       

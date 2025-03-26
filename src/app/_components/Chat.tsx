@@ -19,7 +19,7 @@ import { TradeSetups } from '~/app/_components/TradeSetups';
 import { IconSend, IconMicrophone, IconMicrophoneOff, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { TextToSpeech } from '~/app/_components/TextToSpeech';
-import { VoiceInput } from './VoiceInput';
+//import { VoiceInput } from './VoiceInput';
 import { speakText } from './utils/tts';
 
 interface Message {
@@ -557,11 +557,11 @@ export default function Chat() {
 
           <form onSubmit={handleSubmit} style={{ marginTop: 'auto' }}>
             <Stack gap="md">
-              <VoiceInput 
+              {/* <VoiceInput 
                 onTranscriptionComplete={handleVoiceInput}
                 isProcessing={isProcessingVoice}
                 onAudioEnabled={setAudioEnabled}
-              />
+              /> */}
               <Group align="flex-end">
                 <TextInput
                   value={input}

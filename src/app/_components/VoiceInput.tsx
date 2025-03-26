@@ -55,7 +55,7 @@ export function VoiceInput({
   useEffect(() => {
     return () => {
       console.log('🎤 Cleanup: Component unmounting');
-      cleanupAudioResources();
+      void cleanupAudioResources();
     };
   }, []);
 
@@ -87,7 +87,7 @@ export function VoiceInput({
     }
     
     if (audioContextRef.current) {
-      audioContextRef.current.close();
+      void audioContextRef.current.close();
       audioContextRef.current = null;
     }
     
@@ -205,7 +205,7 @@ export function VoiceInput({
       const checkSilence = () => {
         // Log the call count and current state
         frameCountRef.current++;
-        console.log('�� Silence Check:', {
+        console.log('🎤 Silence Check:', {
           frameCount: frameCountRef.current,
           isRecording,
           hasAnalyser: !!analyserRef.current,
@@ -224,6 +224,7 @@ export function VoiceInput({
         analyserRef.current.getByteFrequencyData(dataArray);
         let sum = 0;
         for (let i = 0; i < bufferLength; i++) {
+          // @ts-expect-error: We know dataArray is defined here because we created it above
           sum += dataArray[i];
         }
         
@@ -256,7 +257,7 @@ export function VoiceInput({
             
             if (silenceDuration > SILENCE_DURATION && recordingDuration > MIN_RECORDING_LENGTH) {
               console.log(`🎤 Silence: Threshold reached! Processing chunk after ${silenceDuration}ms of silence`);
-              processAudioChunk();
+              void processAudioChunk();
               silenceStartRef.current = null;
             }
           }
@@ -270,7 +271,7 @@ export function VoiceInput({
         // Ensure we don't go too long without processing
         if (recordingDuration > MAX_CHUNK_DURATION) {
           console.log(`🎤 Duration: Max chunk duration reached (${MAX_CHUNK_DURATION}ms), processing`);
-          processAudioChunk();
+          void processAudioChunk();
         }
         
         // Log before and after requestAnimationFrame call
@@ -319,7 +320,7 @@ export function VoiceInput({
         console.log('🎤 Timer: Forced processing timer fired');
         if (chunksRef.current.length > 0) {
           console.log('🎤 Timer: Found chunks to process, forcing processing');
-          processAudioChunk();
+          void processAudioChunk();
         } else {
           console.log('🎤 Timer: No chunks to process');
         }
@@ -346,7 +347,7 @@ export function VoiceInput({
       }
       
       // Clean up resources
-      cleanupAudioResources();
+      void cleanupAudioResources();
       setIsRecording(false);
       console.log('🎤 Stop: Recording stopped completely');
     }
