@@ -3,6 +3,7 @@ import { toolRouter } from "~/server/api/routers/tool";
 import { discordRouter } from "./routers/discord";
 import { setupsRouter } from "./routers/setups";
 import { createTRPCRouter, createCallerFactory } from "./trpc";
+import { transcriptionRouter } from "./routers/transcription";
 
 /**
  * This is the primary router for your server.
@@ -14,6 +15,8 @@ export const appRouter = createTRPCRouter({
   tools: toolRouter,
   discord: discordRouter,
   setups: setupsRouter,
+  transcription: transcriptionRouter,
+
 });
 
 // export type definition of API

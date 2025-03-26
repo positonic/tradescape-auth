@@ -315,6 +315,8 @@ export const toolRouter = createTRPCRouter({
         formData.append('language', 'english');
         formData.append('response_format', 'json');
 
+        console.log('🎤 API: About to send transcription request with data length:', base64Data.length);
+        console.log('formData is ', formData);
         const response = await fetch('https://api.lemonfox.ai/v1/audio/transcriptions', {
           method: 'POST',
           headers: {
@@ -326,7 +328,7 @@ export const toolRouter = createTRPCRouter({
         if (!response.ok) {
           throw new Error(`Lemonfox API error: ${response.statusText}`);
         }
-
+        console.log('🎤 API: Response from Lemonfox transcription:', response);
         const data = await response.json() as LemonfoxResponse;
         return { text: data.text };
       } catch (error) {
