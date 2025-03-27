@@ -24,29 +24,6 @@ export default async function SetupPage({ params }: {
     }
   };
 
-  const calculateRiskReward = () => {
-    if (!setup?.entryPrice || !setup?.takeProfitPrice || !setup?.stopPrice) {
-      return null;
-    }
-
-    const entry = Number(setup.entryPrice);
-    const takeProfit = Number(setup.takeProfitPrice);
-    const stopLoss = Number(setup.stopPrice);
-
-    if (isNaN(entry) || isNaN(takeProfit) || isNaN(stopLoss)) {
-      return null;
-    }
-
-    const isLong = setup.direction.toLowerCase() === 'long';
-    const reward = isLong ? takeProfit - entry : entry - takeProfit;
-    const risk = isLong ? entry - stopLoss : stopLoss - entry;
-
-    if (risk === 0) return null;
-
-    const ratio = Math.abs(reward / risk);
-    return ratio.toFixed(2);
-  };
-
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -56,8 +33,6 @@ export default async function SetupPage({ params }: {
       minute: '2-digit'
     });
   };
-
-  const riskReward = calculateRiskReward();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -133,7 +108,7 @@ export default async function SetupPage({ params }: {
                       {setup.content}
                     </Text>
                     <Divider my="md" />
-                    <PriceEditor setup={setup} riskReward={riskReward} />
+                    <PriceEditor setup={setup} />
                   </Card>
                 </div>
 

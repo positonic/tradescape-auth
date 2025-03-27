@@ -4,21 +4,45 @@ import { NumberInput, SimpleGrid, Text } from '@mantine/core';
 import { api } from "~/trpc/react";
 import { notifications } from '@mantine/notifications';
 import type { Setup } from '@prisma/client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Decimal } from '@prisma/client/runtime/library';
 
 interface PriceEditorProps {
   setup: Setup;
-  riskReward: string | null;
 }
 
-export function PriceEditor({ setup, riskReward }: PriceEditorProps) {
-  // Convert Decimal to string for initial state to match zod schema
+export function PriceEditor({ setup }: PriceEditorProps) {
   const [prices, setPrices] = useState({
     entryPrice: setup.entryPrice?.toString() ?? null,
     takeProfitPrice: setup.takeProfitPrice?.toString() ?? null,
     stopPrice: setup.stopPrice?.toString() ?? null
   });
+
+  // Calculate risk/reward dynamically based on current prices
+  const riskReward = useMemo(() => {
+    if (!prices.entryPrice || !prices.takeProfitPrice || !prices.stopPrice) {
+      return null;
+    }
+
+    const entry = Number(prices.entryPrice);
+    const takeProfit = Number(prices.takeProfitPrice);
+    const stopLoss = Number(prices.stopPrice);
+
+    if (isNaN(entry) || isNaN(takeProfit) || isNaN(stopLoss)) {
+      return null;
+    }
+
+    const isLong = setup.direction.toLowerCase() === 'long';
+    // For both long and short, reward is absolute distance to take profit
+    const reward = Math.abs(takeProfit - entry);
+    // For both long and short, risk is absolute distance to stop loss
+    const risk = Math.abs(entry - stopLoss);
+
+    if (risk === 0) return null;
+
+    const ratio = reward / risk;
+    return ratio.toFixed(2);
+  }, [prices, setup.direction]);
 
   useEffect(() => {
     setPrices({
@@ -122,8 +146,8 @@ export function PriceEditor({ setup, riskReward }: PriceEditorProps) {
       </div>
       <div>
         <Text className="pb-6 mt-6" size="sm" c="dimmed">Risk/Reward</Text>
-        <Text style={{ marginTop: '8px' }} size="xl" fw={700} c={riskReward && Number(riskReward) >= 2 ? 'green' : 'yellow'}>
-          {riskReward ? `${riskReward} / 1` : 'N/A'}
+        <Text size="xl" fw={700} c={riskReward && Number(riskReward) >= 2 ? 'green' : 'yellow'}>
+          {riskReward ? `${riskReward}:1` : 'N/A'}
         </Text>
       </div>
     </SimpleGrid>
