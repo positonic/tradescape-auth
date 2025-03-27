@@ -163,4 +163,22 @@ export const transcriptionRouter = createTRPCRouter({
 
       return session;
     }),
+
+  updateTranscription: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      transcription: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const session = await ctx.db.transcriptionSession.update({
+        where: { 
+          id: input.id,
+          userId: ctx.session.user.id 
+        },
+        data: {
+          transcription: input.transcription
+        },
+      });
+      return session;
+    }),
 }); 

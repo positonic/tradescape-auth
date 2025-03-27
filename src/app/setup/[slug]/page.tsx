@@ -5,6 +5,8 @@ import { api } from "~/trpc/server";
 import { IconCalendar, IconChartCandle, IconArrowUp, IconArrowDown, IconVolume } from '@tabler/icons-react';
 import { TextToSpeech } from './_components/TextToSpeech';
 import { PriceEditor } from './_components/PriceEditor';
+import { PrivacyToggle } from './_components/PrivacyToggle';
+import { ContentEditor } from '~/app/_components/ContentEditor';
 
 export default async function SetupPage({ params }: {
   params: Promise<{ slug: string }>
@@ -104,16 +106,17 @@ export default async function SetupPage({ params }: {
                       <Title order={3}>Setup Details</Title>
                       <TextToSpeech text={setup.content} />
                     </Group>
+
+                    <Card shadow="sm" p="lg" radius="md" withBorder>
+                      <Title order={3} mb="md">Transcription</Title>
+                      <ContentEditor setupId={setup.id} initialContent={setup.content} />
+                    
+                    </Card>
                     <Text size="lg" mb="xl">
                       {setup.content}
                     </Text>
                     <Divider my="md" />
-                    <PriceEditor setup={{
-                      ...setup,
-                      entryPrice: setup.entryPrice?.toNumber() ?? null,
-                      takeProfitPrice: setup.takeProfitPrice?.toNumber() ?? null,
-                      stopPrice: setup.stopPrice?.toNumber() ?? null,
-                    }} />
+                    <PriceEditor setup={setup} />
                   </Card>
                 </div>
 
@@ -126,6 +129,10 @@ export default async function SetupPage({ params }: {
                         <Badge size="xl" variant="light" color={setup.status === 'active' ? 'blue' : 'gray'}>
                           {setup.status.toUpperCase()}
                         </Badge>
+                      </div>
+                      <div>
+                        <Text size="sm" c="dimmed">Privacy</Text>
+                        <PrivacyToggle setupId={setup.id} initialPrivacy={setup.privacy} />
                       </div>
                       {setup.video && (
                         <div>

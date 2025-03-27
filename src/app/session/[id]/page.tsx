@@ -16,7 +16,7 @@ import { notifications } from '@mantine/notifications';
 import { use } from 'react';
 import Chat from "~/app/_components/Chat";
 import { Message } from '~/types';
-
+import { ContentEditor } from '~/app/_components/ContentEditor'; 
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   // Use React.use to unwrap the params Promise in a client component
   const { id } = use(params);

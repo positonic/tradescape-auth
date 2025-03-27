@@ -274,4 +274,40 @@ export const setupsRouter = createTRPCRouter({
       });
       return setup;
     }),
+
+  updatePrivacy: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      privacy: z.enum(['public', 'private'])
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const setup = await ctx.db.setup.update({
+        where: { 
+          id: input.id,
+          userId: ctx.session.user.id 
+        },
+        data: {
+          privacy: input.privacy
+        },
+      });
+      return setup;
+    }),
+
+  updateContent: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      content: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const setup = await ctx.db.setup.update({
+        where: { 
+          id: input.id,
+          userId: ctx.session.user.id 
+        },
+        data: {
+          content: input.content
+        },
+      });
+      return setup;
+    }),
 }); 
