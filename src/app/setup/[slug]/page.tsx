@@ -1,13 +1,11 @@
-import { Paper, Title, Text, Group, Badge, Card, Image, Stack, Divider, SimpleGrid, Button } from '@mantine/core';
+import { Title, Text, Group, Badge, Card, Image, Stack, Divider, SimpleGrid, Button } from '@mantine/core';
 import Link from "next/link";
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
-import { IconCalendar, IconChartCandle, IconArrowUp, IconArrowDown, IconVolume } from '@tabler/icons-react';
-import { TextToSpeech } from './_components/TextToSpeech';
+import { IconCalendar, IconChartCandle, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 import { PriceEditor } from './_components/PriceEditor';
 import { PrivacyToggle } from './_components/PrivacyToggle';
-import { ContentEditor } from '~/app/_components/ContentEditor';
-
+import { SetupContentEditor } from '~/app/_components/SetupContentEditor';
 export default async function SetupPage({ params }: {
   params: Promise<{ slug: string }>
 }) {
@@ -104,17 +102,8 @@ export default async function SetupPage({ params }: {
                   <Card shadow="sm" p="lg" radius="md" withBorder>
                     <Group justify="space-between" mb="md">
                       <Title order={3}>Setup Details</Title>
-                      <TextToSpeech text={setup.content} />
                     </Group>
-
-                    <Card shadow="sm" p="lg" radius="md" withBorder>
-                      <Title order={3} mb="md">Transcription</Title>
-                      <ContentEditor setupId={setup.id} initialContent={setup.content} />
-                    
-                    </Card>
-                    <Text size="lg" mb="xl">
-                      {setup.content}
-                    </Text>
+                    <SetupContentEditor setupId={setup.id} initialContent={setup.content} />
                     <Divider my="md" />
                     <PriceEditor setup={setup} />
                   </Card>
@@ -125,7 +114,6 @@ export default async function SetupPage({ params }: {
                     <Title order={3} mb="md">Status</Title>
                     <Stack gap="md">
                       <div>
-                        <Text size="sm" c="dimmed">Current Status</Text>
                         <Badge size="xl" variant="light" color={setup.status === 'active' ? 'blue' : 'gray'}>
                           {setup.status.toUpperCase()}
                         </Badge>

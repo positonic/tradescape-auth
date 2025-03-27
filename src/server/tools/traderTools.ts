@@ -19,12 +19,16 @@ import type { Context } from "~/server/auth/types";
     transcription: z.string()
   })
 
+interface MarketScanInput {
+  transcription: string;
+}
+
 interface TraderTools {
   marketScanTool: DynamicStructuredTool<typeof marketScanToolSchema>;
 }
 
-export const createTraderTools = (_ctx: Context): TraderTools => {
-    const marketScanTool = tool(
+export const createTraderTools = (ctx: any): TraderTools => {
+    const marketScanTool = tool<MarketScanInput>(
         async (input: { transcription: string }): Promise<string> => {
           try {
             if (!input) {

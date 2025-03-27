@@ -17,6 +17,8 @@ import { use } from 'react';
 import Chat from "~/app/_components/Chat";
 import { Message } from '~/types';
 import { ContentEditor } from '~/app/_components/ContentEditor'; 
+import { TranscriptionContentEditor } from '~/app/_components/TranscriptionContentEditor';
+
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   // Use React.use to unwrap the params Promise in a client component
   const { id } = use(params);
@@ -90,8 +92,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       <Text mb="xs"><strong>Updated:</strong> {new Date(session.updatedAt).toLocaleString()}</Text>
       
       <Title order={3} mt="xl" mb="md">Transcription</Title>
-      {session.transcription ? (
-        <Text style={{ whiteSpace: 'pre-wrap' }}>{session.transcription}</Text>
+      {session.transcription !== undefined ? (
+        <TranscriptionContentEditor
+          transcriptionId={session.id}
+          initialContent={session.transcription ?? ''}
+        />
       ) : (
         <Text c="dimmed">No transcription available yet</Text>
       )}

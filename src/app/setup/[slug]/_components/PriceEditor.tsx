@@ -5,10 +5,14 @@ import { api } from "~/trpc/react";
 import { notifications } from '@mantine/notifications';
 import type { Setup } from '@prisma/client';
 import { useState, useEffect, useMemo } from 'react';
-import { Decimal } from '@prisma/client/runtime/library';
+//import { Decimal } from '@prisma/client/runtime/library';
 
 interface PriceEditorProps {
-  setup: Setup;
+  setup: Omit<Setup, 'entryPrice' | 'takeProfitPrice' | 'stopPrice'> & {
+    entryPrice: number | null;
+    takeProfitPrice: number | null;
+    stopPrice: number | null;
+  };
 }
 
 export function PriceEditor({ setup }: PriceEditorProps) {

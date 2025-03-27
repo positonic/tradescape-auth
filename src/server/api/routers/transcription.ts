@@ -175,8 +175,9 @@ export const transcriptionRouter = createTRPCRouter({
           id: input.id,
           userId: ctx.session.user.id 
         },
-        data: {
-          transcription: input.transcription
+        data: { 
+          transcription: input.transcription,
+          updatedAt: new Date(),
         },
       });
       return session;

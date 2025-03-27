@@ -1,38 +1,41 @@
 'use client';
 
 import { Textarea, Button, Group } from '@mantine/core';
-import { api } from "~/trpc/react";
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
 
 interface ContentEditorProps {
-  setupId: string;
+  id: string;
   initialContent: string;
+  onSave: (id: string, content: string) => Promise<void>;
+  label?: string;
 }
 
-export function ContentEditor({ setupId, initialContent }: ContentEditorProps) {
+export function ContentEditor({ id, initialContent, onSave, label = 'Content' }: ContentEditorProps) {
   const [content, setContent] = useState(initialContent);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const utils = api.useUtils();
-  const updateContent = api.setups.updateContent.useMutation({
-    onSuccess: () => {
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await onSave(id, content);
       notifications.show({
         title: 'Success',
-        message: 'Content updated successfully',
+        message: `${label} updated successfully`,
         color: 'green'
       });
       setIsEditing(false);
-      void utils.setups.getById.invalidate({ id: setupId });
-    },
-    onError: ({ message }) => {
+    } catch (error) {
       notifications.show({
         title: 'Error',
-        message,
+        message: error instanceof Error ? error.message : 'Failed to update content',
         color: 'red'
       });
+    } finally {
+      setIsSaving(false);
     }
-  });
+  };
 
   if (!isEditing) {
     return (
@@ -43,7 +46,7 @@ export function ContentEditor({ setupId, initialContent }: ContentEditorProps) {
             variant="light"
             size="sm"
           >
-            Edit Content
+            Edit {label}
           </Button>
         </Group>
         <pre className="whitespace-pre-wrap">{content}</pre>
@@ -72,13 +75,8 @@ export function ContentEditor({ setupId, initialContent }: ContentEditorProps) {
           Cancel
         </Button>
         <Button
-          onClick={() => {
-            void updateContent.mutate({
-              id: setupId,
-              content
-            });
-          }}
-          loading={updateContent.isLoading}
+          onClick={() => void handleSave()}
+          loading={isSaving}
         >
           Save Changes
         </Button>

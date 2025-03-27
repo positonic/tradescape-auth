@@ -238,7 +238,13 @@ export const setupsRouter = createTRPCRouter({
         throw new Error('Not authorized to view this setup');
       }
 
-      return setup;
+      // Convert Decimal fields to numbers
+      return {
+        ...setup,
+        entryPrice: setup.entryPrice ? Number(setup.entryPrice) : null,
+        takeProfitPrice: setup.takeProfitPrice ? Number(setup.takeProfitPrice) : null,
+        stopPrice: setup.stopPrice ? Number(setup.stopPrice) : null,
+      };
     }),
 
   update: protectedProcedure
@@ -275,24 +281,6 @@ export const setupsRouter = createTRPCRouter({
       return setup;
     }),
 
-  updatePrivacy: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      privacy: z.enum(['public', 'private'])
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const setup = await ctx.db.setup.update({
-        where: { 
-          id: input.id,
-          userId: ctx.session.user.id 
-        },
-        data: {
-          privacy: input.privacy
-        },
-      });
-      return setup;
-    }),
-
   updateContent: protectedProcedure
     .input(z.object({
       id: z.string(),
@@ -305,7 +293,7 @@ export const setupsRouter = createTRPCRouter({
           userId: ctx.session.user.id 
         },
         data: {
-          content: input.content
+          content: input.content,
         },
       });
       return setup;
