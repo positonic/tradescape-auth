@@ -149,6 +149,7 @@ export const setupsRouter = createTRPCRouter({
               privacy: "private",
               pairId: pair.id,
               userId: ctx.session.user.id,
+              transcriptionSessionId: input.transcriptionId
             },
           });
 

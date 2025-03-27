@@ -21,84 +21,11 @@ import { notifications } from '@mantine/notifications';
 import { TextToSpeech } from '~/app/_components/TextToSpeech';
 //import { VoiceInput } from './VoiceInput';
 import { speakText } from './utils/tts';
+import { Message, ChatResponse, ChatToolResult, CoinData, MarketScanResult, CoinSetup } from '~/types';
 
-interface Message {
-    type: 'system' | 'human' | 'ai' | 'tool';
-    content: string;
-    tool_call_id?: string;
-    name?: string;
-    tradeSetups?: MarketScanResult | null;
-}
 
-interface MarketScanResult {
-  generalMarketContext: string;
-  coins: Array<{
-    coinSymbol: string;
-    sentiment: 'bullish' | 'bearish' | 'neutral';
-    marketContext: string;
-    tradeSetups: Array<{
-      position: 'long' | 'short' | 'abstain';
-      entryTriggers: string;
-      entryPrice: string;
-      timeframe: string;
-      takeProfit: string;
-      t1: string;
-      t2: string;
-      t3: string;
-      stopLoss: string;
-      stopLossPrice: number;
-      invalidation: string;
-      confidenceLevel: string;
-      transcriptExcerpt: string;
-    }>;
-  }>;
-}
-
-interface CoinSetup {
-  position: string;
-  entryTriggers: string;
-  entryPrice: string;
-  timeframe: string;
-  takeProfit: string;
-  t1?: string;
-  stopLoss: string;
-  stopLossPrice?: number;
-  invalidation: string;
-  confidenceLevel: string;
-  transcriptExcerpt: string;
-}
-
-interface CoinData {
-  coinSymbol: string;
-  sentiment: string;
-  marketContext: string;
-  tradeSetups: CoinSetup[];
-}
-
-interface ChatToolResult {
-  toolName: string;
-  result: string;
-}
-
-interface ChatResponse {
-  validToolResults?: ChatToolResult[];
-  response: string | Record<string, unknown>;
-}
-
-export default function Chat() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      type: 'system',
-      content: `You are a personal assistant who helps manage tasks in our Task Management System. 
-                You never give IDs to the user since those are just for you to keep track of. 
-                When a user asks to create a task and you don't know the project to add it to for sure, clarify with the user.
-                The current date is: ${new Date().toISOString().split('T')[0]}`
-    },
-    {
-      type: 'ai',
-      content: 'Hello! I\'m your AI assistant. How can I help you manage your tasks today?'
-    }
-  ]);
+export default function Chat( { initialMessages }: { initialMessages: Message[] }) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages ? initialMessages : []);
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isAiThinking, setIsAiThinking] = useState(false);

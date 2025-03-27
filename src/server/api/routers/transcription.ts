@@ -136,7 +136,15 @@ export const transcriptionRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const session = await ctx.db.transcriptionSession.findUnique({
         where: { id: input.id },
-        include: { user: true }
+        include: { 
+          user: true,
+          setups: {
+            include: {
+              pair: true,
+              coin: true,
+            }
+          }
+        }
       });
 
       if (!session) {
@@ -154,59 +162,5 @@ export const transcriptionRouter = createTRPCRouter({
       }
 
       return session;
-    }),
-
-  createSetups: protectedProcedure
-    .input(z.object({
-      transcriptionId: z.string()
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const session = await ctx.db.transcriptionSession.findUnique({
-        where: { id: input.transcriptionId }
-      });
-
-      if (!session?.transcription) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'No transcription found'
-        });
-      }
-
-      // Get setups from transcription
-      const setupsData = await getSetups(session.transcription, 'trade-setups');
-      
-      // Create setups for each trade setup found
-      const createdSetups = [];
-      
-      for (const coin of setupsData.coins) {
-        for (const setup of coin.tradeSetups) {
-          // Find or create the pair
-          const pair = await ctx.db.pair.upsert({
-            where: { symbol: coin.coinSymbol },
-            create: { symbol: coin.coinSymbol },
-            update: {},
-          });
-
-          // Create the setup
-          const createdSetup = await ctx.db.setup.create({
-            data: {
-              content: setup.transcriptExcerpt,
-              direction: setup.position,
-              entryPrice: setup.entryPrice ? parseFloat(setup.entryPrice) : null,
-              takeProfitPrice: setup.t1 ? parseFloat(setup.t1) : null,
-              stopPrice: setup.stopLossPrice ?? null,
-              timeframe: setup.timeframe ?? null,
-              status: "active",
-              privacy: "private",
-              pairId: pair.id,
-              userId: ctx.session.user.id,
-            },
-          });
-
-          createdSetups.push(createdSetup);
-        }
-      }
-
-      return createdSetups;
     }),
 }); 

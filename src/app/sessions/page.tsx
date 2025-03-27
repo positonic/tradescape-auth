@@ -16,7 +16,7 @@ import { notifications } from '@mantine/notifications';
 
 export default function ScansPage() {
   const { data: sessions, isLoading } = api.transcription.getSessions.useQuery();
-  const createSetupsMutation = api.transcription.createSetups.useMutation({
+  const createSetupsMutation = api.setups.createFromTranscription.useMutation({
     onSuccess: () => {
       notifications.show({
         title: 'Success',
@@ -62,7 +62,7 @@ export default function ScansPage() {
               style={{ cursor: 'pointer' }}
               onClick={() => router.push(`/transcription/${session.id}`)}
             >
-              <Table.Td>{session.sessionId}</Table.Td>
+              <Table.Td>{session.setupId}</Table.Td>
               <Table.Td>{formatDate(session.createdAt)}</Table.Td>
               <Table.Td>{formatDate(session.updatedAt)}</Table.Td>
               <Table.Td>
@@ -79,7 +79,7 @@ export default function ScansPage() {
                   >
                     View
                   </Button>
-                  {session.transcription && (
+                  {/* {session.transcription && (
                     <Button
                       size="xs"
                       variant="light"
@@ -88,7 +88,7 @@ export default function ScansPage() {
                     >
                       Create Setups
                     </Button>
-                  )}
+                  )} */}
                 </Group>
               </Table.Td>
             </Table.Tr>

@@ -101,56 +101,56 @@ export default function SetupsPage() {
     </Table>
   );
 
-  const renderTranscriptionsTable = () => (
-    <Table highlightOnHover>
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>Session ID</Table.Th>
-          <Table.Th>Created</Table.Th>
-          <Table.Th>Updated</Table.Th>
-          <Table.Th>Actions</Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {transcriptionSessions?.map((session) => (
-          <Table.Tr 
-            key={session.id}
-            style={{ cursor: 'pointer' }}
-            onClick={() => router.push(`/transcription/${session.id}`)}
-          >
-            <Table.Td>{session.sessionId}</Table.Td>
-            <Table.Td>{new Date(session.createdAt).toLocaleDateString()}</Table.Td>
-            <Table.Td>{new Date(session.updatedAt).toLocaleDateString()}</Table.Td>
-            <Table.Td onClick={(e) => e.stopPropagation()}>
-              <Button
-                size="xs"
-                onClick={() => {
-                  if (session.transcription) {
-                    createSetupsMutation.mutate({
-                      transcriptionId: session.id
-                    });
-                  }
-                }}
-                loading={createSetupsMutation.isPending}
-                disabled={!session.transcription}
-              >
-                Create Setups
-              </Button>
-            </Table.Td>
-          </Table.Tr>
-        ))}
-        {!transcriptionSessions?.length && (
-          <Table.Tr>
-            <Table.Td colSpan={4}>
-              <Text ta="center" c="dimmed">
-                No transcription sessions found
-              </Text>
-            </Table.Td>
-          </Table.Tr>
-        )}
-      </Table.Tbody>
-    </Table>
-  );
+  // const renderTranscriptionsTable = () => (
+  //   <Table highlightOnHover>
+  //     <Table.Thead>
+  //       <Table.Tr>
+  //         <Table.Th>Session ID</Table.Th>
+  //         <Table.Th>Created</Table.Th>
+  //         <Table.Th>Updated</Table.Th>
+  //         <Table.Th>Actions</Table.Th>
+  //       </Table.Tr>
+  //     </Table.Thead>
+  //     <Table.Tbody>
+  //       {transcriptionSessions?.map((session) => (
+  //         <Table.Tr 
+  //           key={session.id}
+  //           style={{ cursor: 'pointer' }}
+  //           onClick={() => router.push(`/transcription/${session.id}`)}
+  //         >
+  //           <Table.Td>{session.sessionId}</Table.Td>
+  //           <Table.Td>{new Date(session.createdAt).toLocaleDateString()}</Table.Td>
+  //           <Table.Td>{new Date(session.updatedAt).toLocaleDateString()}</Table.Td>
+  //           <Table.Td onClick={(e) => e.stopPropagation()}>
+  //             <Button
+  //               size="xs"
+  //               onClick={() => {
+  //                 if (session.transcription) {
+  //                   createSetupsMutation.mutate({
+  //                     transcriptionId: session.id
+  //                   });
+  //                 }
+  //               }}
+  //               loading={createSetupsMutation.isPending}
+  //               disabled={!session.transcription}
+  //             >
+  //               Create Setups
+  //             </Button>
+  //           </Table.Td>
+  //         </Table.Tr>
+  //       ))}
+  //       {!transcriptionSessions?.length && (
+  //         <Table.Tr>
+  //           <Table.Td colSpan={4}>
+  //             <Text ta="center" c="dimmed">
+  //               No transcription sessions found
+  //             </Text>
+  //           </Table.Td>
+  //         </Table.Tr>
+  //       )}
+  //     </Table.Tbody>
+  //   </Table>
+  // );
 
   return (
     <Paper p="md" radius="sm">
@@ -159,7 +159,7 @@ export default function SetupsPage() {
         <Tabs.List>
           <Tabs.Tab value="private">My Setups</Tabs.Tab>
           <Tabs.Tab value="public">Public Setups</Tabs.Tab>
-          <Tabs.Tab value="transcriptions">Transcriptions</Tabs.Tab>
+          {/* <Tabs.Tab value="transcriptions">Transcriptions</Tabs.Tab> */}
         </Tabs.List>
 
         <Tabs.Panel value="private" pt="md">
@@ -168,9 +168,9 @@ export default function SetupsPage() {
         <Tabs.Panel value="public" pt="md">
           {renderSetupsTable(publicSetups)}
         </Tabs.Panel>
-        <Tabs.Panel value="transcriptions" pt="md">
+        {/* <Tabs.Panel value="transcriptions" pt="md">
           {renderTranscriptionsTable()}
-        </Tabs.Panel>
+        </Tabs.Panel> */}
       </Tabs>
     </Paper>
   );

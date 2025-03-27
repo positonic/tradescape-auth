@@ -266,6 +266,8 @@ model Setup {
   pair            Pair     @relation(fields: [pairId], references: [id])
   coinId          Int?
   coin            Coin?    @relation(fields: [coinId], references: [id])
+  transcriptionSessionId String?
+  transcriptionSession  TranscriptionSession? @relation("TranscriptionSetups", fields: [transcriptionSessionId], references: [id])
   userId          String
   user            User     @relation(fields: [userId], references: [id])
 
@@ -273,6 +275,7 @@ model Setup {
   @@index([videoId])
   @@index([pairId])
   @@index([coinId])
+  @@index([transcriptionSessionId])
 }
 
 model Coin {
@@ -336,12 +339,14 @@ model ExchangeUser {
 
 model TranscriptionSession {
   id            String   @id @default(cuid())
-  sessionId     String   @unique // This will store our session_${timestamp} identifier
+  sessionId     String   @unique
   transcription String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   userId        String?
   user          User?    @relation(fields: [userId], references: [id])
+  setupId       String?
+  setups        Setup[]  @relation("TranscriptionSetups")
 
   @@index([sessionId])
   @@index([userId])

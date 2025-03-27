@@ -88,7 +88,7 @@ export default async function SetupPage({ params }: {
                       />
                     )}
                     <div>
-                      <Title order={2}>{setup.coin?.name} ({setup.pair.symbol})</Title>
+                      <Title order={2}>{setup.coin?.name} {setup.pair.symbol}</Title>
                       <Group gap="xs">
                         <Badge
                           size="lg"

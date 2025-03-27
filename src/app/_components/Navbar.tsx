@@ -15,7 +15,7 @@ export default async function Navbar() {
       <div className="flex-1 flex flex-col space-y-2">
         <NavItem href="/" icon={<IconHome size={24} />} />
         <NavItem href="/agent" icon={<IconRobot size={24} />} />
-        <NavItem href="/scans" icon={<IconScanEye size={24} />} />
+        <NavItem href="/sessions" icon={<IconScanEye size={24} />} />
         {/* <NavItem href="/videos" icon={<IconVideo size={24} />} /> */}
         <NavItem href="/setups" icon={<IconTargetArrow size={24} />} />
       </div>
