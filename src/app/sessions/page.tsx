@@ -60,7 +60,7 @@ export default function ScansPage() {
             <Table.Tr 
               key={session.id}
               style={{ cursor: 'pointer' }}
-              onClick={() => router.push(`/transcription/${session.id}`)}
+              onClick={() => router.push(`/session/${session.id}`)}
             >
               <Table.Td>{session.setupId}</Table.Td>
               <Table.Td>{formatDate(session.createdAt)}</Table.Td>
@@ -75,7 +75,7 @@ export default function ScansPage() {
                   <Button 
                     size="xs"
                     variant="light"
-                    onClick={() => router.push(`/transcription/${session.id}`)}
+                    onClick={() => router.push(`/session/${session.id}`)}
                   >
                     View
                   </Button>

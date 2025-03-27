@@ -238,4 +238,38 @@ export const setupsRouter = createTRPCRouter({
 
       return setup;
     }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      entryPrice: z.union([
+        z.string().transform((val) => Number(val)),
+        z.number(),
+        z.null()
+      ]),
+      takeProfitPrice: z.union([
+        z.string().transform((val) => Number(val)),
+        z.number(),
+        z.null()
+      ]),
+      stopPrice: z.union([
+        z.string().transform((val) => Number(val)),
+        z.number(),
+        z.null()
+      ]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const setup = await ctx.db.setup.update({
+        where: { 
+          id: input.id,
+          userId: ctx.session.user.id 
+        },
+        data: {
+          entryPrice: input.entryPrice,
+          takeProfitPrice: input.takeProfitPrice,
+          stopPrice: input.stopPrice,
+        },
+      });
+      return setup;
+    }),
 }); 

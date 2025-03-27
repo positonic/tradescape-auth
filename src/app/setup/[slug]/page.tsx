@@ -4,6 +4,7 @@ import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
 import { IconCalendar, IconChartCandle, IconArrowUp, IconArrowDown, IconVolume } from '@tabler/icons-react';
 import { TextToSpeech } from './_components/TextToSpeech';
+import { PriceEditor } from './_components/PriceEditor';
 
 export default async function SetupPage({ params }: {
   params: Promise<{ slug: string }>
@@ -132,32 +133,7 @@ export default async function SetupPage({ params }: {
                       {setup.content}
                     </Text>
                     <Divider my="md" />
-                    <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
-                      <div>
-                        <Text size="sm" c="dimmed">Entry Price</Text>
-                        <Text size="xl" fw={700}>
-                          ${setup.entryPrice?.toString() ?? 'N/A'}
-                        </Text>
-                      </div>
-                      <div>
-                        <Text size="sm" c="dimmed">Take Profit</Text>
-                        <Text size="xl" fw={700}>
-                          ${setup.takeProfitPrice?.toString() ?? 'N/A'}
-                        </Text>
-                      </div>
-                      <div>
-                        <Text size="sm" c="dimmed">Stop Loss</Text>
-                        <Text size="xl" fw={700}>
-                          ${setup.stopPrice?.toString() ?? 'N/A'}
-                        </Text>
-                      </div>
-                      <div>
-                        <Text size="sm" c="dimmed">Risk/Reward</Text>
-                        <Text size="xl" fw={700} c={riskReward && Number(riskReward) >= 2 ? 'green' : 'yellow'}>
-                          {riskReward ? `${riskReward}:1` : 'N/A'}
-                        </Text>
-                      </div>
-                    </SimpleGrid>
+                    <PriceEditor setup={setup} riskReward={riskReward} />
                   </Card>
                 </div>
 
