@@ -56,7 +56,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       </Paper>
     );
   }
-  let initialMessages: Message[] = [
+  const initialMessages: Message[] = [
     {
       type: 'system',
       content: `You are a personal assistant who helps manage tasks in our Task Management System. 

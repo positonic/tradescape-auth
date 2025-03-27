@@ -77,6 +77,7 @@ const TimeStampLink = ({
       </button>
     );
   } catch (error) {
+    console.error("TimeStampLink: error", error);
     return (
       <a href={href} className="text-blue-600 hover:underline">
         {children}

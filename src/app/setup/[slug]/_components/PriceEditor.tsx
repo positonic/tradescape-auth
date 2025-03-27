@@ -60,12 +60,12 @@ export function PriceEditor({ setup }: PriceEditorProps) {
         message: 'Setup updated successfully',
         color: 'green'
       });
-      utils.setups.getById.invalidate({ id: setup.id });
+      void utils.setups.getById.invalidate({ id: setup.id });
     },
-    onError: (error) => {
+    onError: ({ message }) => {
       notifications.show({
         title: 'Error',
-        message: error.message,
+        message,
         color: 'red'
       });
       setPrices({
@@ -85,7 +85,7 @@ export function PriceEditor({ setup }: PriceEditorProps) {
     }));
 
     const timeoutId = setTimeout(() => {
-      updateSetup.mutate({
+      void updateSetup.mutate({
         id: setup.id,
         entryPrice: field === 'entryPrice' ? stringValue : prices.entryPrice,
         takeProfitPrice: field === 'takeProfitPrice' ? stringValue : prices.takeProfitPrice,
