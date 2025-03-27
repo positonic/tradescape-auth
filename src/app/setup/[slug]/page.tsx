@@ -108,7 +108,12 @@ export default async function SetupPage({ params }: {
                       {setup.content}
                     </Text>
                     <Divider my="md" />
-                    <PriceEditor setup={setup} />
+                    <PriceEditor setup={{
+                      ...setup,
+                      entryPrice: setup.entryPrice?.toNumber() ?? null,
+                      takeProfitPrice: setup.takeProfitPrice?.toNumber() ?? null,
+                      stopPrice: setup.stopPrice?.toNumber() ?? null,
+                    }} />
                   </Card>
                 </div>
 

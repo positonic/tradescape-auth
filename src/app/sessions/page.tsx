@@ -16,22 +16,22 @@ import { notifications } from '@mantine/notifications';
 
 export default function ScansPage() {
   const { data: sessions, isLoading } = api.transcription.getSessions.useQuery();
-  const createSetupsMutation = api.setups.createFromTranscription.useMutation({
-    onSuccess: () => {
-      notifications.show({
-        title: 'Success',
-        message: 'Setups created successfully',
-        color: 'green',
-      });
-    },
-    onError: (error) => {
-      notifications.show({
-        title: 'Error',
-        message: error.message,
-        color: 'red',
-      });
-    },
-  });
+  // const createSetupsMutation = api.setups.createFromTranscription.useMutation({
+  //   onSuccess: () => {
+  //     notifications.show({
+  //       title: 'Success',
+  //       message: 'Setups created successfully',
+  //       color: 'green',
+  //     });
+  //   },
+  //   onError: (error) => {
+  //     notifications.show({
+  //       title: 'Error',
+  //       message: error.message,
+  //       color: 'red',
+  //     });
+  //   },
+  // });
   const router = useRouter();
 
   if (isLoading) {

@@ -31,9 +31,7 @@ export const createTraderTools = (_ctx: Context): TraderTools => {
               throw new Error("Input is required");
             }
     
-            console.log('input is ', input);
             const setups: TranscriptionSetups = await getSetups(input.transcription, 'trade-setups')
-            console.log("summarizeTranscription is", setups)
             
             if (!setups?.coins) {
                 return JSON.stringify({

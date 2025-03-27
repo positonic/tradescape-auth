@@ -111,9 +111,11 @@ export const setupsRouter = createTRPCRouter({
         });
       }
 
+      console.log("session.transcription is ", session.transcription);
       // Get setups from transcription with type assertion
       const setupsData = await getSetups(session.transcription, 'trade-setups') as SetupResponse;
       
+      console.log("setupsData is ", setupsData);
       // Validate the response structure
       if (!setupsData || !Array.isArray(setupsData.coins)) {
         throw new TRPCError({
