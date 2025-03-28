@@ -15,9 +15,9 @@ import type { Context } from "~/server/auth/types";
 //     scanType: z.enum(['technical', 'fundamental', 'sentiment']).default('technical')
 //       .describe("Type of market scan to perform")
 //   });
-  const marketScanToolSchema = z.object({
-    transcription: z.string()
-  })
+const marketScanToolSchema = z.object({
+  transcription: z.string()
+});
 
 interface MarketScanInput {
   transcription: string;
@@ -27,9 +27,9 @@ interface TraderTools {
   marketScanTool: DynamicStructuredTool<typeof marketScanToolSchema>;
 }
 
-export const createTraderTools = (ctx: any): TraderTools => {
-    const marketScanTool = tool<MarketScanInput>(
-        async (input: { transcription: string }): Promise<string> => {
+export const createTraderTools = (ctx: Context): TraderTools => {
+    const marketScanTool = tool(
+        async (input: z.infer<typeof marketScanToolSchema>): Promise<string> => {
           try {
             if (!input) {
               throw new Error("Input is required");

@@ -27,12 +27,12 @@ export function PrivacyToggle({ setupId, initialPrivacy }: PrivacyToggleProps) {
       void utils.setups.getPublic.invalidate();
       void utils.setups.getPrivate.invalidate();
     },
-    onError: ({ message }) => {
+    onError: (error: { message: string }) => {
       // Revert the toggle on error
       setIsPublic(!isPublic);
       notifications.show({
         title: 'Error',
-        message,
+        message: error.message,
         color: 'red'
       });
     }

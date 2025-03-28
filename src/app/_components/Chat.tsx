@@ -163,6 +163,7 @@ export default function Chat( { initialMessages }: { initialMessages: Message[] 
         void submitMessage(result.text);
       }
     } catch (error: unknown) {
+      console.error('Error processing voice input:', error);
       notifications.show({
         title: 'Error',
         message: 'Failed to process voice input. Please try again.',
