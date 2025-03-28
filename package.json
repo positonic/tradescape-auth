@@ -37,6 +37,7 @@
     "@trpc/client": "^11.0.0-rc.446",
     "@trpc/react-query": "^11.0.0-rc.446",
     "@trpc/server": "^11.0.0-rc.446",
+    "@vercel/blob": "^0.27.3",
     "asana": "^3.0.15",
     "elevenlabs": "^1.53.0",
     "form-data": "^4.0.2",

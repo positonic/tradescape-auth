@@ -13,6 +13,7 @@ import {
 } from '@mantine/core';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
+import { useEffect, useState } from 'react';
 
 export default function ScansPage() {
   const { data: sessions, isLoading } = api.transcription.getSessions.useQuery();
@@ -38,8 +39,13 @@ export default function ScansPage() {
     return <Skeleton height={400} />;
   }
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString();
+  const formatDuration = (startDate: Date, endDate: Date) => {
+    const diff = new Date(endDate).getTime() - new Date(startDate).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -49,8 +55,7 @@ export default function ScansPage() {
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Session ID</Table.Th>
-            <Table.Th>Created</Table.Th>
-            <Table.Th>Updated</Table.Th>
+            <Table.Th>Duration</Table.Th>
             <Table.Th>Status</Table.Th>
             <Table.Th>Actions</Table.Th>
           </Table.Tr>
@@ -63,8 +68,7 @@ export default function ScansPage() {
               onClick={() => router.push(`/session/${session.id}`)}
             >
               <Table.Td>{session.setupId}</Table.Td>
-              <Table.Td>{formatDate(session.createdAt)}</Table.Td>
-              <Table.Td>{formatDate(session.updatedAt)}</Table.Td>
+              <Table.Td>{formatDuration(session.createdAt, session.updatedAt)}</Table.Td>
               <Table.Td>
                 <Badge color={session.transcription ? 'green' : 'yellow'}>
                   {session.transcription ? 'Completed' : 'In Progress'}
@@ -95,7 +99,7 @@ export default function ScansPage() {
           ))}
           {!sessions?.length && (
             <Table.Tr>
-              <Table.Td colSpan={5}>
+              <Table.Td colSpan={4}>
                 <Text ta="center" c="dimmed">
                   No transcription sessions found
                 </Text>

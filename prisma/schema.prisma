@@ -347,8 +347,18 @@ model TranscriptionSession {
   user          User?    @relation(fields: [userId], references: [id])
   setupId       String?
   setups        Setup[]  @relation("TranscriptionSetups")
+  screenshots   Screenshot[]
 
   @@index([sessionId])
   @@index([userId])
+}
+
+model Screenshot {
+  id                    String              @id @default(cuid())
+  url                   String
+  timestamp             String
+  transcriptionSession  TranscriptionSession @relation(fields: [transcriptionSessionId], references: [id])
+  transcriptionSessionId String
+  createdAt             DateTime            @default(now())
 }
  
