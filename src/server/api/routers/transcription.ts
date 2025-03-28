@@ -84,35 +84,41 @@ export const transcriptionRouter = createTRPCRouter({
       };
     }),
 
-  saveTranscription: apiKeyMiddleware
+    
+  saveTranscription: protectedProcedure
     .input(z.object({
       id: z.string(),
       transcription: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { id, transcription } = input;
-      
-      // Update database using ctx.db
+      // First, get the current transcription session
+      const existingSession = await ctx.db.transcriptionSession.findUnique({
+        where: { id: input.id }
+      });
+
+      if (!existingSession) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Transcription session not found'
+        });
+      }
+
+      // Check if existing transcription has content and append if so
+      const updatedTranscription = 
+        existingSession.transcription && existingSession.transcription !== "" 
+          ? `${existingSession.transcription} ${input.transcription}` 
+          : input.transcription;
+
+      // Update with the combined transcription
       await ctx.db.transcriptionSession.update({
-        where: { id },
-        data: { 
-          transcription,
-          updatedAt: new Date(),
+        where: { id: input.id },
+        data: {
+          transcription: updatedTranscription,
         },
       });
-      
-      // Keep in-memory store for debugging
-      if (!transcriptionStore[id]) {
-        transcriptionStore[id] = [];
-      }
-      transcriptionStore[id].push(transcription);
-      
-      console.log('\n🎙️ Saved transcription for session:', id);
-      logStore();
-
       return {
         success: true,
-        id,
+        id: input.id,
         savedAt: new Date().toISOString(),
       };
     }),
