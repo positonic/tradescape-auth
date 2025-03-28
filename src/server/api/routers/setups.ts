@@ -143,9 +143,9 @@ export const setupsRouter = createTRPCRouter({
             data: {
               content: setup.transcriptExcerpt || '',
               direction: setup.position,
-              entryPrice: setup.entryPrice ? parseFloat(setup.entryPrice) : null,
-              takeProfitPrice: setup.t1 ? parseFloat(setup.t1) : null,
-              stopPrice: setup.stopLossPrice || null,
+              entryPrice: Number(setup.entryPrice) || 0,
+              takeProfitPrice: Number(setup.t1) || 0,
+              stopPrice: Number(setup.stopLossPrice) || 0,
               timeframe: setup.timeframe || null,
               status: "active",
               privacy: "private",
