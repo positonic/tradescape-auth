@@ -316,4 +316,40 @@ export const setupsRouter = createTRPCRouter({
       });
       return setup;
     }),
+
+  deleteSetup: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Ensure the user owns the setup before deleting
+      const setup = await ctx.db.setup.findUnique({
+        where: { 
+          id: input.id 
+        },
+        select: { userId: true }
+      });
+      
+      if (!setup) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Setup not found'
+        });
+      }
+      
+      if (setup.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not authorized to delete this setup'
+        });
+      }
+      
+      await ctx.db.setup.delete({
+        where: { 
+          id: input.id
+        },
+      });
+      
+      return { success: true };
+    }),
 }); 

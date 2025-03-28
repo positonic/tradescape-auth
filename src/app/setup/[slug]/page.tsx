@@ -6,6 +6,8 @@ import { IconCalendar, IconChartCandle, IconArrowUp, IconArrowDown } from '@tabl
 import { PriceEditor } from './_components/PriceEditor';
 import { PrivacyToggle } from './_components/PrivacyToggle';
 import { SetupContentEditor } from '~/app/_components/SetupContentEditor';
+import { DeleteButton } from './_components/DeleteButton';
+
 export default async function SetupPage({ params }: {
   params: Promise<{ slug: string }>
 }) {
@@ -133,6 +135,9 @@ export default async function SetupPage({ params }: {
                           </Link>
                         </div>
                       )}
+                      
+                      <Divider my="sm" />
+                      <DeleteButton setupId={setup.id} />
                     </Stack>
                   </Card>
                 </div>
