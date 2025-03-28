@@ -11,6 +11,8 @@ import {
   Group,
   Table,
   Badge,
+  Image,
+  SimpleGrid,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { use } from 'react';
@@ -145,6 +147,26 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         <Text c="dimmed">No setups for this session yet</Text>
       )}
       
+      <Title order={3} mt="xl" mb="md">Screenshots</Title>
+      {session.screenshots?.length > 0 ? (
+        <SimpleGrid cols={3} spacing="md">
+          {session.screenshots.map((screenshot) => (
+            <div key={screenshot.id}>
+              <Text size="sm" c="dimmed" mb="xs">{screenshot.timestamp}</Text>
+              <Image
+                src={screenshot.url}
+                alt={`Screenshot from ${screenshot.timestamp}`}
+                radius="md"
+                onClick={() => window.open(screenshot.url, '_blank')}
+                style={{ cursor: 'pointer' }}
+              />
+            </div>
+          ))}
+        </SimpleGrid>
+      ) : (
+        <Text c="dimmed">No screenshots for this session yet</Text>
+      )}
+
       <Chat initialMessages={initialMessages} />
     </Paper>
   );
