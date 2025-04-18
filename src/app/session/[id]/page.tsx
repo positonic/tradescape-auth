@@ -18,7 +18,6 @@ import { notifications } from '@mantine/notifications';
 import { use } from 'react';
 import Chat from "~/app/_components/Chat";
 import { Message } from '~/types';
-import { ContentEditor } from '~/app/_components/ContentEditor'; 
 import { TranscriptionContentEditor } from '~/app/_components/TranscriptionContentEditor';
 
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
