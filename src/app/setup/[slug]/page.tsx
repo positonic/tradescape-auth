@@ -13,7 +13,15 @@ export default async function SetupPage({ params }: {
 }) {
   const slug = (await params).slug;
   const session = await auth();
-  const setup = await api.setups.getById.call({}, { id: slug });
+
+  let setup: Awaited<ReturnType<typeof api.setups.getById>> | null = null;
+  if (session?.user) {
+    try {
+      setup = await api.setups.getById.call({}, { id: slug });
+    } catch (error) {
+      console.error("Failed to fetch setup:", error);
+    }
+  }
 
   const getDirectionColor = (direction: string) => {
     switch (direction.toLowerCase()) {
@@ -39,18 +47,28 @@ export default async function SetupPage({ params }: {
   return (
     <div className="min-h-screen bg-gray-50">
       {!session && (
-        <div className="p-4">
+        <div className="flex h-screen flex-col items-center justify-center p-4 text-center">
+          <Title order={3} mb="md">Access Denied</Title>
+          <Text mb="lg">Please sign in to view setup details.</Text>
           <Link
-            href={session ? "/api/auth/signout" : "/api/auth/signin"}
-            className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
+            href="/api/auth/signin"
+            className="rounded-md bg-blue-500 px-6 py-2 font-semibold text-white no-underline shadow-sm transition hover:bg-blue-600"
           >
-            Sign in
+            Sign In
           </Link>
         </div>
       )}
-      {session?.user ? (
+      {session?.user && (
         <div className="container mx-auto py-8 px-4">
-          {!setup && <div>Setup not found</div>}
+          {!setup && (
+            <Card shadow="sm" p="lg" radius="md" withBorder className="text-center">
+              <Title order={4}>Setup Not Found</Title>
+              <Text c="dimmed">The requested setup could not be found or you may not have permission to view it.</Text>
+              <Button component={Link} href="/dashboard" mt="md">
+                Back to Dashboard
+              </Button>
+            </Card>
+          )}
           {setup && (
             <Stack gap="xl">
               {/* Header Section */}
@@ -105,7 +123,7 @@ export default async function SetupPage({ params }: {
                     <Group justify="space-between" mb="md">
                       <Title order={3}>Setup Details</Title>
                     </Group>
-                    <SetupContentEditor setupId={setup.id} initialContent={setup.content} />
+                    <SetupContentEditor setupId={setup.id} initialContent={setup.content ?? ''} />
                     <Divider my="md" />
                     <PriceEditor setup={setup} />
                   </Card>
@@ -144,10 +162,6 @@ export default async function SetupPage({ params }: {
               </SimpleGrid>
             </Stack>
           )}
-        </div>
-      ) : (
-        <div className="text-center p-4">
-          <p>Please sign in to view setup details</p>
         </div>
       )}
     </div>

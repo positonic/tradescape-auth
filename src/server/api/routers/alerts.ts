@@ -1,4 +1,154 @@
+// src/server/api/routers/alerts.ts
+
+import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { AlertType, Direction, AlertStatus } from "@prisma/client"; // Import Prisma enums
+import { TRPCError } from "@trpc/server";
+import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
+import Redis from "ioredis"; // Assuming Redis is available in context, import type for functions
+
+// Hard-coded exchange key for all alerts
+const exchangeKey = 'BINANCE';
+
+// --- TODO: Move Redis Logic to a Service File (e.g., src/server/services/redisService.ts) ---
+// For now, defining helper functions here based on your reference code.
+// These functions assume 'redis' client is available via ctx.redis
+
+// Modified function that works with a pair object or with ctx+pairId
+function getMarketIdentifier(pairOrSymbol: { symbol: string } | string): string {
+  const symbol = typeof pairOrSymbol === 'string' 
+    ? pairOrSymbol 
+    : pairOrSymbol.symbol;
+  
+  return `${exchangeKey}:${symbol.replace('/', '')}`;
+}
+
+// This is the original async DB version, renamed to avoid conflicts
+async function getMarketIdentifierFromDb(ctx: any, pairId: number): Promise<string> {
+  const pair = await ctx.db.pair.findUnique({ 
+    where: { id: pairId }, 
+    select: { symbol: true } 
+  });
+  
+  if (!pair) throw new TRPCError({ 
+    code: "NOT_FOUND", 
+    message: "Pair not found for market identifier." 
+  });
+  
+  return getMarketIdentifier(pair.symbol);
+}
+
+const priceAlertZSetKey = (market: string, direction: Direction): string =>
+  `price_alerts:${market.toUpperCase()}:${direction}`;
+
+const candleAlertZSetKey = (market: string, interval: string, direction: Direction): string =>
+  `candle_alerts:${market.toUpperCase()}:${interval}:${direction}`;
+
+const alertDetailsHashKey = (alertId: string): string => `alert_details:${alertId}`;
+
+async function addAlertToRedis(redis: Redis, alert: any): Promise<void> {
+  if (!redis) {
+    console.error("Redis client not available in context for addAlertToRedis");
+    return;
+  }
+  
+  const pipeline = redis.pipeline();
+  const thresholdScore = new Decimal(alert.threshold).toNumber();
+  const alertId = alert.id;
+  const hashKey = alertDetailsHashKey(alertId);
+  const market = getMarketIdentifier(alert.pair);
+
+  // Store alert details in HASH
+  const alertDataForRedis = {
+    ...alert,
+    threshold: alert.threshold.toString(),
+    createdAt: alert.createdAt.toISOString(),
+    user: undefined,
+    pair: undefined,
+    setup: undefined,
+    market: market,
+  };
+  
+  // Remove undefined keys before HSET
+   Object.keys(alertDataForRedis).forEach(key => alertDataForRedis[key] === undefined && delete alertDataForRedis[key]);
+
+  pipeline.hset(hashKey, alertDataForRedis);
+
+  // Add alert ID to the appropriate ZSET
+  if (alert.type === AlertType.PRICE) {
+    const zsetKey = priceAlertZSetKey(market, alert.direction);
+    pipeline.zadd(zsetKey, thresholdScore, alertId);
+  } else if (alert.type === AlertType.CANDLE && alert.interval) {
+    const zsetKey = candleAlertZSetKey(market, alert.interval, alert.direction);
+    pipeline.zadd(zsetKey, thresholdScore, alertId);
+  } else {
+    console.warn(`Skipping add to Redis ZSET: Invalid alert type or missing interval for alert ${alertId}`);
+    // Execute only HSET if ZADD is skipped
+     try {
+      await pipeline.hset(hashKey, alertDataForRedis).exec(); // Only HSET
+      console.info(`Added only HASH for alert ${alertId} to Redis.`);
+    } catch (error) {
+      console.error(`Error adding only HASH for alert ${alertId} to Redis:`, error);
+    }
+    return;
+  }
+
+  try {
+    await pipeline.exec();
+    console.info(`Added alert ${alertId} to Redis.`);
+  } catch (error) {
+    console.error(`Error adding alert ${alertId} to Redis:`, error);
+    // Consider rollback/cleanup for DB entry if Redis fails?
+  }
+}
+
+async function removeAlertFromRedis(redis: Redis, alert: any): Promise<void> {
+  if (!redis) {
+    console.error("Redis client not available in context for removeAlertFromRedis");
+    return;
+  }
+  
+  const pipeline = redis.pipeline();
+  const alertId = alert.id;
+  const hashKey = alertDetailsHashKey(alertId);
+  const market = getMarketIdentifier(alert.pair);
+
+  // Remove alert details HASH
+  pipeline.del(hashKey);
+
+  // Remove alert ID from the appropriate ZSET
+  if (alert.type === AlertType.PRICE) {
+    const zsetKey = priceAlertZSetKey(market, alert.direction);
+    pipeline.zrem(zsetKey, alertId);
+  } else if (alert.type === AlertType.CANDLE && alert.interval) {
+    const zsetKey = candleAlertZSetKey(market, alert.interval, alert.direction);
+    pipeline.zrem(zsetKey, alertId);
+  } else {
+     console.warn(`Skipping remove from Redis ZSET: Invalid alert type or missing interval for alert ${alertId}`);
+    // Only execute HASH deletion if ZSET removal is skipped
+    try {
+      await pipeline.del(hashKey).exec();
+      console.info(`Removed only HASH for alert ${alertId} from Redis.`);
+    } catch (error) {
+      console.error(`Error removing HASH for alert ${alertId} from Redis:`, error);
+    }
+    return;
+  }
+
+  try {
+    await pipeline.exec();
+    console.info(`Removed alert ${alertId} from Redis.`);
+  } catch (error) {
+    console.error(`Error removing alert ${alertId} from Redis:`, error);
+  }
+}
+
+// --- End Redis Logic ---
+
+// Zod schema for validating numeric strings
+const numericString = z.string().refine((val) => !isNaN(parseFloat(val)), {
+  message: "Threshold must be a valid number string",
+});
 
 export const alertsRouter = createTRPCRouter({
   getAllForUser: protectedProcedure
@@ -8,14 +158,158 @@ export const alertsRouter = createTRPCRouter({
           userId: ctx.session.user.id,
         },
         include: {
-          pair: true, // Include related pair data
+          pair: true, // Include related pair data needed for display/Redis keys
         },
         orderBy: {
-          createdAt: 'desc', // Order by newest first
+          createdAt: 'desc',
         },
       });
-      return alerts;
+      // Convert Decimal to string before sending to client
+      return alerts.map(alert => ({
+        ...alert,
+        threshold: alert.threshold.toString(),
+      }));
     }),
 
-  // Add other alert-related procedures here (e.g., create, delete)
-}); 
+  create: protectedProcedure
+    .input(
+      z.object({
+        pairId: z.number(),
+        type: z.nativeEnum(AlertType),
+        // Validate threshold as a numeric string
+        threshold: numericString,
+        direction: z.nativeEnum(Direction),
+        interval: z.string().optional().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.type === AlertType.CANDLE && !input.interval) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Interval is required for CANDLE alerts.",
+        });
+      }
+
+      // Explicitly define data for Prisma create
+      const createData = {
+        userId: ctx.session.user.id,
+        pairId: input.pairId,
+        type: input.type,
+        // Convert validated string to Decimal
+        threshold: new Decimal(input.threshold),
+        direction: input.direction,
+        interval: input.interval,
+        status: AlertStatus.PENDING,
+      };
+
+      const alert = await ctx.db.alert.create({
+        data: createData,
+        include: { pair: true }
+      });
+
+      if (ctx.redis) {
+        console.log('Redis client available, adding alert to Redis', alert);
+        await addAlertToRedis(ctx.redis, alert);
+      } else {
+        console.warn(`Redis client not available, skipping addAlertToRedis for alert ${alert.id}`);
+      }
+
+      return { ...alert, threshold: alert.threshold.toString() };
+    }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        // Validate optional threshold as numeric string
+        threshold: numericString.optional(),
+        direction: z.nativeEnum(Direction).optional(),
+        status: z.nativeEnum(AlertStatus).optional(),
+        interval: z.string().optional().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...inputData } = input;
+
+      const currentAlert = await ctx.db.alert.findUnique({
+        where: { id: id, userId: ctx.session.user.id },
+         include: { pair: true }
+      });
+
+      if (!currentAlert) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Alert not found or you do not have permission to update it." });
+      }
+
+      // Explicitly build the update object for Prisma
+      const updateData: { threshold?: Decimal; direction?: Direction; status?: AlertStatus; interval?: string | null } = {};
+      if (inputData.threshold !== undefined) {
+         // Convert validated string to Decimal
+        updateData.threshold = new Decimal(inputData.threshold);
+      }
+      if (inputData.direction !== undefined) {
+        updateData.direction = inputData.direction;
+      }
+      if (inputData.status !== undefined) {
+        updateData.status = inputData.status;
+      }
+      if (inputData.interval !== undefined) {
+        // Allow setting interval to null explicitly
+        updateData.interval = inputData.interval;
+      }
+
+      // Check if there's anything to update
+      if (Object.keys(updateData).length === 0) {
+          // Optionally return current alert or throw an error if no changes are made
+          return { ...currentAlert, threshold: currentAlert.threshold.toString() };
+      }
+
+      const updatedAlert = await ctx.db.alert.update({
+        where: { id: id, userId: ctx.session.user.id },
+        data: updateData,
+        include: { pair: true }
+      });
+
+      if (ctx.redis) {
+        await removeAlertFromRedis(ctx.redis, currentAlert);
+      } else {
+         console.warn(`Redis client not available, skipping removeAlertFromRedis for alert ${currentAlert.id}`);
+      }
+
+      if (ctx.redis) {
+        await addAlertToRedis(ctx.redis, updatedAlert);
+      } else {
+        console.warn(`Redis client not available, skipping addAlertToRedis for alert ${updatedAlert.id}`);
+      }
+
+      return { ...updatedAlert, threshold: updatedAlert.threshold.toString() };
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+       // 1. Fetch the alert to get details needed for Redis removal
+      const alertToDelete = await ctx.db.alert.findUnique({
+        where: { id: input.id, userId: ctx.session.user.id }, // Ensure user owns the alert
+        include: { pair: true } // Needed for Redis key generation
+      });
+
+      if (!alertToDelete) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Alert not found or you do not have permission to delete it." });
+      }
+
+      // 2. Delete the alert from the database
+      await ctx.db.alert.delete({
+        where: { id: input.id, userId: ctx.session.user.id },
+      });
+
+      // 3. Remove the alert from Redis (if client exists)
+      if (ctx.redis) {
+        await removeAlertFromRedis(ctx.redis, alertToDelete);
+      } else {
+        console.warn(`Redis client not available, skipping removeAlertFromRedis for alert ${alertToDelete.id}`);
+      }
+
+      // Return the deleted alert data (optional)
+      return { ...alertToDelete, threshold: alertToDelete.threshold.toString() };
+    }),
+});

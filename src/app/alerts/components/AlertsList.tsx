@@ -2,10 +2,30 @@
 
 import * as React from 'react';
 import { api } from "~/trpc/react";
-import { Paper, Table, Badge, Text, LoadingOverlay, Title } from '@mantine/core';
+import { Paper, Table, Badge, Text, LoadingOverlay, Title, Button, ActionIcon, Group, Tooltip } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { IconTrash } from '@tabler/icons-react';
 
 export function AlertsList() {
-  const { data: alerts, isLoading, error } = api.alerts.getAllForUser.useQuery();
+  const { data: alerts, isLoading, error, refetch } = api.alerts.getAllForUser.useQuery();
+  
+  const deleteAlert = api.alerts.delete.useMutation({
+    onSuccess: () => {
+      refetch();
+      notifications.show({
+        title: 'Alert deleted',
+        message: 'Alert has been successfully deleted',
+        color: 'green',
+      });
+    },
+    onError: (error) => {
+      notifications.show({
+        title: 'Error',
+        message: `Failed to delete alert: ${error.message}`,
+        color: 'red',
+      });
+    },
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -20,11 +40,15 @@ export function AlertsList() {
     return direction === 'ABOVE' ? 'green' : 'red';
   };
 
+  const handleDelete = (id: string) => {
+    deleteAlert.mutate({ id });
+  };
+
   const safeAlerts = alerts ?? [];
 
   return (
     <Paper shadow="sm" p="md" radius="md" withBorder pos="relative">
-      <LoadingOverlay visible={isLoading} overlayProps={{ radius: "sm", blur: 2 }} />
+      <LoadingOverlay visible={isLoading || deleteAlert.isPending} overlayProps={{ radius: "sm", blur: 2 }} />
       <Title order={3} mb="md">My Alerts</Title>
       
       {error && (
@@ -46,6 +70,7 @@ export function AlertsList() {
               <Table.Th>Interval</Table.Th>
               <Table.Th>Status</Table.Th>
               <Table.Th>Created</Table.Th>
+              <Table.Th>Actions</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -68,6 +93,19 @@ export function AlertsList() {
                   </Badge>
                 </Table.Td>
                 <Table.Td>{new Date(alert.createdAt).toLocaleDateString()}</Table.Td>
+                <Table.Td>
+                  <Tooltip label="Delete alert">
+                    <ActionIcon 
+                      color="red" 
+                      variant="subtle"
+                      size="sm"
+                      onClick={() => handleDelete(alert.id)}
+                      disabled={deleteAlert.isPending}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>

@@ -1,13 +1,9 @@
 import { auth } from "~/server/auth";
-
-import VideoSearch from "~/app/_components/VideoSearch";
-//import SignInButton from "../_components/SignInButton";
 import { LandingPage } from "~/app/_components/LandingPage";
 import HavenMemberBadge from "../videos/components/HavenMemberBadge";
-import { AlertsList } from "./components/AlertsList";
+import { AlertsPageWrapper } from "./components/AlertsPageWrapper";
 
-
-export default async function VideosPage() {
+export default async function AlertsPage() {
   const session = await auth();
 
   return (
@@ -17,8 +13,7 @@ export default async function VideosPage() {
         {session?.user && (
           <div className="w-full">
             <HavenMemberBadge />
-            <h1 className="text-2xl font-bold mb-6">Alerts</h1>
-            <AlertsList />
+            <AlertsPageWrapper />
           </div>
         )}
       </div>
