@@ -116,6 +116,7 @@ export function AlertModal({ opened, onClose }: AlertModalProps) {
             data={pairOptions}
             searchable
             required
+            value="BTC/USDT"
             disabled={isLoadingPairs}
             {...form.getInputProps('pairId')}
           />

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { api } from "~/trpc/react";
-import { Paper, Table, Badge, Text, LoadingOverlay, Title, Button, ActionIcon, Group, Tooltip } from '@mantine/core';
+import { Paper, Table, Badge, Text, LoadingOverlay, Title, ActionIcon, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconTrash } from '@tabler/icons-react';
 
@@ -11,7 +11,7 @@ export function AlertsList() {
   
   const deleteAlert = api.alerts.delete.useMutation({
     onSuccess: () => {
-      refetch();
+      void refetch();
       notifications.show({
         title: 'Alert deleted',
         message: 'Alert has been successfully deleted',
@@ -56,7 +56,7 @@ export function AlertsList() {
       )}
 
       {!isLoading && !error && safeAlerts.length === 0 && (
-        <Text c="dimmed">You haven't created any alerts yet.</Text>
+        <Text c="dimmed">You haven&apos;t created any alerts yet.</Text>
       )}
 
       {!isLoading && !error && safeAlerts.length > 0 && (

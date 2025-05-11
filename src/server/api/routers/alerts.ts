@@ -1,11 +1,11 @@
 // src/server/api/routers/alerts.ts
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { AlertType, Direction, AlertStatus } from "@prisma/client"; // Import Prisma enums
+import { createTRPCRouter, protectedProcedure, type TRPCContext } from "~/server/api/trpc"; // Changed Context to TRPCContext
+import { AlertType, Direction, AlertStatus, Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { Decimal } from "@prisma/client/runtime/library"; // Import Decimal
-import Redis from "ioredis"; // Assuming Redis is available in context, import type for functions
+import { Decimal } from "@prisma/client/runtime/library";
+import type Redis from "ioredis";
 
 // Hard-coded exchange key for all alerts
 const exchangeKey = 'BINANCE';
@@ -23,20 +23,7 @@ function getMarketIdentifier(pairOrSymbol: { symbol: string } | string): string 
   return `${exchangeKey}:${symbol.replace('/', '')}`;
 }
 
-// This is the original async DB version, renamed to avoid conflicts
-async function getMarketIdentifierFromDb(ctx: any, pairId: number): Promise<string> {
-  const pair = await ctx.db.pair.findUnique({ 
-    where: { id: pairId }, 
-    select: { symbol: true } 
-  });
-  
-  if (!pair) throw new TRPCError({ 
-    code: "NOT_FOUND", 
-    message: "Pair not found for market identifier." 
-  });
-  
-  return getMarketIdentifier(pair.symbol);
-}
+// Function removed as it was unused and causing lint errors.
 
 const priceAlertZSetKey = (market: string, direction: Direction): string =>
   `price_alerts:${market.toUpperCase()}:${direction}`;
@@ -46,7 +33,12 @@ const candleAlertZSetKey = (market: string, interval: string, direction: Directi
 
 const alertDetailsHashKey = (alertId: string): string => `alert_details:${alertId}`;
 
-async function addAlertToRedis(redis: Redis, alert: any): Promise<void> {
+// Define a more specific type for alerts that include the pair relationship
+type AlertWithPair = Prisma.AlertGetPayload<{
+  include: { pair: true }
+}>;
+
+async function addAlertToRedis(redis: Redis, alert: AlertWithPair): Promise<void> {
   if (!redis) {
     console.error("Redis client not available in context for addAlertToRedis");
     return;
@@ -59,20 +51,33 @@ async function addAlertToRedis(redis: Redis, alert: any): Promise<void> {
   const market = getMarketIdentifier(alert.pair);
 
   // Store alert details in HASH
-  const alertDataForRedis = {
-    ...alert,
-    threshold: alert.threshold.toString(),
-    createdAt: alert.createdAt.toISOString(),
-    user: undefined,
-    pair: undefined,
-    setup: undefined,
-    market: market,
+  // Explicitly construct the object for Redis to ensure correct types and remove relational data
+  const alertDataForRedis: Record<string, string | number | boolean | null | undefined> = {
+    id: alert.id,
+    userId: alert.userId,
+    pairId: alert.pairId,
+    type: alert.type,
+    threshold: alert.threshold.toString(), // Convert Decimal to string
+    direction: alert.direction,
+    status: alert.status,
+    interval: alert.interval,
+    createdAt: alert.createdAt.toISOString(), // Convert Date to ISO string
+    // If triggeredAt and notes are part of your Alert model in schema.prisma, uncomment them:
+    // triggeredAt: alert.triggeredAt?.toISOString(), 
+    // notes: alert.notes, 
+    market: market, // Add the market identifier
   };
   
-  // Remove undefined keys before HSET
-   Object.keys(alertDataForRedis).forEach(key => alertDataForRedis[key] === undefined && delete alertDataForRedis[key]);
+  // Filter out null or undefined values and ensure all values are strings for HSET
+  const finalAlertDataForRedis: Record<string, string> = {};
+  for (const key in alertDataForRedis) {
+    const value = alertDataForRedis[key];
+    if (value !== undefined && value !== null) {
+      finalAlertDataForRedis[key] = String(value);
+    }
+  }
 
-  pipeline.hset(hashKey, alertDataForRedis);
+  pipeline.hset(hashKey, finalAlertDataForRedis);
 
   // Add alert ID to the appropriate ZSET
   if (alert.type === AlertType.PRICE) {
@@ -85,7 +90,7 @@ async function addAlertToRedis(redis: Redis, alert: any): Promise<void> {
     console.warn(`Skipping add to Redis ZSET: Invalid alert type or missing interval for alert ${alertId}`);
     // Execute only HSET if ZADD is skipped
      try {
-      await pipeline.hset(hashKey, alertDataForRedis).exec(); // Only HSET
+      await pipeline.hset(hashKey, finalAlertDataForRedis).exec(); // Only HSET with filtered data
       console.info(`Added only HASH for alert ${alertId} to Redis.`);
     } catch (error) {
       console.error(`Error adding only HASH for alert ${alertId} to Redis:`, error);
@@ -102,7 +107,7 @@ async function addAlertToRedis(redis: Redis, alert: any): Promise<void> {
   }
 }
 
-async function removeAlertFromRedis(redis: Redis, alert: any): Promise<void> {
+async function removeAlertFromRedis(redis: Redis, alert: AlertWithPair): Promise<void> {
   if (!redis) {
     console.error("Redis client not available in context for removeAlertFromRedis");
     return;
@@ -150,12 +155,31 @@ const numericString = z.string().refine((val) => !isNaN(parseFloat(val)), {
   message: "Threshold must be a valid number string",
 });
 
+// Input Schemas
+const createAlertInputSchema = z.object({
+  pairId: z.number(),
+  type: z.nativeEnum(AlertType),
+  threshold: numericString,
+  direction: z.nativeEnum(Direction),
+  interval: z.string().optional().nullable(),
+});
+
+const updateAlertInputSchema = z.object({
+  id: z.string(),
+  threshold: numericString.optional(),
+  direction: z.nativeEnum(Direction).optional(),
+  status: z.nativeEnum(AlertStatus).optional(),
+  interval: z.string().optional().nullable(),
+});
+
+const deleteAlertInputSchema = z.object({ id: z.string() });
+
 export const alertsRouter = createTRPCRouter({
   getAllForUser: protectedProcedure
-    .query(async ({ ctx }) => {
+    .query(async ({ ctx }: { ctx: TRPCContext }) => {
       const alerts = await ctx.db.alert.findMany({
         where: {
-          userId: ctx.session.user.id,
+          userId: ctx.session!.user.id,
         },
         include: {
           pair: true, // Include related pair data needed for display/Redis keys
@@ -165,24 +189,15 @@ export const alertsRouter = createTRPCRouter({
         },
       });
       // Convert Decimal to string before sending to client
-      return alerts.map(alert => ({
+      return alerts.map((alert: AlertWithPair) => ({
         ...alert,
         threshold: alert.threshold.toString(),
       }));
     }),
 
   create: protectedProcedure
-    .input(
-      z.object({
-        pairId: z.number(),
-        type: z.nativeEnum(AlertType),
-        // Validate threshold as a numeric string
-        threshold: numericString,
-        direction: z.nativeEnum(Direction),
-        interval: z.string().optional().nullable(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
+    .input(createAlertInputSchema)
+    .mutation(async ({ ctx, input }: { ctx: TRPCContext, input: z.infer<typeof createAlertInputSchema> }) => {
       if (input.type === AlertType.CANDLE && !input.interval) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -192,7 +207,7 @@ export const alertsRouter = createTRPCRouter({
 
       // Explicitly define data for Prisma create
       const createData = {
-        userId: ctx.session.user.id,
+        userId: ctx.session!.user.id,
         pairId: input.pairId,
         type: input.type,
         // Convert validated string to Decimal
@@ -209,7 +224,7 @@ export const alertsRouter = createTRPCRouter({
 
       if (ctx.redis) {
         console.log('Redis client available, adding alert to Redis', alert);
-        await addAlertToRedis(ctx.redis, alert);
+        await addAlertToRedis(ctx.redis, alert as AlertWithPair); // Added type assertion
       } else {
         console.warn(`Redis client not available, skipping addAlertToRedis for alert ${alert.id}`);
       }
@@ -218,21 +233,12 @@ export const alertsRouter = createTRPCRouter({
     }),
 
   update: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        // Validate optional threshold as numeric string
-        threshold: numericString.optional(),
-        direction: z.nativeEnum(Direction).optional(),
-        status: z.nativeEnum(AlertStatus).optional(),
-        interval: z.string().optional().nullable(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
+    .input(updateAlertInputSchema)
+    .mutation(async ({ ctx, input }: { ctx: TRPCContext, input: z.infer<typeof updateAlertInputSchema>}) => {
       const { id, ...inputData } = input;
 
       const currentAlert = await ctx.db.alert.findUnique({
-        where: { id: id, userId: ctx.session.user.id },
+        where: { id: id, userId: ctx.session!.user.id },
          include: { pair: true }
       });
 
@@ -264,19 +270,19 @@ export const alertsRouter = createTRPCRouter({
       }
 
       const updatedAlert = await ctx.db.alert.update({
-        where: { id: id, userId: ctx.session.user.id },
+        where: { id: id, userId: ctx.session!.user.id },
         data: updateData,
         include: { pair: true }
       });
 
       if (ctx.redis) {
-        await removeAlertFromRedis(ctx.redis, currentAlert);
+        await removeAlertFromRedis(ctx.redis, currentAlert as AlertWithPair); // Added type assertion
       } else {
          console.warn(`Redis client not available, skipping removeAlertFromRedis for alert ${currentAlert.id}`);
       }
 
       if (ctx.redis) {
-        await addAlertToRedis(ctx.redis, updatedAlert);
+        await addAlertToRedis(ctx.redis, updatedAlert as AlertWithPair); // Added type assertion
       } else {
         console.warn(`Redis client not available, skipping addAlertToRedis for alert ${updatedAlert.id}`);
       }
@@ -285,11 +291,11 @@ export const alertsRouter = createTRPCRouter({
     }),
 
   delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+    .input(deleteAlertInputSchema)
+    .mutation(async ({ ctx, input }: { ctx: TRPCContext, input: z.infer<typeof deleteAlertInputSchema> }) => {
        // 1. Fetch the alert to get details needed for Redis removal
       const alertToDelete = await ctx.db.alert.findUnique({
-        where: { id: input.id, userId: ctx.session.user.id }, // Ensure user owns the alert
+        where: { id: input.id, userId: ctx.session!.user.id }, // Ensure user owns the alert
         include: { pair: true } // Needed for Redis key generation
       });
 
@@ -299,12 +305,12 @@ export const alertsRouter = createTRPCRouter({
 
       // 2. Delete the alert from the database
       await ctx.db.alert.delete({
-        where: { id: input.id, userId: ctx.session.user.id },
+        where: { id: input.id, userId: ctx.session!.user.id },
       });
 
       // 3. Remove the alert from Redis (if client exists)
       if (ctx.redis) {
-        await removeAlertFromRedis(ctx.redis, alertToDelete);
+        await removeAlertFromRedis(ctx.redis, alertToDelete as AlertWithPair); // Added type assertion
       } else {
         console.warn(`Redis client not available, skipping removeAlertFromRedis for alert ${alertToDelete.id}`);
       }

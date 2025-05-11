@@ -18,7 +18,7 @@ export default async function Navbar() {
         <NavItem href="/sessions" icon={<IconMicrophone size={24} />} />
         {/* <NavItem href="/videos" icon={<IconVideo size={24} />} /> */}
         <NavItem href="/setups" icon={<IconTargetArrow size={24} />} />
-        <NavItem href="/alerts" icon={<IconBell size={24} />} />
+        {/* <NavItem href="/alerts" icon={<IconBell size={24} />} /> */}
       </div>
       
       
