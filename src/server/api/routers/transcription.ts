@@ -5,7 +5,7 @@ import {
   protectedProcedure,
 } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-import { getSetups } from "~/server/services/videoService";
+//import { getSetups } from "~/server/services/videoService";
 import { uploadToBlob } from "~/lib/blob";
 
 // Keep in-memory store for development/debugging

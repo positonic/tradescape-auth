@@ -9,6 +9,7 @@ import '@mantine/core/styles.css';
 import Layout from "./_components/Layout";
 import { Notifications } from '@mantine/notifications';
 import '@mantine/notifications/styles.css';
+import { Providers } from "./_components/Providers";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -24,7 +25,9 @@ export default function RootLayout({
         <MantineProvider>
           <Notifications />
           <TRPCReactProvider>
-            <Layout>{children}</Layout>
+            <Providers>
+              <Layout>{children}</Layout>
+            </Providers>
           </TRPCReactProvider>
         </MantineProvider>
       </body>

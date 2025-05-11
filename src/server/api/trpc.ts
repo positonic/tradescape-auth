@@ -10,9 +10,51 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import Redis from "ioredis";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+
+// Initialize Redis Client
+// Ensure REDIS_URL is set in your .env files
+const redisUrl = process.env.REDIS_URL;
+let redis: Redis | undefined;
+
+if (!redisUrl) {
+  console.warn("REDIS_URL not found in environment variables. Redis client will not be initialized.");
+  // Depending on your app's requirements, you might want to throw an error here
+  // if Redis is essential for core functionality.
+  // throw new Error("REDIS_URL environment variable is not set.");
+} else {
+  redis = new Redis(redisUrl, {
+    // Optional: Configure ioredis options here
+    maxRetriesPerRequest: 3, // Example: Limit retries
+    connectTimeout: 10000, // Example: Connection timeout
+     // Keep the process running even if Redis loses connection initially or during runtime
+    // This is often desired in server environments. Adjust if needed.
+    enableOfflineQueue: true,
+  });
+
+  redis.on("connect", () => {
+    console.log("[Redis] Connected successfully.");
+  });
+
+  redis.on("error", (error: Error) => {
+    // Log the error, but don't crash the app unless Redis is absolutely critical
+    // and cannot function without it. ioredis might attempt reconnection automatically.
+    console.error("[Redis] Connection error:", error);
+  });
+
+   // Optional: Add a 'ready' listener if you need to ensure commands can be processed
+  redis.on("ready", () => {
+    console.log("[Redis] Client ready to process commands.");
+  });
+
+  // Optional: Add listener for reconnection attempts/success
+  redis.on("reconnecting", (timeToReconnect: number) => {
+    console.warn(`[Redis] Reconnecting in ${timeToReconnect}ms...`);
+  });
+}
 
 /**
  * 1. CONTEXT
@@ -32,9 +74,14 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   return {
     db,
     session,
+    redis: redis,
     ...opts,
   };
 };
+
+// Define the context type including Redis
+// This helps with type inference in your procedures
+export type TRPCContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
 /**
  * 2. INITIALIZATION
@@ -43,7 +90,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
  * ZodErrors so that you get typesafety on the frontend if your procedure fails due to validation
  * errors on the backend.
  */
-const t = initTRPC.context<typeof createTRPCContext>().create({
+const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
     return {
@@ -124,10 +171,13 @@ export const protectedProcedure = t.procedure
     if (!ctx.session || !ctx.session.user) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
+    // Ensure the context type is maintained correctly
+    const session = { ...ctx.session, user: ctx.session.user };
     return next({
       ctx: {
+        ...ctx, // Pass existing context properties
         // infers the `session` as non-nullable
-        session: { ...ctx.session, user: ctx.session.user },
+        session: session,
       },
     });
   });

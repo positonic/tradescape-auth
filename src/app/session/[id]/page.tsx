@@ -13,12 +13,12 @@ import {
   Badge,
   Image,
   SimpleGrid,
+  Grid,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { use } from 'react';
+import { use, useState, useEffect } from 'react';
 import Chat from "~/app/_components/Chat";
 import { Message } from '~/types';
-import { ContentEditor } from '~/app/_components/ContentEditor'; 
 import { TranscriptionContentEditor } from '~/app/_components/TranscriptionContentEditor';
 
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +30,14 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   });
   
   const router = useRouter();
+  const [transcriptionContent, setTranscriptionContent] = useState<string>('');
+
+  // Update the state when session data is loaded
+  useEffect(() => {
+    if (session?.transcription) {
+      setTranscriptionContent(session.transcription);
+    }
+  }, [session?.transcription]);
 
   const createSetupsMutation = api.setups.createFromTranscription.useMutation({
     onSuccess: () => {
@@ -69,7 +77,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
                 The current date is: ${new Date().toISOString().split('T')[0]}`
     }
   ]
-  if (session.setups.length === 0) {
+  if (session.setups?.length === 0) {
     initialMessages.push({
       type: 'ai',
       content: `Click create setups at the top right corner of the page to create setups for this transcription.`  
@@ -94,13 +102,66 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       <Text mb="xs"><strong>Updated:</strong> {new Date(session.updatedAt).toLocaleString()}</Text>
       
       <Title order={3} mt="xl" mb="md">Transcription</Title>
-      {session.transcription !== undefined ? (
+      {session?.transcription !== undefined ? (
         <TranscriptionContentEditor
           transcriptionId={session.id}
           initialContent={session.transcription ?? ''}
+          onSave={(content) => setTranscriptionContent(content)}
         />
       ) : (
         <Text c="dimmed">No transcription available yet</Text>
+      )}
+
+      <Title order={3} mt="xl" mb="md">The Plan</Title>
+      {transcriptionContent && session?.screenshots?.length > 0 ? (
+        <Paper p="md" withBorder>
+          {(() => {
+            // Sort screenshots by timestamp (most recent first)
+            const screenshots = session.screenshots || [];
+            const sortedScreenshots = [...screenshots].sort(
+              (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            
+            // Split transcription by [SCREENSHOT] placeholder
+            const segments = transcriptionContent.split('[SCREENSHOT]');
+            
+            return (
+              <>
+                {segments.map((segment, index) => (
+                  <div key={index}>
+                    {/* If this is the first segment, render it as text first */}
+                    {index === 0 && segment && (
+                      <Text mb="md">{segment}</Text>
+                    )}
+                    
+                    {/* Render screenshot with corresponding text to the right */}
+                    {index < segments.length - 1 && index < sortedScreenshots.length && sortedScreenshots[index] && (
+                      <Grid mb="md">
+                        <Grid.Col span={6}>
+                          <Image
+                            src={sortedScreenshots[index]?.url}
+                            alt={`Screenshot ${index + 1}`}
+                            radius="md"
+                            onClick={() => window.open(sortedScreenshots[index]?.url, '_blank')}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        </Grid.Col>
+                        <Grid.Col span={6}>
+                          {/* Show the text that follows this screenshot */}
+                          {index + 1 < segments.length && segments[index + 1] && (
+                            <Text>{segments[index + 1]}</Text>
+                          )}
+                        </Grid.Col>
+                      </Grid>
+                    )}
+                  </div>
+                ))}
+              </>
+            );
+          })()}
+        </Paper>
+      ) : (
+        <Text c="dimmed">No plan with screenshots available yet</Text>
       )}
 
       <Title order={3} mt="xl" mb="md">Setups</Title>
@@ -118,7 +179,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {session.setups.map((setup) => (
+            {session.setups?.map((setup) => (
               <Table.Tr 
                 key={setup.id}
                 style={{ cursor: 'pointer' }}
@@ -150,18 +211,21 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
       <Title order={3} mt="xl" mb="md">Screenshots</Title>
       {session.screenshots?.length > 0 ? (
         <SimpleGrid cols={3} spacing="md">
-          {session.screenshots.map((screenshot) => (
-            <div key={screenshot.id}>
-              <Text size="sm" c="dimmed" mb="xs">{screenshot.timestamp}</Text>
-              <Image
-                src={screenshot.url}
-                alt={`Screenshot from ${screenshot.timestamp}`}
-                radius="md"
-                onClick={() => window.open(screenshot.url, '_blank')}
-                style={{ cursor: 'pointer' }}
-              />
-            </div>
-          ))}
+          {session.screenshots
+            .slice()
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .map((screenshot) => (
+              <div key={screenshot.id}>
+                <Text size="sm" c="dimmed" mb="xs">{screenshot.timestamp}</Text>
+                <Image
+                  src={screenshot.url}
+                  alt={`Screenshot from ${screenshot.timestamp}`}
+                  radius="md"
+                  onClick={() => window.open(screenshot.url, '_blank')}
+                  style={{ cursor: 'pointer' }}
+                />
+              </div>
+            ))}
         </SimpleGrid>
       ) : (
         <Text c="dimmed">No screenshots for this session yet</Text>
