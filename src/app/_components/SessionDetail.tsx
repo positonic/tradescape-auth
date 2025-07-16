@@ -189,6 +189,50 @@ export default function SessionDetail({ sessionId, showFullDetails = true, onClo
         <Text c="dimmed">No transcription available yet</Text>
       )}
 
+      <Title order={3} mt="xl" mb="md">Setups</Title>
+      {session.setups?.length > 0 ? (
+        <Table highlightOnHover>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Pair</Table.Th>
+              <Table.Th>Direction</Table.Th>
+              <Table.Th>Entry</Table.Th>
+              <Table.Th>Take Profit</Table.Th>
+              <Table.Th>Stop Loss</Table.Th>
+              <Table.Th>Timeframe</Table.Th>
+              <Table.Th>Status</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {session.setups?.map((setup) => (
+              <Table.Tr 
+                key={setup.id}
+                style={{ cursor: 'pointer' }}
+                onClick={() => router.push(`/setup/${setup.id}`)}
+              >
+                <Table.Td>{setup.pair.symbol}</Table.Td>
+                <Table.Td>
+                  <span className={setup.direction === 'long' ? 'text-green-500' : 'text-red-500'}>
+                    {setup.direction}
+                  </span>
+                </Table.Td>
+                <Table.Td>{setup.entryPrice?.toString() ?? 'Not specified'}</Table.Td>
+                <Table.Td>{setup.takeProfitPrice?.toString() ?? 'Not specified'}</Table.Td>
+                <Table.Td>{setup.stopPrice?.toString() ?? '-'}</Table.Td>
+                <Table.Td>{setup.timeframe ?? 'Not specified'}</Table.Td>
+                <Table.Td>
+                  <Badge color={setup.status === 'active' ? 'blue' : 'gray'}>
+                    {setup.status}
+                  </Badge>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      ) : (
+        <Text c="dimmed">No setups for this session yet</Text>
+      )}
+
       {showFullDetails && (
         <>
           <Title order={3} mt="xl" mb="md">The Plan</Title>
@@ -241,50 +285,6 @@ export default function SessionDetail({ sessionId, showFullDetails = true, onClo
             </Paper>
           ) : (
             <Text c="dimmed">No plan with screenshots available yet</Text>
-          )}
-
-          <Title order={3} mt="xl" mb="md">Setups</Title>
-          {session.setups?.length > 0 ? (
-            <Table highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Pair</Table.Th>
-                  <Table.Th>Direction</Table.Th>
-                  <Table.Th>Entry</Table.Th>
-                  <Table.Th>Take Profit</Table.Th>
-                  <Table.Th>Stop Loss</Table.Th>
-                  <Table.Th>Timeframe</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {session.setups?.map((setup) => (
-                  <Table.Tr 
-                    key={setup.id}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => router.push(`/setup/${setup.id}`)}
-                  >
-                    <Table.Td>{setup.pair.symbol}</Table.Td>
-                    <Table.Td>
-                      <span className={setup.direction === 'long' ? 'text-green-500' : 'text-red-500'}>
-                        {setup.direction}
-                      </span>
-                    </Table.Td>
-                    <Table.Td>{setup.entryPrice?.toString() ?? 'Not specified'}</Table.Td>
-                    <Table.Td>{setup.takeProfitPrice?.toString() ?? 'Not specified'}</Table.Td>
-                    <Table.Td>{setup.stopPrice?.toString() ?? '-'}</Table.Td>
-                    <Table.Td>{setup.timeframe ?? 'Not specified'}</Table.Td>
-                    <Table.Td>
-                      <Badge color={setup.status === 'active' ? 'blue' : 'gray'}>
-                        {setup.status}
-                      </Badge>
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          ) : (
-            <Text c="dimmed">No setups for this session yet</Text>
           )}
           
           <Title order={3} mt="xl" mb="md">Screenshots</Title>

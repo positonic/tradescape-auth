@@ -9,7 +9,6 @@ import {
   Skeleton,
   Button,
   Group,
-  TextInput,
   Drawer,
 } from '@mantine/core';
 import SignInButton from "~/app/_components/SignInButton";
@@ -24,14 +23,8 @@ export default function ScansPage() { // Removed async
   const { data: sessions, isLoading: isLoadingSessions } = api.transcription.getSessions.useQuery(); // Renamed isLoading for clarity
   const { data: clientSession, status: sessionStatus } = useSession(); // Use client-side session
   const router = useRouter();
-  const utils = api.useUtils();
-  const updateTitleMutation = api.transcription.updateTitle.useMutation({
-    onSuccess: () => utils.transcription.getSessions.invalidate(),
-  });
   // const session = await auth(); // Removed server-side session fetching
 
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState<string>('');
   const [drawerSessionId, setDrawerSessionId] = useState<string | null>(null);
   const [drawerOpened, setDrawerOpened] = useState(false);
 
@@ -94,7 +87,6 @@ export default function ScansPage() { // Removed async
         </Table.Thead>
         <Table.Tbody>
           {sessions?.map((session) => {
-            const isEditing = editingSessionId === session.id;
             return (
               <Table.Tr 
                 key={session.id}
@@ -102,55 +94,7 @@ export default function ScansPage() { // Removed async
                 onClick={() => handleRowClick(session.id)}
               >
                 <Table.Td>
-                  {isEditing ? (
-                    <Group gap="xs">
-                      <TextInput
-                        value={editingTitle}
-                        onChange={e => setEditingTitle(e.currentTarget.value)}
-                        size="xs"
-                        autoFocus
-                        onClick={e => e.stopPropagation()}
-                      />
-                      <Button
-                        size="xs"
-                        loading={updateTitleMutation.isPending}
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          await updateTitleMutation.mutateAsync({ id: session.id, title: editingTitle });
-                          setEditingSessionId(null);
-                        }}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="subtle"
-                        onClick={e => {
-                          e.stopPropagation();
-                          setEditingSessionId(null);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </Group>
-                  ) : (
-                    <Group gap="xs">
-                      <Text>{session.title ?? <span style={{ color: '#aaa' }}>No title</span>}</Text>
-                      {clientSession?.user && (
-                        <Button
-                          size="xs"
-                          variant="subtle"
-                          onClick={e => {
-                            e.stopPropagation();
-                            setEditingSessionId(session.id);
-                            setEditingTitle(session.title ?? '');
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      )}
-                    </Group>
-                  )}
+                  <Text>{session.title ?? <span style={{ color: '#aaa' }}>No title</span>}</Text>
                 </Table.Td>
                 <Table.Td>{formatDuration(session.createdAt, session.updatedAt)}</Table.Td>
                 <Table.Td>
