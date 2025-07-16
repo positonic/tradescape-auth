@@ -69,6 +69,9 @@ model User {
     transcriptionSessions TranscriptionSession[]
     verificationTokens VerificationToken[]
     alerts        Alert[]
+    orders        Order[]
+    userTrades    UserTrade[]
+    positions     Position[]
 }
 
 model VerificationToken {
@@ -404,4 +407,80 @@ enum AlertStatus {
   PENDING   // Alert is active and waiting to be triggered
   TRIGGERED // Alert condition was met
   CANCELLED // Alert was cancelled by the user or system
+}
+
+// Trades tables from Tradescape.ai
+model UserTrade {
+  id        Int    @id @default(autoincrement())
+  ordertxid String
+  pair      String
+  time      BigInt
+  type      String
+  ordertype String
+  price     String
+  cost      String
+  fee       String
+  vol       Float
+  margin    String
+  leverage  String
+  misc      String
+  closedPnL Decimal?
+  tradeId   String @unique
+  exchange  String
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   Int?
+  order     Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  ordertxid     String
+  time          BigInt
+  type          String
+  pair          String
+  amount        Decimal
+  totalCost     Decimal
+  fee           Decimal
+  highestPrice  Decimal
+  lowestPrice   Decimal
+  averagePrice  Decimal
+  exchange      String
+  userId        String
+  closedPnL     Decimal?
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades        UserTrade[]
+  createdAt     DateTime   @default(now())
+  positionId    Int?
+  position      Position? @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@index([time])
+  @@index([userId])
+  @@index([pair])
+}
+
+model Position {
+  id            Int         @id @default(autoincrement())
+  status            String    // e.g., "draft", "open", "closed"
+  positionType      String    // e.g., "manual", "automated"
+  direction         String    // e.g., "long", "short"
+  pair              String
+  averageEntryPrice Decimal
+  averageExitPrice  Decimal
+  totalCostBuy      Decimal
+  totalCostSell     Decimal
+  amount            Decimal
+  profitLoss        Decimal
+  duration          String
+  time              BigInt
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders            Order[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([pair])
+  @@index([time])
+  @@index([status])
 }

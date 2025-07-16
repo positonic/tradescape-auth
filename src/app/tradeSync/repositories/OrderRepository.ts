@@ -4,7 +4,7 @@ import { Order } from '@/interfaces/Order';
 export class OrderRepository {
   constructor(private prisma: PrismaClient) {}
 
-  async saveAll(orders: Order[], userId: number): Promise<Order[]> {
+  async saveAll(orders: Order[], userId: string): Promise<Order[]> {
     if (orders.length === 0) return orders;
 
     await Promise.all(

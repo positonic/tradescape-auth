@@ -20,7 +20,7 @@ export class UserTradeRepository {
     // this.prisma = prisma;
   }
 
-  async findUserTrades(userId: number, since: number): Promise<TradeData> {
+  async findUserTrades(userId: string, since: number): Promise<TradeData> {
     const dbTrades = await this.prisma.userTrade.findMany({
       where: {
         userId,

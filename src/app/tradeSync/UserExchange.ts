@@ -19,7 +19,7 @@ interface ExchangeConfig {
 }
 
 class UserExchange {
-  userId: number;
+  userId: string;
   exchanges: Record<string, Exchange>;
   pairs: Record<string, UserPair[]>;
   apiKeys: ApiKey[];
@@ -28,7 +28,7 @@ class UserExchange {
   private readonly userExchangeRepository: UserExchangeRepository;
 
   constructor(
-    userId: number,
+    userId: string,
     apiKeys: ApiKey[],
     userPairs: Record<string, UserPair[]>,
     userExchangeRepository: UserExchangeRepository

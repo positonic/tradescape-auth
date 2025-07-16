@@ -1,18 +1,8 @@
 import { db } from "~/server/db";
 import { UserExchangeRepository } from "~/app/tradeSync/repositories/UserExchangeRepository";
 import UserExchange from "~/app/tradeSync/UserExchange";
-
-// Mock decrypt function - you'll need to implement this based on your encryption method
-function decryptKeys(encryptedKeys: string): string | null {
-  try {
-    // TODO: Implement actual decryption logic
-    // For now, assuming the keys are base64 encoded JSON
-    return Buffer.from(encryptedKeys, 'base64').toString('utf-8');
-  } catch (error) {
-    console.error('Failed to decrypt keys:', error);
-    return null;
-  }
-}
+import { decryptFromTransmission } from "~/lib/keyEncryption";
+import type { DecryptedKeys } from "~/lib/keyEncryption";
 
 interface InitUserExchangeResult {
   userExchange: UserExchange | null;
@@ -26,8 +16,8 @@ export async function initUserExchange(
   try {
     const userExchangeRepository = new UserExchangeRepository(db);
 
-    const decryptedKeys = JSON.parse(decryptKeys(encryptedKeys) || '[]');
-    if (!decryptedKeys.length) {
+    const decryptedKeys = decryptFromTransmission(encryptedKeys);
+    if (!decryptedKeys || !decryptedKeys.length) {
       return {
         userExchange: null,
         error: 'No valid API keys found',
@@ -35,7 +25,7 @@ export async function initUserExchange(
     }
 
     const userExchange = new UserExchange(
-      parseInt(userId, 10),
+      userId,
       decryptedKeys,
       {},
       userExchangeRepository

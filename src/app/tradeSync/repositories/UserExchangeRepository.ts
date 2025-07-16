@@ -24,7 +24,7 @@ export class UserExchangeRepository {
   }
 
   async updateLastSyncTimes(
-    userId: number,
+    userId: string,
     exchanges: string[]
   ): Promise<void> {
     const now = new Date();
@@ -79,7 +79,7 @@ export class UserExchangeRepository {
     }
   }
 
-  async findUserPairs(userId: number): Promise<Record<string, UserPair[]>> {
+  async findUserPairs(userId: string): Promise<Record<string, UserPair[]>> {
     const userPairs = await this.prisma.userPair.findMany({
       where: { userId },
       include: { pair: true, exchange: true },
@@ -102,7 +102,7 @@ export class UserExchangeRepository {
   }
 
   async getMostRecentTrade(
-    userId: number,
+    userId: string,
     symbol: string
   ): Promise<UserTrade | null> {
     return this.prisma.userTrade.findFirst({
@@ -112,7 +112,7 @@ export class UserExchangeRepository {
   }
 
   async updateUserPairs(
-    userId: number,
+    userId: string,
     exchangeName: string,
     pairs: string[]
   ): Promise<void> {

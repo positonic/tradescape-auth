@@ -5,14 +5,14 @@ import {
   Order as CCxtOrder,
   Balances,
 } from 'ccxt';
-import { Trade } from '@/interfaces/Trade';
-import { Order } from '@/interfaces/Order';
-import { ApiKey } from '@/interfaces/ApiKeys';
+import { Trade } from '../interfaces/Trade';
+import { Order } from '../interfaces/Order';
+import { ApiKey } from '../interfaces/ApiKeys';
 import { CCxtTrade, FetchTradesReturnType } from './types';
 import { mapCCxtOrdersToOrders, mapToOrders } from './ orderMapper';
 import { createPositionsFromOrders } from './ PositionService';
-import { getExchangeFetchConfig } from '@/config/exchanges';
-import { ExchangeData } from '@/interfaces/ExchangeData';
+import { getExchangeFetchConfig } from '../exchange-config';
+import { ExchangeData } from '../interfaces/ExchangeData';
 
 /**
  * Check if a symbol is a futures symbol

@@ -40,6 +40,7 @@
     "@types/crypto-js": "^4.2.2",
     "@vercel/blob": "^0.27.3",
     "asana": "^3.0.15",
+    "ccxt": "^4.4.94",
     "crypto-js": "^4.2.0",
     "elevenlabs": "^1.53.0",
     "form-data": "^4.0.2",
