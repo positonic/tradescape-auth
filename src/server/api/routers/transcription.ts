@@ -137,6 +137,7 @@ export const transcriptionRouter = createTRPCRouter({
     return ctx.db.transcriptionSession.findMany({
       where: {
         userId: ctx.session.user.id,
+        projectId: "cmd2xuzq200021tykblvurm90",
       },
       orderBy: {
         createdAt: "desc",
