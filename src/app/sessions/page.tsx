@@ -1,5 +1,4 @@
-'use client';
-
+"use client";
 import { api } from "~/trpc/react";
 import { 
   Paper, 
@@ -10,32 +9,30 @@ import {
   Skeleton,
   Button,
   Group,
+  TextInput,
 } from '@mantine/core';
+import SignInButton from "~/app/_components/SignInButton";
+// import { auth } from "~/server/auth"; // Removed server-side auth import
 import { useRouter } from 'next/navigation';
-import { notifications } from '@mantine/notifications';
-import { useEffect, useState } from 'react';
+import { useSession } from "next-auth/react"; // Added client-side session hook
+import { useState } from 'react';
 
-export default function ScansPage() {
-  const { data: sessions, isLoading } = api.transcription.getSessions.useQuery();
-  // const createSetupsMutation = api.setups.createFromTranscription.useMutation({
-  //   onSuccess: () => {
-  //     notifications.show({
-  //       title: 'Success',
-  //       message: 'Setups created successfully',
-  //       color: 'green',
-  //     });
-  //   },
-  //   onError: (error) => {
-  //     notifications.show({
-  //       title: 'Error',
-  //       message: error.message,
-  //       color: 'red',
-  //     });
-  //   },
-  // });
+
+export default function ScansPage() { // Removed async
+  const { data: sessions, isLoading: isLoadingSessions } = api.transcription.getSessions.useQuery(); // Renamed isLoading for clarity
+  const { data: clientSession, status: sessionStatus } = useSession(); // Use client-side session
   const router = useRouter();
+  const utils = api.useUtils();
+  const updateTitleMutation = api.transcription.updateTitle.useMutation({
+    onSuccess: () => utils.transcription.getSessions.invalidate(),
+  });
+  // const session = await auth(); // Removed server-side session fetching
 
-  if (isLoading) {
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
+
+  // Update loading state to consider both session and data fetching
+  if (isLoadingSessions || sessionStatus === "loading") {
     return <Skeleton height={400} />;
   }
 
@@ -51,55 +48,102 @@ export default function ScansPage() {
   return (
     <Paper p="md" radius="sm">
       <Title order={2} mb="lg">Transcription Sessions</Title>
+      <Group gap="md" justify="center" wrap="wrap">
+          {/* Use clientSession to determine auth state */}
+          {!clientSession?.user ?  <SignInButton /> : <></>}
+        </Group>
       <Table highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Session ID</Table.Th>
+            <Table.Th>Title</Table.Th>
             <Table.Th>Duration</Table.Th>
             <Table.Th>Status</Table.Th>
             <Table.Th>Actions</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {sessions?.map((session) => (
-            <Table.Tr 
-              key={session.id}
-              style={{ cursor: 'pointer' }}
-              onClick={() => router.push(`/session/${session.id}`)}
-            >
-              <Table.Td>{session.setupId}</Table.Td>
-              <Table.Td>{formatDuration(session.createdAt, session.updatedAt)}</Table.Td>
-              <Table.Td>
-                <Badge color={session.transcription ? 'green' : 'yellow'}>
-                  {session.transcription ? 'Completed' : 'In Progress'}
-                </Badge>
-              </Table.Td>
-              <Table.Td onClick={(e) => e.stopPropagation()}>
-                <Group gap="xs">
-                  <Button 
-                    size="xs"
-                    variant="light"
-                    onClick={() => router.push(`/session/${session.id}`)}
-                  >
-                    View
-                  </Button>
-                  {/* {session.transcription && (
-                    <Button
+          {sessions?.map((session) => {
+            const isEditing = editingSessionId === session.id;
+            return (
+              <Table.Tr 
+                key={session.id}
+                style={{ cursor: 'pointer' }}
+                onClick={() => router.push(`/session/${session.id}`)}
+              >
+                <Table.Td onClick={e => e.stopPropagation()}>
+                  {isEditing ? (
+                    <Group gap="xs">
+                      <TextInput
+                        value={editingTitle}
+                        onChange={e => setEditingTitle(e.currentTarget.value)}
+                        size="xs"
+                        autoFocus
+                        onClick={e => e.stopPropagation()}
+                      />
+                      <Button
+                        size="xs"
+                        loading={updateTitleMutation.isPending}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await updateTitleMutation.mutateAsync({ id: session.id, title: editingTitle });
+                          setEditingSessionId(null);
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setEditingSessionId(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </Group>
+                  ) : (
+                    <Group gap="xs">
+                      <Text>{session.title || <span style={{ color: '#aaa' }}>No title</span>}</Text>
+                      {clientSession?.user && (
+                        <Button
+                          size="xs"
+                          variant="subtle"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setEditingSessionId(session.id);
+                            setEditingTitle(session.title || '');
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </Group>
+                  )}
+                </Table.Td>
+                <Table.Td>{formatDuration(session.createdAt, session.updatedAt)}</Table.Td>
+                <Table.Td>
+                  <Badge color={session.transcription ? 'green' : 'yellow'}>
+                    {session.transcription ? 'Completed' : 'In Progress'}
+                  </Badge>
+                </Table.Td>
+                <Table.Td onClick={(e) => e.stopPropagation()}>
+                  <Group gap="xs">
+                    <Button 
                       size="xs"
                       variant="light"
-                      loading={createSetupsMutation.isPending}
-                      onClick={() => createSetupsMutation.mutate({ transcriptionId: session.id })}
+                      onClick={() => router.push(`/session/${session.id}`)}
                     >
-                      Create Setups
+                      View
                     </Button>
-                  )} */}
-                </Group>
-              </Table.Td>
-            </Table.Tr>
-          ))}
+                  </Group>
+                </Table.Td>
+              </Table.Tr>
+            );
+          })}
           {!sessions?.length && (
             <Table.Tr>
-              <Table.Td colSpan={4}>
+              <Table.Td colSpan={5}>
                 <Text ta="center" c="dimmed">
                   No transcription sessions found
                 </Text>

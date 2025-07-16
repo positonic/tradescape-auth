@@ -64,29 +64,34 @@ const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
 });
 
 export const transcriptionRouter = createTRPCRouter({
-  startSession: apiKeyMiddleware.mutation(async ({ ctx }) => {
-    // Type-safe userId access
-    const userId = ctx.userId;
+  startSession: apiKeyMiddleware
+    .input(z.object({ projectId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Type-safe userId access
+      const userId = ctx.userId;
+      const { projectId } = input;
 
-    // Create record in database using ctx.db
-    const session = await ctx.db.transcriptionSession.create({
-      data: {
-        sessionId: `session_${Date.now()}`, // Keep this as a reference
-        transcription: "", // Start with empty transcription
-        userId, // Now type-safe
-      },
-    });
+      // Create record in database using ctx.db
+      const session = await ctx.db.transcriptionSession.create({
+        data: {
+          sessionId: `session_${Date.now()}`,
+          transcription: "",
+          userId,
+          projectId, // Save projectId
+        },
+      });
 
-    // Keep in-memory store for debugging
-    transcriptionStore[session.id] = [];
-    console.log("\n🎙️ New session started:", session.id);
-    logStore();
+      // Keep in-memory store for debugging
+      transcriptionStore[session.id] = [];
+      console.log("\n🎙️ New session started:", session.id);
+      logStore();
 
-    return {
-      id: session.id, // Return the database ID
-      startTime: new Date().toISOString(),
-    };
-  }),
+      return {
+        id: session.id,
+        startTime: new Date().toISOString(),
+        projectId: session.projectId,
+      };
+    }),
 
   saveTranscription: protectedProcedure
     .input(
@@ -135,6 +140,14 @@ export const transcriptionRouter = createTRPCRouter({
       },
       orderBy: {
         createdAt: "desc",
+      },
+      select: {
+        id: true,
+        setupId: true,
+        createdAt: true,
+        updatedAt: true,
+        transcription: true,
+        title: true,
       },
     });
   }),
@@ -198,6 +211,38 @@ export const transcriptionRouter = createTRPCRouter({
         },
       });
       return session;
+    }),
+
+  updateTitle: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure the session belongs to the user
+      const session = await ctx.db.transcriptionSession.findUnique({
+        where: { id: input.id },
+      });
+      if (!session) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Session not found",
+        });
+      }
+      if (session.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Not authorized to update this session",
+        });
+      }
+      // Update the title
+      const updated = await ctx.db.transcriptionSession.update({
+        where: { id: input.id },
+        data: { title: input.title, updatedAt: new Date() },
+      });
+      return updated;
     }),
 
   // Add to your transcriptionRouter
