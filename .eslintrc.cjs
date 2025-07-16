@@ -4,6 +4,7 @@ const config = {
   "parserOptions": {
     "project": true
   },
+  "ignorePatterns": ["src/app/tradeSync/**/*", "src/lib/exchangeAuth.ts"],
   "plugins": [
     "@typescript-eslint"
   ],

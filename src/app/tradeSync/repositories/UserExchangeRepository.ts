@@ -1,0 +1,155 @@
+import { PrismaClient, UserTrade } from '@prisma/client';
+import { UserPair } from '../types';
+export type LastSyncTimes = {
+  [exchangeName: string]: number | undefined;
+};
+
+export class UserExchangeRepository {
+  constructor(private prisma: PrismaClient) {
+    this.prisma = prisma;
+  }
+
+  async getLastSyncTimes(userId: number): Promise<LastSyncTimes> {
+    const exchangeUsers = await this.prisma.exchangeUser.findMany({
+      where: { userId },
+      include: { exchange: true },
+    });
+
+    return exchangeUsers.reduce((acc, { exchange, lastTradesSyncTime }) => {
+      acc[exchange.name] = lastTradesSyncTime
+        ? lastTradesSyncTime.getTime()
+        : undefined;
+      return acc;
+    }, {} as LastSyncTimes);
+  }
+
+  async updateLastSyncTimes(
+    userId: number,
+    exchanges: string[]
+  ): Promise<void> {
+    const now = new Date();
+
+    // Get existing ExchangeUser records for this user
+    const existingRecords = await this.prisma.exchangeUser.findMany({
+      where: {
+        userId,
+        exchange: {
+          name: {
+            in: exchanges,
+          },
+        },
+      },
+      include: { exchange: true },
+    });
+
+    // Create a map of existing records by exchange name
+    const existingByExchange = existingRecords.reduce((acc, record) => {
+      acc[record.exchange.name] = record;
+      return acc;
+    }, {} as Record<string, (typeof existingRecords)[0]>);
+
+    // For each exchange, update or create the record
+    for (const exchangeName of exchanges) {
+      if (existingByExchange[exchangeName]) {
+        // Update existing record
+        await this.prisma.exchangeUser.update({
+          where: {
+            id: existingByExchange[exchangeName].id,
+          },
+          data: {
+            lastTradesSyncTime: now,
+          },
+        });
+      } else {
+        // Create new record
+        const exchange = await this.prisma.exchange.findUnique({
+          where: { name: exchangeName },
+        });
+
+        if (exchange) {
+          await this.prisma.exchangeUser.create({
+            data: {
+              userId,
+              exchangeId: exchange.id,
+              lastTradesSyncTime: now,
+            },
+          });
+        }
+      }
+    }
+  }
+
+  async findUserPairs(userId: number): Promise<Record<string, UserPair[]>> {
+    const userPairs = await this.prisma.userPair.findMany({
+      where: { userId },
+      include: { pair: true, exchange: true },
+    });
+    return userPairs.reduce((acc, { exchange, pair, lastTradesSyncTime }) => {
+      if (exchange && pair) {
+        const exchangeName = exchange.name;
+        const pairSymbol: UserPair = {
+          symbol: pair.symbol,
+        };
+
+        if (!acc[exchangeName]) {
+          acc[exchangeName] = [];
+        }
+
+        acc[exchangeName].push(pairSymbol);
+      }
+      return acc;
+    }, {} as Record<string, UserPair[]>);
+  }
+
+  async getMostRecentTrade(
+    userId: number,
+    symbol: string
+  ): Promise<UserTrade | null> {
+    return this.prisma.userTrade.findFirst({
+      where: { userId, pair: symbol },
+      orderBy: { time: 'desc' },
+    });
+  }
+
+  async updateUserPairs(
+    userId: number,
+    exchangeName: string,
+    pairs: string[]
+  ): Promise<void> {
+    // First, ensure the exchange exists
+    const exchange = await this.prisma.exchange.findUnique({
+      where: { name: exchangeName },
+    });
+
+    if (!exchange) {
+      throw new Error(`Exchange ${exchangeName} not found`);
+    }
+
+    // For each pair
+    for (const pairSymbol of pairs) {
+      // Find or create the pair
+      const pair = await this.prisma.pair.upsert({
+        where: { symbol: pairSymbol },
+        update: {},
+        create: { symbol: pairSymbol },
+      });
+
+      // Create or update the userPair association
+      await this.prisma.userPair.upsert({
+        where: {
+          userId_pairId_exchangeId: {
+            userId,
+            exchangeId: exchange.id,
+            pairId: pair.id,
+          },
+        },
+        update: {},
+        create: {
+          userId,
+          exchangeId: exchange.id,
+          pairId: pair.id,
+        },
+      });
+    }
+  }
+}
