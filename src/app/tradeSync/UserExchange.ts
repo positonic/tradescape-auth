@@ -108,16 +108,34 @@ class UserExchange {
   }> {
     let allTrades: Trade[] = [];
 
+    console.log('🚀 [UserExchange] getTrades() started');
+    console.log('🔍 [UserExchange] Available exchanges:', Object.keys(this.exchanges));
+    console.log('🔍 [UserExchange] Available pairs:', Object.keys(this.pairs));
+    console.log('🔍 [UserExchange] Pairs data:', this.pairs);
+
     // Iterate through each exchange the user has configured
     for (const exchangeName in this.exchanges) {
+      console.log(`📊 [${exchangeName}] Processing exchange...`);
       const exchange = this.exchanges[exchangeName];
       const pairs = this.pairs[exchangeName];
-      // todo: remove this. If we don't have trades for the pair, fetch since 0
-      //const since = lastSyncTimes?.[exchangeName];
+      
+      console.log(`🔍 [${exchangeName}] Exchange exists:`, !!exchange);
+      console.log(`🔍 [${exchangeName}] Pairs exists:`, !!pairs);
+      console.log(`🔍 [${exchangeName}] Pairs length:`, pairs?.length || 0);
+      
+      if (!exchange) {
+        console.log(`❌ [${exchangeName}] No exchange found, skipping`);
+        continue;
+      }
+      
+      if (!pairs) {
+        console.log(`❌ [${exchangeName}] No pairs found, skipping`);
+        continue;
+      }
 
-      if (!exchange || !pairs) continue;
       console.log('tradeSynch > UserExchange - exchangeName is ', exchangeName);
       console.log('tradeSynch > UserExchange - pairs is ', pairs);
+      console.log(`🔍 [${exchangeName}] Will fetch trades for ${pairs.length} symbols:`, pairs.map(p => p.symbol).join(', '));
       // For each trading pair on the current exchange
       for (const { symbol } of pairs) {
         try {
@@ -141,12 +159,16 @@ class UserExchange {
               : `We have not trades for ${symbol}, setting since to ${0}`
           );
           // Fetch trades for the current pair from the exchange
+          console.log(`🔍 [${exchangeName}] About to fetch trades for symbol: '${symbol}', since: ${since}`);
           const exchangeTrades = await exchange.fetchTrades(symbol, since);
           const trades = Object.values(exchangeTrades);
           console.log(
             `tradeSynch > UserExchange - trades.length for ${symbol} since ${since} is `,
             trades.length
           );
+          if (trades.length === 0) {
+            console.log(`⚠️  [${exchangeName}] No trades found for symbol: '${symbol}'`);
+          }
           if (exchangeName === 'hyperliquid') {
             console.log('Hyperliquid trades: ', trades[0]);
           }

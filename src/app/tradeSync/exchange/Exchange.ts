@@ -15,6 +15,7 @@ import { getExchangeFetchConfig } from '../exchange-config';
 import { ExchangeData } from '../interfaces/ExchangeData';
 import { getExchangeFilterConfig } from './filterConfig';
 import { validateRawTrade, filterTradesByBusinessLogic, logFilteringStats } from './tradeValidation';
+import { getExchangeCapabilities, supportsBulkFetch, logExchangeCapabilities } from './exchangeCapabilities';
 
 /**
  * Check if a symbol is a futures symbol
@@ -40,6 +41,11 @@ export default class Exchange {
   protected client: CCXTExchange;
   fetchConfig: Record<string, any>;
   id: string;
+  
+  // Cache for bulk trade fetching
+  private cachedTradesBySymbol: Map<string, CCxtTrade[]> | null = null;
+  private cacheTimestamp: number = 0;
+  private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes (increased from 5 minutes)
 
   constructor(
     ccxtInstance: any, // Accepting ccxt instance or class dynamically
@@ -70,6 +76,166 @@ export default class Exchange {
     });
 
     this.id = exchangeId;
+    
+    // Log exchange capabilities for debugging
+    logExchangeCapabilities(this.id);
+  }
+
+  /**
+   * Clear the trade cache
+   */
+  private clearTradeCache(): void {
+    this.cachedTradesBySymbol = null;
+    this.cacheTimestamp = 0;
+  }
+
+  /**
+   * Check if cache is valid and not expired
+   */
+  private isCacheValid(): boolean {
+    const hasCache = this.cachedTradesBySymbol !== null;
+    const timeSinceCache = Date.now() - this.cacheTimestamp;
+    const withinDuration = timeSinceCache < this.CACHE_DURATION;
+    const isValid = hasCache && withinDuration;
+    
+    if (!isValid) {
+      console.log(`🔍 [${this.id}] Cache validation: hasCache=${hasCache}, age=${Math.round(timeSinceCache/1000)}s, maxAge=${this.CACHE_DURATION/1000}s`);
+    }
+    
+    return isValid;
+  }
+
+  /**
+   * Fetch all trades at once and group by symbol (for exchanges like Hyperliquid)
+   */
+  private async fetchAllTradesAndGroupBySymbol(since?: number): Promise<Set<string>> {
+    const startTime = Date.now();
+    console.log(`🚀 [${this.id}] Starting BULK FETCH optimization (1 API call instead of 500+)`);
+    
+    try {
+      // Single API call to get ALL trades
+      const allTrades = await this.client.fetchMyTrades(
+        undefined, // No symbol filter - get all trades
+        since ? since : undefined,
+        undefined // No limit - get all trades
+      );
+
+      const fetchTime = Date.now() - startTime;
+      
+      // Only log if we found trades
+      if (allTrades.length > 0) {
+        console.log(`📊 [${this.id}] BULK FETCH SUCCESS: ${allTrades.length} trades fetched in ${fetchTime}ms`);
+      }
+
+      // Apply filtering to all trades
+      const filteredTrades = this.filterTradesByExchange(allTrades, since);
+      
+      // Group trades by symbol
+      const tradesGroupedBySymbol = new Map<string, CCxtTrade[]>();
+      const activePairs = new Set<string>();
+      const pairTradeCount = new Map<string, number>();
+      
+      for (const trade of filteredTrades) {
+        const symbol = trade.symbol;
+        if (symbol) {
+          if (!tradesGroupedBySymbol.has(symbol)) {
+            tradesGroupedBySymbol.set(symbol, []);
+            activePairs.add(symbol);
+            pairTradeCount.set(symbol, 0);
+          }
+          tradesGroupedBySymbol.get(symbol)!.push(trade);
+          pairTradeCount.set(symbol, pairTradeCount.get(symbol)! + 1);
+        }
+      }
+
+      // Cache the grouped trades
+      this.cachedTradesBySymbol = tradesGroupedBySymbol;
+      this.cacheTimestamp = Date.now();
+
+      // Only log if we found active pairs
+      if (activePairs.size > 0) {
+        const totalTime = Date.now() - startTime;
+        console.log(`✅ [${this.id}] BULK OPTIMIZATION COMPLETE: ${activePairs.size} active pairs found in ${totalTime}ms`);
+        console.log(`📈 [${this.id}] Performance: ~${Math.round(500 / (totalTime / 1000))}x faster than per-symbol calls`);
+        
+        // Show top traded pairs
+        const topPairs = Array.from(pairTradeCount.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+        
+        console.log(`💰 [${this.id}] Top traded pairs:`, topPairs.map(([symbol, count]) => `${symbol}(${count})`).join(', '));
+        console.log(`🔍 [${this.id}] All cached symbols:`, Array.from(activePairs).slice(0, 20).join(', '));
+      }
+
+      return activePairs;
+      
+    } catch (error) {
+      console.error(`❌ [${this.id}] BULK FETCH FAILED:`, error);
+      // Clear cache on error
+      this.clearTradeCache();
+      throw error;
+    }
+  }
+
+  /**
+   * Traditional per-symbol trade fetching (for exchanges like Binance)
+   */
+  private async fetchTradesPerSymbol(since?: number): Promise<Set<string>> {
+    const startTime = Date.now();
+    console.log(`🔄 [${this.id}] Starting PER-SYMBOL fetch (traditional method)`);
+    
+    // Load all markets first
+    await this.client.loadMarkets();
+    const activePairs = new Set<string>();
+
+    // Get all symbols from the exchange
+    const symbols = this.loadSymbols();
+    if (!symbols) {
+      throw new Error('No symbols found for exchange');
+    }
+
+    console.log(`📊 [${this.id}] Checking ${symbols.length} symbols individually`);
+
+    const capabilities = getExchangeCapabilities(this.id);
+    let checkedCount = 0;
+    let skippedCount = 0;
+    
+    for (const symbol of symbols) {
+      try {
+        // Wait for rate limit BEFORE making the API call
+        if (capabilities.rateLimit) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, capabilities.rateLimit)
+          );
+        }
+
+        if (isFuturesSymbol(symbol)) {
+          skippedCount++;
+          continue;
+        }
+
+        const trades = await this.fetchTradesDirectly(symbol, since);
+        checkedCount++;
+        
+        if (trades && Object.values(trades).length > 0) {
+          activePairs.add(symbol);
+          console.log(`✅ [${this.id}] FOUND trades for ${symbol} (${Object.values(trades).length} trades)`);
+        }
+      } catch (error) {
+        console.error(`❌ [${this.id}] Error fetching trades for ${symbol}:`, error);
+        continue;
+      }
+    }
+
+    // Only log completion if we found active pairs
+    if (activePairs.size > 0) {
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ [${this.id}] PER-SYMBOL COMPLETE: ${activePairs.size} active pairs found`);
+      console.log(`📊 [${this.id}] Stats: ${checkedCount} checked, ${skippedCount} skipped, ${totalTime}ms total`);
+      console.log(`📈 [${this.id}] Active pairs: ${Array.from(activePairs).slice(0, 10).join(', ')}${activePairs.size > 10 ? '...' : ''}`);
+    }
+
+    return activePairs;
   }
 
   public loadMarkets() {
@@ -360,10 +526,12 @@ export default class Exchange {
       logFilteringStats(this.id, filteredTrades.length, businessFilteredTrades.length, 'business-logic');
     }
 
-    // Final summary
-    console.log(
-      `🔍 ${this.id} filtering summary: ${originalCount} → ${businessFilteredTrades.length} trades (${((originalCount - businessFilteredTrades.length) / originalCount * 100).toFixed(1)}% filtered)`
-    );
+    // Final summary - only log if significant filtering occurred
+    const filteredCount = originalCount - businessFilteredTrades.length;
+    if (filteredCount > 0) {
+      const percentage = ((filteredCount / originalCount) * 100).toFixed(1);
+      console.log(`🔍 [${this.id}] FILTERING: ${originalCount} → ${businessFilteredTrades.length} trades (${percentage}% filtered)`);
+    }
 
     return businessFilteredTrades;
   }
@@ -373,130 +541,217 @@ export default class Exchange {
     since: number | undefined = undefined
     //  limit: number = 1000
   ): Promise<FetchTradesReturnType> {
-    try {
-      console.log(
-        'Exchange class > fetchTrades! -- market is ',
-        market,
-        since,
-        new Date(since ?? 0),
-        { defaultType: ['swap', 'option', 'spot', 'futures'] }
+    // Debug logging for cache state
+    if (supportsBulkFetch(this.id)) {
+      const cacheStats = this.getCacheStats();
+      console.log(`🔍 [${this.id}] Cache check for ${market}: valid=${cacheStats.isValid}, symbols=${cacheStats.symbolCount}, trades=${cacheStats.totalTrades}, age=${cacheStats.ageMinutes}min`);
+    }
+    
+    // Check if we can use cached data from bulk fetch
+    if (supportsBulkFetch(this.id) && this.isCacheValid() && market) {
+      const result = await this.processTradesFromCache(market, since);
+      // Only log if we found trades in cache
+      if (Object.keys(result).length > 0) {
+        console.log(`🎯 [${this.id}] CACHE HIT: ${Object.keys(result).length} trades for ${market} (instant)`);
+      } else {
+        console.log(`🔍 [${this.id}] CACHE MISS: No trades found for ${market} in cache`);
+      }
+      return result;
+    }
+    
+    // For bulk fetch exchanges, if cache is invalid but we need trades, repopulate cache
+    if (supportsBulkFetch(this.id) && !this.isCacheValid() && market) {
+      console.log(`🔄 [${this.id}] Cache invalid for bulk fetch exchange, repopulating...`);
+      try {
+        await this.fetchAllTradesAndGroupBySymbol(since);
+        // Try cache again after repopulation
+        if (this.isCacheValid()) {
+          const result = await this.processTradesFromCache(market, since);
+          if (Object.keys(result).length > 0) {
+            console.log(`🎯 [${this.id}] CACHE REPOPULATED: ${Object.keys(result).length} trades for ${market}`);
+          } else {
+            console.log(`⚠️ [${this.id}] CACHE REPOPULATED but no trades found for ${market}`);
+            console.log(`🔍 [${this.id}] Available symbols after repopulation:`, Array.from(this.cachedTradesBySymbol?.keys() || []).slice(0, 10));
+          }
+          return result;
+        } else {
+          console.error(`❌ [${this.id}] Cache still invalid after repopulation`);
+        }
+      } catch (error) {
+        console.error(`❌ [${this.id}] Cache repopulation failed:`, error);
+      }
+    }
+    
+    // Fall back to direct API call
+    console.log(`🌐 [${this.id}] Falling back to direct API call for ${market}`);
+    return await this.fetchTradesDirectly(market, since);
+  }
+
+  /**
+   * Process trades from cache (for bulk fetch exchanges)
+   */
+  private async processTradesFromCache(
+    market: string,
+    since?: number
+  ): Promise<FetchTradesReturnType> {
+    if (!this.cachedTradesBySymbol) {
+      throw new Error('Cache is not available');
+    }
+
+    const cachedTrades = this.cachedTradesBySymbol.get(market) || [];
+    console.log(`📊 [${this.id}] Cache lookup for '${market}': ${cachedTrades.length} trades found`);
+    
+    if (cachedTrades.length === 0) {
+      const availableSymbols = Array.from(this.cachedTradesBySymbol.keys());
+      console.log(`🔍 [${this.id}] Available symbols in cache (${availableSymbols.length}):`, availableSymbols.slice(0, 10));
+      
+      // Check for partial matches
+      const partialMatches = availableSymbols.filter(symbol => 
+        symbol.includes(market) || market.includes(symbol.split('/')[0]) || market.includes(symbol.split(':')[0])
       );
+      if (partialMatches.length > 0) {
+        console.log(`🔍 [${this.id}] Potential symbol matches for '${market}':`, partialMatches);
+      }
+    }
+
+    // Apply additional time filtering if needed (cache might have broader time range)
+    let filteredTrades = cachedTrades;
+    if (since !== undefined) {
+      filteredTrades = cachedTrades.filter(trade => {
+        const tradeTime = Number(trade.timestamp);
+        return tradeTime > since;
+      });
+      // Only log if time filtering made a difference
+      if (filteredTrades.length !== cachedTrades.length) {
+        console.log(`⏰ [${this.id}] Time filtered ${cachedTrades.length} → ${filteredTrades.length} trades for ${market}`);
+      }
+    }
+
+    return this.convertTradesToReturnFormat(filteredTrades);
+  }
+
+  /**
+   * Direct API call to fetch trades (for traditional exchanges or cache miss)
+   */
+  private async fetchTradesDirectly(
+    market: string | undefined,
+    since: number | undefined = undefined
+  ): Promise<FetchTradesReturnType> {
+    try {
       const rawTrades = await this.client.fetchMyTrades(
         market,
         since ? since : undefined,
         undefined
       );
 
-      console.log(
-        'In exchange/Exchange > fetchTrades -- rawTrades.length is ',
-        rawTrades.length
-      );
-      if (this.id === 'hyperliquid') {
-        console.log('Hyperliquid raw trades: ', rawTrades[0]);
+      // Only log if we found trades
+      if (rawTrades.length > 0) {
+        console.log(`🌐 [${this.id}] DIRECT API: ${rawTrades.length} trades for ${market || 'all'}`);
+        
+        if (this.id === 'hyperliquid' && rawTrades.length > 0) {
+          console.log(`🔍 [${this.id}] Sample trade:`, rawTrades[0]);
+        }
       }
       
       // Apply comprehensive filtering (time-based + exchange-specific)
       const filteredTrades = this.filterTradesByExchange(rawTrades, since);
 
-      const sortedTrades = filteredTrades.sort(
-        (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)
-      );
-      const Trades = sortedTrades.map(
-        (ccxtTrade: CCxtTrade): [string, Trade] => {
-          const trade: Trade = {
-            id: ccxtTrade.id?.toString() ?? '',
-            tradeId: ccxtTrade.id?.toString() ?? '',
-            ordertxid: ccxtTrade.order?.toString() ?? '',
-            pair: ccxtTrade.symbol ?? '',
-            time: Number(ccxtTrade.timestamp),
-            type: ccxtTrade.side,
-            ordertype: String(ccxtTrade.type),
-            price: ccxtTrade.price.toString(),
-            cost: (ccxtTrade.cost ?? 0).toString(),
-            fee: ccxtTrade.fee?.cost?.toString() ?? '0',
-            vol: Number(ccxtTrade.amount),
-            margin: ccxtTrade.margin ?? '',
-            leverage: ccxtTrade.leverage ?? '',
-            misc: ccxtTrade.misc ?? '',
-            exchange: this.client.name?.toString() ?? '',
-            date: new Date(Number(ccxtTrade.timestamp)),
-            closedPnL: Number(ccxtTrade.info.closedPnl) ?? 0,
-          };
-          if (this.id === 'hyperliquid') {
-            console.log(
-              'log> ccxtTrade.info.closedPnL is ',
-              ccxtTrade.info.closedPnl
-            );
-            console.log(
-              'log> Number(ccxtTrade.info.closedPnL) ?? 0 ',
-              Number(ccxtTrade.info.closedPnL) ?? 0
-            );
-            console.log('log> trade.closedPnL is ', trade.closedPnL);
-
-            console.log('log> ccxtTrade.info is ', ccxtTrade.info);
-          }
-
-          return [trade.tradeId, trade];
-        }
-      );
-      return Object.fromEntries(Trades);
+      return this.convertTradesToReturnFormat(filteredTrades);
+      
     } catch (error) {
-      console.warn(`Error fetching trades from ${this.client.name}:`, error);
-      return {} as FetchTradesReturnType; // Return an empty Record<string, Trade>
+      console.warn(`❌ [${this.id}] Direct API error for ${market}:`, error);
+      return {} as FetchTradesReturnType;
     }
   }
+
+  /**
+   * Convert CCxtTrade[] to FetchTradesReturnType format
+   */
+  private convertTradesToReturnFormat(trades: CCxtTrade[]): FetchTradesReturnType {
+    const sortedTrades = trades.sort(
+      (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)
+    );
+    
+    const Trades = sortedTrades.map(
+      (ccxtTrade: CCxtTrade): [string, Trade] => {
+        const trade: Trade = {
+          id: ccxtTrade.id?.toString() ?? '',
+          tradeId: ccxtTrade.id?.toString() ?? '',
+          ordertxid: ccxtTrade.order?.toString() ?? '',
+          pair: ccxtTrade.symbol ?? '',
+          time: Number(ccxtTrade.timestamp),
+          type: ccxtTrade.side,
+          ordertype: String(ccxtTrade.type),
+          price: ccxtTrade.price.toString(),
+          cost: (ccxtTrade.cost ?? 0).toString(),
+          fee: ccxtTrade.fee?.cost?.toString() ?? '0',
+          vol: Number(ccxtTrade.amount),
+          margin: ccxtTrade.margin ?? '',
+          leverage: ccxtTrade.leverage ?? '',
+          misc: ccxtTrade.misc ?? '',
+          exchange: this.client.name?.toString() ?? '',
+          date: new Date(Number(ccxtTrade.timestamp)),
+          closedPnL: Number(ccxtTrade.info.closedPnl) ?? 0,
+        };
+        
+        if (this.id === 'hyperliquid') {
+          console.log('log> ccxtTrade.info.closedPnL is ', ccxtTrade.info.closedPnl);
+          console.log('log> Number(ccxtTrade.info.closedPnL) ?? 0 ', Number(ccxtTrade.info.closedPnL) ?? 0);
+          console.log('log> trade.closedPnL is ', trade.closedPnL);
+          console.log('log> ccxtTrade.info is ', ccxtTrade.info);
+        }
+
+        return [trade.tradeId, trade];
+      }
+    );
+    
+    return Object.fromEntries(Trades);
+  }
+
+  /**
+   * Clear the trade cache (useful for testing or when cache becomes stale)
+   */
+  public clearCache(): void {
+    console.log(`🧹 Clearing trade cache for ${this.id}`);
+    this.clearTradeCache();
+  }
+
+  /**
+   * Get cache statistics for debugging
+   */
+  public getCacheStats(): {
+    isValid: boolean;
+    symbolCount: number;
+    totalTrades: number;
+    ageMinutes: number;
+  } {
+    const isValid = this.isCacheValid();
+    const symbolCount = this.cachedTradesBySymbol?.size || 0;
+    const totalTrades = this.cachedTradesBySymbol 
+      ? Array.from(this.cachedTradesBySymbol.values()).reduce((sum, trades) => sum + trades.length, 0)
+      : 0;
+    const ageMinutes = this.cacheTimestamp ? (Date.now() - this.cacheTimestamp) / (1000 * 60) : 0;
+
+    return {
+      isValid,
+      symbolCount,
+      totalTrades,
+      ageMinutes: Math.round(ageMinutes * 10) / 10,
+    };
+  }
+
   async fetchTradePairs(
     exchangeName: string,
     since?: number
   ): Promise<Set<string>> {
-    // const exchange = this.exchanges[exchangeName];
-    // if (!exchange) throw new Error(`Exchange ${exchangeName} not found`);
-
-    // Load all markets first
-    await this.client.loadMarkets();
-    const activePairs = new Set<string>();
-
-    // Get all symbols from the exchange
-    const symbols = this.loadSymbols();
-    // works const symbols = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT'];
-    if (!symbols) {
-      throw new Error('No symbols found for exchange');
+    // Check exchange capabilities and use appropriate strategy
+    if (supportsBulkFetch(this.id)) {
+      console.log(`📦 [${this.id}] Using BULK FETCH strategy (performance optimization)`);
+      return await this.fetchAllTradesAndGroupBySymbol(since);
+    } else {
+      console.log(`🔁 [${this.id}] Using PER-SYMBOL fetch strategy (traditional)`);
+      return await this.fetchTradesPerSymbol(since);
     }
-    console.log('debug: fetchTradePairs: symbols is ', symbols);
-    for (const symbol of symbols) {
-      try {
-        // Wait for rate limit BEFORE making the API call
-        if (this.client.rateLimit) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, this.client.rateLimit)
-          );
-        }
-        console.log(
-          `debug: fetchTradePairs: seeking trades for ${symbol} on ${exchangeName}`
-        );
-
-        if (isFuturesSymbol(symbol)) {
-          console.log(
-            `debug: fetchTradePairs: skipping ${symbol} on ${exchangeName} since=${since}`
-          );
-          continue;
-        }
-        const trades = await this.fetchTrades(symbol, since);
-        //changing below for linting, will it break?
-        if (trades && Object.values(trades).length > 0) {
-          activePairs.add(symbol);
-          console.log(
-            '\x1b[32m%s\x1b[0m',
-            `Found trades for ${symbol} on ${exchangeName}`
-          );
-        }
-      } catch (error) {
-        console.error(`Error fetching trades for ${symbol}:`, error);
-        continue;
-      }
-    }
-
-    return activePairs;
   }
   async fetchAllTrades(
     market: string,

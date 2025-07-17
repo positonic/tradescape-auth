@@ -205,32 +205,40 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
               ✅ Exchange API keys are saved and encrypted in your browser.
             </Text>
           </Alert>
-          <Group justify="space-between">
-            <Button
-              onClick={handleIncrementalSync}
-              loading={isSyncing}
-              variant="gradient"
-              gradient={{ from: '#23dd7a', to: '#1b9b57' }}
-            >
-              Quick Sync
-            </Button>
+          <Stack gap="sm">
+            <Group justify="space-between">
+              <Button
+                onClick={handleIncrementalSync}
+                loading={isSyncing}
+                variant="gradient"
+                gradient={{ from: '#23dd7a', to: '#1b9b57' }}
+                style={{ flex: 1 }}
+              >
+                ⚡ Quick Sync
+              </Button>
+              <Button
+                onClick={() => {
+                  // Use existing saved keys for full sync
+                  const encrypted = encryptForTransmission(keys);
+                  syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'full' });
+                }}
+                loading={isSyncing}
+                style={{ flex: 1 }}
+              >
+                🔄 Full Sync
+              </Button>
+            </Group>
+            <Text size="xs" c="dimmed" ta="center">
+              Quick: Sync trades from known pairs • Full: Rediscover all pairs + sync trades
+            </Text>
             <Button
               variant="outline"
               onClick={addNewExchange}
+              size="sm"
             >
               Add New Exchange
             </Button>
-            <Button
-              onClick={() => {
-                // Use existing saved keys for full sync
-                const encrypted = encryptForTransmission(keys);
-                syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'full' });
-              }}
-              loading={isSyncing}
-            >
-              Full Sync
-            </Button>
-          </Group>
+          </Stack>
         </Stack>
       ) : (
         <Stack gap="lg">

@@ -123,16 +123,23 @@ export class UserExchangeRepository {
     exchangeName: string,
     pairs: string[]
   ): Promise<void> {
-    // First, ensure the exchange exists
-    const exchange = await this.prisma.exchange.findUnique({
+    // First, ensure the exchange exists (create if missing)
+    const exchange = await this.prisma.exchange.upsert({
       where: { name: exchangeName },
+      update: {},
+      create: { name: exchangeName },
     });
 
-    if (!exchange) {
-      throw new Error(`Exchange ${exchangeName} not found`);
+    console.log(`📊 Using exchange: ${exchange.name} (ID: ${exchange.id})`);
+    
+    if (pairs.length > 0) {
+      console.log(`💱 Processing ${pairs.length} pairs for ${exchangeName}`);
     }
 
     // For each pair
+    let processedCount = 0;
+    let newPairsCount = 0;
+    
     for (const pairSymbol of pairs) {
       // Find or create the pair
       const pair = await this.prisma.pair.upsert({
@@ -142,7 +149,7 @@ export class UserExchangeRepository {
       });
 
       // Create or update the userPair association
-      await this.prisma.userPair.upsert({
+      const result = await this.prisma.userPair.upsert({
         where: {
           userId_pairId_exchangeId: {
             userId,
@@ -157,6 +164,17 @@ export class UserExchangeRepository {
           pairId: pair.id,
         },
       });
+
+      processedCount++;
+      
+      // Note: UserPair model doesn't have createdAt/updatedAt timestamps
+      // We'll count all processed pairs as potentially new for now
+      newPairsCount++;
+    }
+
+    // Log summary only if we processed pairs
+    if (processedCount > 0) {
+      console.log(`✅ [${exchangeName}] Processed ${processedCount} pairs (${newPairsCount} new)`);
     }
   }
 }

@@ -74,22 +74,39 @@ export class TradeSyncService {
   }
 
   private async performInitialSync(userId: string, userExchange: any): Promise<SyncResult> {
+    const startTime = Date.now();
     try {
-      console.log('🔄 Starting initial sync for user:', userId);
+      console.log('🚀 INITIAL SYNC STARTED for user:', userId);
       
       // 1. Comprehensive pair discovery - check ALL symbols
       console.log('📊 Discovering all trading pairs...');
+      const pairDiscoveryStart = Date.now();
       const activePairs = await userExchange.updateUserPairs();
+      
+      // 1.5. Load pairs into UserExchange instance for getTrades()
+      console.log('📋 Loading pairs into UserExchange instance...');
+      await userExchange.loadUserPairs();
+      const pairDiscoveryTime = Date.now() - pairDiscoveryStart;
       
       // 2. Fetch ALL historical trades for discovered pairs
       console.log('📈 Fetching all historical trades...');
+      const tradesFetchStart = Date.now();
       const { allTrades } = await userExchange.getTrades();
+      const tradesFetchTime = Date.now() - tradesFetchStart;
       
       // 3. Update last sync times
       const exchanges = Object.keys(userExchange.exchanges);
       await this.userExchangeRepository.updateLastSyncTimes(userId, exchanges);
       
-      console.log('✅ Initial sync completed');
+      const totalTime = Date.now() - startTime;
+      
+      // Only log success if we found data
+      if (Array.from(activePairs).length > 0 || allTrades.length > 0) {
+        console.log('✅ INITIAL SYNC SUCCESS');
+        console.log(`⏱️  Performance: ${totalTime}ms total (${pairDiscoveryTime}ms pairs, ${tradesFetchTime}ms trades)`);
+        console.log(`📊 Results: ${Array.from(activePairs).length} pairs, ${allTrades.length} trades`);
+      }
+      
       return {
         success: true,
         type: 'initial',
@@ -99,7 +116,7 @@ export class TradeSyncService {
       };
       
     } catch (error) {
-      console.error('❌ Initial sync failed:', error);
+      console.error('❌ INITIAL SYNC FAILED:', error);
       return {
         success: false,
         type: 'initial',
@@ -111,21 +128,34 @@ export class TradeSyncService {
   }
 
   private async performIncrementalSync(userId: string, userExchange: any, since?: number): Promise<SyncResult> {
+    const startTime = Date.now();
     try {
-      console.log('🔄 Starting incremental sync for user:', userId);
+      console.log('⚡ QUICK SYNC STARTED for user:', userId);
       
-      // 1. Get current pairs from database
+      // 1. Get current pairs from database (skip discovery if we have recent pairs)
       const currentPairs = await userExchange.loadUserPairs();
       const currentPairCount = Object.values(currentPairs).flat().length;
       
-      // 2. Check for new pairs periodically (every incremental sync)
-      // This addresses the requirement that incremental sync must check for new pairs
-      console.log('🔍 Checking for new trading pairs...');
-      const newActivePairs = await userExchange.updateUserPairs(since);
+      let newActivePairs;
+      let pairDiscoveryTime = 0;
       
-      // 3. Fetch recent trades for all pairs (existing + new)
-      console.log('📈 Fetching recent trades...');
+      // 2. Only check for new pairs if we have fewer than 5 pairs or it's been a while
+      if (currentPairCount < 5) {
+        console.log('🔍 Few pairs found, checking for new trading pairs...');
+        const pairDiscoveryStart = Date.now();
+        newActivePairs = await userExchange.updateUserPairs(since);
+        pairDiscoveryTime = Date.now() - pairDiscoveryStart;
+      } else {
+        console.log('📋 Using existing pairs (use Full Sync to rediscover)');
+        // Use existing pairs, convert to Set format expected by return
+        newActivePairs = new Set(Object.values(currentPairs).flat().map(pair => pair.symbol));
+      }
+      
+      // 3. Fetch recent trades for known pairs only
+      console.log('📈 Fetching recent trades for known pairs...');
+      const tradesFetchStart = Date.now();
       const { allTrades } = await userExchange.getTrades();
+      const tradesFetchTime = Date.now() - tradesFetchStart;
       
       // 4. Update last sync times
       const exchanges = Object.keys(userExchange.exchanges);
@@ -135,26 +165,39 @@ export class TradeSyncService {
       const newPairCount = Array.from(newActivePairs).length;
       const newPairsDiscovered = Math.max(0, newPairCount - currentPairCount);
       
-      console.log('✅ Incremental sync completed');
+      const totalTime = Date.now() - startTime;
+      
+      // Only log success if we found data
+      if (newPairsDiscovered > 0 || allTrades.length > 0) {
+        console.log('⚡ QUICK SYNC SUCCESS');
+        console.log(`⏱️  Performance: ${totalTime}ms total (${pairDiscoveryTime}ms pairs, ${tradesFetchTime}ms trades)`);
+        console.log(`📊 Results: ${newPairsDiscovered} new pairs, ${allTrades.length} trades`);
+        if (currentPairCount >= 5 && pairDiscoveryTime === 0) {
+          console.log('💡 Used existing pairs - use Full Sync to rediscover all pairs');
+        }
+      }
+      
       return {
         success: true,
         type: 'incremental',
         pairsFound: newPairCount,
         tradesFound: allTrades.length,
         newPairs: newPairsDiscovered,
-        message: newPairsDiscovered > 0 
-          ? `Found ${newPairsDiscovered} new trading pairs and ${allTrades.length} trades`
-          : `Synced ${allTrades.length} trades from existing pairs`
+        message: currentPairCount >= 5 && pairDiscoveryTime === 0
+          ? `Quick sync completed: ${allTrades.length} trades from ${currentPairCount} known pairs`
+          : newPairsDiscovered > 0 
+            ? `Found ${newPairsDiscovered} new trading pairs and ${allTrades.length} trades`
+            : `Synced ${allTrades.length} trades from existing pairs`
       };
       
     } catch (error) {
-      console.error('❌ Incremental sync failed:', error);
+      console.error('❌ QUICK SYNC FAILED:', error);
       return {
         success: false,
         type: 'incremental',
         pairsFound: 0,
         tradesFound: 0,
-        message: 'Incremental sync failed: ' + (error instanceof Error ? error.message : 'Unknown error')
+        message: 'Quick sync failed: ' + (error instanceof Error ? error.message : 'Unknown error')
       };
     }
   }

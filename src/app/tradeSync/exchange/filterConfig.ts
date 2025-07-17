@@ -63,5 +63,5 @@ export const EXCHANGE_FILTER_CONFIGS: Record<string, ExchangeFilterConfig> = {
 };
 
 export function getExchangeFilterConfig(exchangeId: string): ExchangeFilterConfig {
-  return EXCHANGE_FILTER_CONFIGS[exchangeId] || EXCHANGE_FILTER_CONFIGS.default;
+  return EXCHANGE_FILTER_CONFIGS[exchangeId] || EXCHANGE_FILTER_CONFIGS.default!;
 }
