@@ -1,4 +1,5 @@
-import { Order } from '@/interfaces/Order';
+import { Order } from '../interfaces/Order';
+import { Trade } from '../interfaces/Trade';
 import { Order as CCxtOrder } from 'ccxt';
 
 // TODO: 2nd version below copied from ./Exchange before deleting looks better?

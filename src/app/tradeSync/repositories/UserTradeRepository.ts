@@ -1,8 +1,8 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { Order } from '@/interfaces/Order';
-import { Trade } from '@/interfaces/Trade';
+import { Order } from '../interfaces/Order';
+import { Trade } from '../interfaces/Trade';
 import { DefaultTradeMapper, DefaultOrderMapper } from './mappers/tradeMappers';
-import { IOrderMapper, ITradeMapper } from '@/app/interfaces/TradeMappers';
+import { IOrderMapper, ITradeMapper } from '../interfaces/TradeMappers';
 
 export interface TradeData {
   trades: Trade[];

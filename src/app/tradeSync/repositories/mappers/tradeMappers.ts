@@ -1,6 +1,6 @@
-import { ITradeMapper, IOrderMapper } from '@/app/interfaces/TradeMappers';
-import { Trade } from '@/interfaces/Trade';
-import { Order } from '@/interfaces/Order';
+import { ITradeMapper, IOrderMapper } from '../../interfaces/TradeMappers';
+import { Trade } from '../../interfaces/Trade';
+import { Order } from '../../interfaces/Order';
 
 export class DefaultTradeMapper implements ITradeMapper {
   mapDbTradeToTrade(dbTrade: any): Trade {

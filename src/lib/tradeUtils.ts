@@ -26,13 +26,13 @@ export function parseExchangePair(input: string): {
   const [exchangePart, pairPart] = input.split('-');
 
   // Capitalize the first letter of the exchange part
-  const exchange = exchangePart?.slice(0) || '';
+  const exchange = exchangePart?.slice(0) ?? '';
 
   // Replace underscores with slashes and convert the pair part to uppercase
-  const pair = pairPart?.replace('_', '/').toUpperCase() || '';
+  const pair = pairPart?.replace('_', '/').toUpperCase() ?? '';
 
-  const base = pair.split('/')[0] || '';
-  const quote = pair.split('/')[1] || '';
+  const base = pair.split('/')[0] ?? '';
+  const quote = pair.split('/')[1] ?? '';
 
   return { exchange, pair, base, quote };
 }
@@ -46,8 +46,8 @@ export function parseQuoteBaseFromPair(pair: string): {
   base: string;
   quote: string;
 } {
-  const base = pair.split('/')[0] || '';
-  const quote = pair.split('/')[1] || '';
+  const base = pair.split('/')[0] ?? '';
+  const quote = pair.split('/')[1] ?? '';
   return { base, quote };
 }
 
@@ -110,12 +110,16 @@ export const cryptoColors: ColorMap = {
   SOL: '#24AEA9',
 };
 
-export const sortDescending = (a: any, b: any) => {
+interface TimeBasedObject {
+  time: number | bigint;
+}
+
+export const sortDescending = (a: TimeBasedObject, b: TimeBasedObject) => {
   const aTime = typeof a.time === 'bigint' ? Number(a.time) : a.time;
   const bTime = typeof b.time === 'bigint' ? Number(b.time) : b.time;
   return bTime - aTime;
 };
-export const sortAscending = (a: any, b: any) => {
+export const sortAscending = (a: TimeBasedObject, b: TimeBasedObject) => {
   const aTime = typeof a.time === 'bigint' ? Number(a.time) : a.time;
   const bTime = typeof b.time === 'bigint' ? Number(b.time) : b.time;
   return aTime - bTime;
@@ -230,9 +234,9 @@ export function createSummary(entries: BalanceEntry[]): BalanceEntry[] {
 }
 
 export interface TradeResponseData {
-  trades: any[];
-  orders: any[];
-  positions: any[];
+  trades: unknown[];
+  orders: unknown[];
+  positions: unknown[];
   error: string;
   rotki?: boolean;
   firstTradeTime?: number | null;

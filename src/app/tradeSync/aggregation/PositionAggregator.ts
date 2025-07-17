@@ -1,4 +1,19 @@
 // PositionAggregator.ts
+import { Order } from "../interfaces/Order";
+
+interface Position {
+  Date: string;
+  ProfitLoss: number;
+  Duration: string;
+  PositionType: 'long' | 'short';
+  AverageEntryPrice: number;
+  AverageExitPrice: number;
+  TotalCostBuy: number;
+  TotalCostSell: number;
+  Orders: Order[];
+  amount: number;
+}
+
 export class PositionAggregator {
   private readonly volumeThresholdPercent: number;
 

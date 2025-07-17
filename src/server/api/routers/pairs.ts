@@ -11,6 +11,7 @@ import { UserTradeRepository } from "~/app/tradeSync/repositories/UserTradeRepos
 import { OrderRepository } from "~/app/tradeSync/repositories/OrderRepository";
 import { sortDescending } from "~/lib/tradeUtils";
 import { TRPCError } from "@trpc/server";
+import type { Trade } from "~/app/tradeSync/interfaces/Trade";
 export const pairsRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
     const pairs = await ctx.db.pair.findMany({
@@ -78,7 +79,7 @@ export const pairsRouter = createTRPCRouter({
             
             // Update trade-order relationships
             await Promise.all(
-              trades.allTrades.map(async (trade) => {
+              trades.allTrades.map(async (trade: Trade) => {
                 if (!trade?.tradeId) return;
                 
                 try {
@@ -86,8 +87,8 @@ export const pairsRouter = createTRPCRouter({
                     where: { tradeId: trade.tradeId },
                     data: { ordertxid: trade.ordertxid ?? '' },
                   });
-                } catch (error) {
-                  console.error('Error updating trade-order relationship:', error);
+                } catch (updateError) {
+                  console.error('Error updating trade-order relationship:', updateError);
                 }
               })
             );

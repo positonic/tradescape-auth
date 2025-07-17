@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Order } from '@/interfaces/Order';
+import { Order } from '../interfaces/Order';
 
 export class OrderRepository {
   constructor(private prisma: PrismaClient) {}

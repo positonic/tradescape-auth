@@ -1,16 +1,16 @@
 import ccxt from 'ccxt';
 import tradeAggregator from './aggregation/TradeAggregator';
 import { PositionAggregator } from './aggregation/PositionAggregator';
-import { Trade } from '@/interfaces/Trade';
+import { Trade } from './interfaces/Trade';
 import Exchange from './exchange/Exchange';
 import { FetchTradesReturnType } from './exchange/types';
 import {
   LastSyncTimes,
   UserExchangeRepository,
 } from './repositories/UserExchangeRepository';
-import { ApiKey } from '@/interfaces/ApiKeys';
-import { ExchangeData } from '@/interfaces/ExchangeData';
-import { Order } from '@/interfaces/Order';
+import { ApiKey } from './interfaces/ApiKeys';
+import { ExchangeData } from './interfaces/ExchangeData';
+import { Order } from './interfaces/Order';
 import { UserPair } from './types';
 interface ExchangeConfig {
   exchange: string;

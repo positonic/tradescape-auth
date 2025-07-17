@@ -24,6 +24,29 @@ import { formatCurrency, formatDateTime } from '~/lib/tradeUtils';
 import { useSyncTrades } from '~/hooks/useSyncTrades';
 import { KeyStorage, encryptForTransmission } from '~/lib/keyEncryption';
 
+interface Trade {
+  tradeId: string;
+  time: number | bigint;
+  pair: string;
+  type: string;
+  vol: number;
+  price: string;
+  cost: string;
+  fee: string;
+  exchange: string;
+}
+
+interface Order {
+  id: string;
+  time: number | bigint;
+  pair: string;
+  type: string;
+  vol: number;
+  price: string;
+  status: string;
+  exchange: string;
+}
+
 export default function TradesPage() {
   const { data: clientSession, status: sessionStatus } = useSession();
   const [since] = useState<number | undefined>(undefined);
@@ -55,7 +78,7 @@ export default function TradesPage() {
   };
 
   const handleQuickSync = () => {
-    const keys = KeyStorage.getKeys();
+    const keys = KeyStorage.load();
     if (keys && keys.length > 0) {
       const encrypted = encryptForTransmission(keys);
       syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'incremental' });
@@ -63,7 +86,7 @@ export default function TradesPage() {
   };
 
   const handleFullSync = () => {
-    const keys = KeyStorage.getKeys();
+    const keys = KeyStorage.load();
     if (keys && keys.length > 0) {
       const encrypted = encryptForTransmission(keys);
       syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'full' });
@@ -177,7 +200,7 @@ export default function TradesPage() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {tradesData?.trades.map((trade: any) => (
+                {tradesData?.trades.map((trade: Trade) => (
                   <Table.Tr key={trade.tradeId}>
                     <Table.Td>{formatDateTime(trade.time)}</Table.Td>
                     <Table.Td>{trade.pair}</Table.Td>
@@ -238,7 +261,7 @@ export default function TradesPage() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {ordersData?.orders.map((order: any) => (
+                {ordersData?.orders.map((order: Order) => (
                   <Table.Tr key={order.id}>
                     <Table.Td>{formatDateTime(order.time)}</Table.Td>
                     <Table.Td>{order.pair}</Table.Td>

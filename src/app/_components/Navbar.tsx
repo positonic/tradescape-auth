@@ -1,6 +1,6 @@
 import { auth } from "~/server/auth";
 import Link from "next/link";
-import { IconHome, IconRobot, IconScanEye, IconMicrophone,IconBell, IconSettings, IconLogout, IconLogin, IconTargetArrow, IconScan, IconChartLine} from "@tabler/icons-react";
+import { IconHome, IconRobot, IconMicrophone, IconSettings, IconLogout, IconLogin, IconTargetArrow, IconChartLine} from "@tabler/icons-react";
 
 export default async function Navbar() {
   const session = await auth();

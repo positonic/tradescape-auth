@@ -1,5 +1,5 @@
 import { Position } from './types';
-import { Order } from '@/interfaces/Order';
+import { Order } from '../interfaces/Order';
 import {
   minutesBetweenTimestamps,
   isVolumeDifferenceWithinThreshold,
@@ -124,7 +124,7 @@ export function aggregatePositions(orders: Order[]): Position[] {
     if (!ordersByPair[order.pair]) {
       ordersByPair[order.pair] = [];
     }
-    ordersByPair[order.pair].push(order);
+    ordersByPair[order.pair]?.push(order);
   });
 
   const positions: Position[] = [];
@@ -139,7 +139,7 @@ export function aggregatePositions(orders: Order[]): Position[] {
       sellCost = 0;
     let tempOrders: Order[] = [];
 
-    ordersByPair[pair].forEach((order: Order) => {
+    ordersByPair[pair]?.forEach((order: Order) => {
       console.log('ordersByPair pair', pair);
       // Accumulate volumes and costs
       if (order.type === 'buy') {
@@ -173,18 +173,18 @@ export function aggregatePositions(orders: Order[]): Position[] {
         const profitLoss =
           positionType === 'long' ? sellCost - buyCost : buyCost - sellCost;
         const duration =
-          tempOrders[0].time - tempOrders[tempOrders.length - 1].time;
+          (tempOrders[0]?.time ?? 0) - (tempOrders[tempOrders.length - 1]?.time ?? 0);
         positions.push({
-          time: tempOrders[0].trades[0].time,
-          date: new Date(tempOrders[0].trades[0].time),
-          price: Number(tempOrders[0].trades[0].price),
+          time: tempOrders[0]?.trades[0]?.time ?? 0,
+          date: new Date(tempOrders[0]?.trades[0]?.time ?? 0),
+          price: Number(tempOrders[0]?.trades[0]?.price ?? 0),
           type: positionType,
           buyCost,
           sellCost,
           profitLoss,
-          exchange: tempOrders[0].trades[0].exchange,
+          exchange: tempOrders[0]?.trades[0]?.exchange ?? '',
           orders: tempOrders.slice(),
-          pair: tempOrders[0].pair,
+          pair: tempOrders[0]?.pair ?? '',
           quantity,
           duration,
         });

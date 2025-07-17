@@ -1,5 +1,5 @@
-import { Trade } from '@/interfaces/Trade';
-import { Order } from '@/interfaces/Order';
+import { Trade } from '../interfaces/Trade';
+import { Order } from '../interfaces/Order';
 import { Trade as CCxtLibTrade } from 'ccxt';
 export type FetchTradesReturnType = Record<string, Trade>;
 export type FetchOrdersReturnType = Record<string, Order>;

@@ -340,9 +340,9 @@ export default class Exchange {
     }
 
     // Transform token balancess
-    const tokenCount = Object.keys(balances.total).length;
+    const tokenCount = Object.keys(balances.total ?? {}).length;
     console.log(`   - Processing ${tokenCount} tokens for ${this.id}`);
-    Object.entries(balances.total).forEach(([token, total]) => {
+    Object.entries(balances.total ?? {}).forEach(([token, total]) => {
       exchangeInfo.balances[token] = {
         total: parseFloat(String(total)),
         free: parseFloat(String((balances.free as any)[token] || 0)),
@@ -488,7 +488,7 @@ export default class Exchange {
     const filterConfig = getExchangeFilterConfig(this.id);
     const configFilteredTrades = filteredTrades.filter(trade => {
       // Check minimum trade amount
-      if (trade.amount < filterConfig.minTradeAmount) {
+      if ((trade.amount ?? 0) < filterConfig.minTradeAmount) {
         return false;
       }
 
@@ -832,21 +832,22 @@ export default class Exchange {
       };
     }
 
-    for (const [currency, totalAmount] of Object.entries(balances.total)) {
+    for (const [currency, totalAmount] of Object.entries(balances.total ?? {})) {
       console.log(`currency1 is ${currency}`);
       console.log(`totalAmount is ${totalAmount}`);
       //console.log(`balances now is ${JSON.stringify(balances)}`);
+      const numericTotal = Number(totalAmount);
       if (currency === 'USD' || currency === 'USDT' || currency === 'USDC') {
         if (balances.usdValue) {
-          balances.usdValue.total = totalAmount;
-          (balances.usdValue as any)[currency] = totalAmount;
-          totalUsdValue += totalAmount;
+          balances.usdValue.total = numericTotal;
+          (balances.usdValue as any)[currency] = numericTotal;
+          totalUsdValue += numericTotal;
           console.log(`balances.usdValue.total is ${balances.usdValue.total}`);
         }
         continue;
       }
 
-      if (totalAmount <= 0) continue;
+      if (numericTotal <= 0) continue;
 
       const usdMarketSymbol = `${currency}/USD`;
       const usdtMarketSymbol = `${currency}/USDT`;
@@ -874,7 +875,7 @@ export default class Exchange {
         try {
           const ticker = await this.client.fetchTicker(marketSymbol);
           if (ticker.last !== undefined) {
-            const currencyValue = totalAmount * ticker.last; // Calculate USD value
+            const currencyValue = numericTotal * ticker.last; // Calculate USD value
             if (currencyValue > 3 && balances.usdValue) {
               balances.usdValue.total = currencyValue; // Assign USD value
               totalUsdValue += currencyValue; // Add to total

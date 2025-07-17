@@ -12,6 +12,23 @@ export interface EncryptedKeys {
   expiresAt?: number;
 }
 
+interface StoragePayload {
+  keys: DecryptedKeys[];
+  timestamp: number;
+  expiresAt?: number;
+}
+
+interface TransmissionPayload {
+  keys: DecryptedKeys[];
+  timestamp: number;
+  clientId: string;
+}
+
+interface DatabasePayload {
+  keys: DecryptedKeys[];
+  timestamp: number;
+}
+
 export interface DecryptedKeys {
   exchange: string;
   apiKey: string;
@@ -36,7 +53,7 @@ export function encryptForStorage(keys: DecryptedKeys[]): string {
 export function decryptFromStorage(encryptedData: string): DecryptedKeys[] | null {
   try {
     const decrypted = CryptoJS.AES.decrypt(encryptedData, CLIENT_ENCRYPTION_KEY);
-    const payload = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
+    const payload = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8)) as StoragePayload;
     
     // Check if expired
     if (payload.expiresAt && Date.now() > payload.expiresAt) {
@@ -66,7 +83,7 @@ export function decryptFromTransmission(encryptedKeys: string): DecryptedKeys[] 
   try {
     // First decrypt with client key
     const decrypted = CryptoJS.AES.decrypt(encryptedKeys, CLIENT_ENCRYPTION_KEY);
-    const payload = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
+    const payload = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8)) as TransmissionPayload;
     
     // Validate timestamp (reject if older than 5 minutes)
     const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
@@ -95,7 +112,7 @@ export function encryptForDatabase(keys: DecryptedKeys[]): string {
 export function decryptFromDatabase(encryptedKeys: string): DecryptedKeys[] | null {
   try {
     const decrypted = CryptoJS.AES.decrypt(encryptedKeys, SERVER_ENCRYPTION_KEY);
-    const payload = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
+    const payload = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8)) as DatabasePayload;
     
     return payload.keys;
   } catch (error) {
