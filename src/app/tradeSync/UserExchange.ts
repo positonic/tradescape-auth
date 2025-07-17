@@ -266,6 +266,9 @@ class UserExchange {
 
   async fetchOpenOrders(exchangeId: string, pair?: string): Promise<Order[]> {
     const exchange = this.exchanges[exchangeId];
+    if (!exchange) {
+      throw new Error(`Exchange ${exchangeId} not found`);
+    }
     const orders = await exchange.fetchOpenOrders(exchangeId, pair);
     // Ensure type is always a string
     return orders.map((order) => ({

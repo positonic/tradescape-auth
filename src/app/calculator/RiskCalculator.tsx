@@ -13,8 +13,13 @@ import {
   Grid,
   Divider,
   Card,
-  Alert
+  Alert,
+  Table,
+  Progress,
+  ThemeIcon,
+  Slider
 } from '@mantine/core';
+import { IconTrendingUp, IconTrendingDown, IconEqual } from '@tabler/icons-react';
 
 // --- Configuration for localStorage ---
 const ACCOUNT_SIZE_KEY = 'riskCalculator_accountSize_v1';
@@ -22,6 +27,7 @@ const RISK_PERCENTAGE_KEY = 'riskCalculator_riskPercentage_v1';
 const SL_PERCENTAGE_KEY = 'riskCalculator_slPercentage_v1';
 const FEES_PERCENTAGE_KEY = 'riskCalculator_feesPercentage_v1';
 const RR_RATIO_KEY = 'riskCalculator_rrRatio_v1';
+const HIT_RATE_KEY = 'riskCalculator_hitRate_v1';
 
 interface RiskCalculations {
   riskInDollars: number;
@@ -29,6 +35,12 @@ interface RiskCalculations {
   profitIfTPHit: number;
   positionSizeWithFees?: number;
   profitIfTPHitWithFees?: number;
+}
+
+interface HitRateScenario {
+  hitRate: number;
+  expectedValue: number;
+  color: 'green' | 'red' | 'yellow';
 }
 
 const RiskCalculator: React.FC = () => {
@@ -58,9 +70,15 @@ const RiskCalculator: React.FC = () => {
     return saved ? parseFloat(saved) : 3.0;
   });
 
+  const [hitRate, setHitRate] = useState<number>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(HIT_RATE_KEY) : null;
+    return saved ? parseFloat(saved) : 50;
+  });
+
   // --- UI State ---
   const [includeFees, setIncludeFees] = useState(false);
   const [calculations, setCalculations] = useState<RiskCalculations | null>(null);
+  const [hitRateScenarios, setHitRateScenarios] = useState<HitRateScenario[]>([]);
 
   // --- Effects for localStorage ---
   useEffect(() => {
@@ -92,6 +110,12 @@ const RiskCalculator: React.FC = () => {
       localStorage.setItem(RR_RATIO_KEY, rrRatio.toString());
     }
   }, [rrRatio]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(HIT_RATE_KEY, hitRate.toString());
+    }
+  }, [hitRate]);
 
   // --- Calculation Logic ---
   const calculateRisk = useCallback(() => {
@@ -142,6 +166,29 @@ const RiskCalculator: React.FC = () => {
   useEffect(() => {
     calculateRisk();
   }, [calculateRisk]);
+
+  // Calculate hit rate scenarios
+  useEffect(() => {
+    if (rrRatio === '' || Number(rrRatio) <= 0) {
+      setHitRateScenarios([]);
+      return;
+    }
+
+    const rr = Number(rrRatio);
+    const scenarios: HitRateScenario[] = [];
+    
+    // Calculate scenarios from 20% to 80% hit rate
+    for (let hr = 20; hr <= 80; hr += 5) {
+      const ev = (hr / 100) * rr - (1 - hr / 100);
+      scenarios.push({
+        hitRate: hr,
+        expectedValue: ev,
+        color: ev > 0.05 ? 'green' : ev < -0.05 ? 'red' : 'yellow'
+      });
+    }
+    
+    setHitRateScenarios(scenarios);
+  }, [rrRatio]);
 
   // --- Input Handlers ---
   const handleNumberInputChange = (setter: React.Dispatch<React.SetStateAction<number | ''>>) =>
@@ -423,6 +470,126 @@ const RiskCalculator: React.FC = () => {
             </Text>
           </Group>
         </Card>
+
+        <Divider my="xl" />
+
+        <Paper shadow="sm" p="lg" withBorder>
+          <Title order={3} mb="md" c="blue">Profitability Analysis</Title>
+          
+          <Grid>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Stack gap="md">
+                <div>
+                  <Group justify="space-between" mb="xs">
+                    <Text size="sm" fw={500}>Hit Rate: {hitRate}%</Text>
+                    <Badge 
+                      color={hitRate >= (1 / (1 + Number(rrRatio || 1))) * 100 ? 'green' : 'red'}
+                    >
+                      {hitRate >= (1 / (1 + Number(rrRatio || 1))) * 100 ? 'Profitable' : 'Unprofitable'}
+                    </Badge>
+                  </Group>
+                  <Slider
+                    value={hitRate}
+                    onChange={setHitRate}
+                    min={0}
+                    max={100}
+                    step={5}
+                    marks={[
+                      { value: 0, label: '0%' },
+                      { value: 25, label: '25%' },
+                      { value: 50, label: '50%' },
+                      { value: 75, label: '75%' },
+                      { value: 100, label: '100%' }
+                    ]}
+                    styles={{
+                      bar: { backgroundColor: 'var(--mantine-color-green-6)' },
+                      markLabel: { fontSize: '11px' }
+                    }}
+                  />
+                </div>
+
+                <Paper p="md" withBorder>
+                  <Group justify="space-between" mb="sm">
+                    <Text size="sm" fw={500}>Expected Value</Text>
+                    <Group gap="xs">
+                      {(() => {
+                        const ev = rrRatio !== '' ? (hitRate / 100) * Number(rrRatio) - (1 - hitRate / 100) : 0;
+                        const icon = ev > 0 ? <IconTrendingUp size={16} /> : ev < 0 ? <IconTrendingDown size={16} /> : <IconEqual size={16} />;
+                        const color = ev > 0 ? 'green' : ev < 0 ? 'red' : 'yellow';
+                        return (
+                          <>
+                            <ThemeIcon size="sm" color={color} variant="light">
+                              {icon}
+                            </ThemeIcon>
+                            <Text fw={700} c={color}>{ev.toFixed(3)}R</Text>
+                          </>
+                        );
+                      })()}
+                    </Group>
+                  </Group>
+                  <Text size="xs" c="dimmed">
+                    Expected profit per trade in risk units
+                  </Text>
+                </Paper>
+
+                <Paper p="md" withBorder>
+                  <Text size="sm" fw={500} mb="xs">
+                    Breakeven Hit Rate: {rrRatio !== '' ? ((1 / (1 + Number(rrRatio))) * 100).toFixed(1) : '0'}%
+                  </Text>
+                  <Progress 
+                    value={hitRate} 
+                    color={hitRate >= (1 / (1 + Number(rrRatio || 1))) * 100 ? 'green' : 'red'}
+                    size="lg"
+                  />
+                  <Text size="xs" c="dimmed" mt="xs">
+                    Minimum win rate needed for profitability
+                  </Text>
+                </Paper>
+              </Stack>
+            </Grid.Col>
+
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Paper p="md" withBorder>
+                <Title order={5} mb="sm">Hit Rate Impact Table</Title>
+                <Table>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Hit Rate</Table.Th>
+                      <Table.Th>Expected Value</Table.Th>
+                      <Table.Th>100 Trades Result</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {hitRateScenarios.map((scenario) => (
+                      <Table.Tr key={scenario.hitRate}>
+                        <Table.Td>{scenario.hitRate}%</Table.Td>
+                        <Table.Td>
+                          <Badge color={scenario.color} variant="light">
+                            {scenario.expectedValue.toFixed(2)}R
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm" fw={500} c={scenario.color}>
+                            {scenario.expectedValue > 0 ? '+' : ''}{(scenario.expectedValue * 100).toFixed(0)}R
+                          </Text>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Paper>
+            </Grid.Col>
+          </Grid>
+
+          <Alert color="blue" mt="lg" title="Strategy Insight">
+            {rrRatio !== '' && (
+              <>
+                With a {Number(rrRatio).toFixed(1)}:1 risk-reward ratio, you need a minimum {((1 / (1 + Number(rrRatio))) * 100).toFixed(1)}% win rate to break even. 
+                Your current {hitRate}% hit rate results in an expected value of {((hitRate / 100) * Number(rrRatio) - (1 - hitRate / 100)).toFixed(3)}R per trade.
+              </>
+            )}
+          </Alert>
+        </Paper>
       </Stack>
     </Container>
   );

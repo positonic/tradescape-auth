@@ -148,7 +148,7 @@ export class TradeSyncService {
       } else {
         console.log('📋 Using existing pairs (use Full Sync to rediscover)');
         // Use existing pairs, convert to Set format expected by return
-        newActivePairs = new Set(Object.values(currentPairs).flat().map(pair => pair.symbol));
+        newActivePairs = new Set(Object.values(currentPairs).flat().map((pair: any) => pair.symbol));
       }
       
       // 3. Fetch recent trades for known pairs only

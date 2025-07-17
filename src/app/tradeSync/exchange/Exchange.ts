@@ -918,14 +918,16 @@ export function aggregateTrades(trades: Trade[]): Order[] {
     } else {
       // Update existing order
       const order = ordersMap[trade.ordertxid];
-      order.trades.push(trade);
-      order.amount += vol;
-      order.highestPrice = Math.max(order.highestPrice, price);
-      order.lowestPrice = Math.min(order.lowestPrice, price);
-      order.totalCost += price * vol;
-      order.averagePrice = order.totalCost / order.amount;
-      order.fee = Number(trade.fee) + order.fee;
-      order.closedPnL = (order.closedPnL || 0) + (trade.closedPnL || 0);
+      if (order) {
+        order.trades.push(trade);
+        order.amount += vol;
+        order.highestPrice = Math.max(order.highestPrice, price);
+        order.lowestPrice = Math.min(order.lowestPrice, price);
+        order.totalCost += price * vol;
+        order.averagePrice = order.totalCost / order.amount;
+        order.fee = Number(trade.fee) + order.fee;
+        order.closedPnL = (order.closedPnL || 0) + (trade.closedPnL || 0);
+      }
     }
   });
 

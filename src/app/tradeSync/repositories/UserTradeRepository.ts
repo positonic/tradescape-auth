@@ -73,7 +73,7 @@ export class UserTradeRepository {
 
   async getUserOrdersByOrderId(
     orderIds: string[],
-    userId: number
+    userId: string
   ): Promise<Order[]> {
     const dbOrders = await this.prisma.order.findMany({
       where: {

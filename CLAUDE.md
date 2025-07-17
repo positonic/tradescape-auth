@@ -92,6 +92,45 @@ This is a **video transcription and trading analysis platform** built with the T
 - Follows Next.js App Router patterns
 - Uses double quotes consistently
 
+## Code Quality and Build Requirements
+
+### TypeScript Strict Mode Compliance
+- **ALWAYS use proper TypeScript types** - never use `any` or `unknown` without explicit type assertions
+- **Use nullish coalescing (`??`) instead of logical OR (`||`)** for default values
+- **Add proper null checks** for potentially undefined values using optional chaining (`?.`)
+- **Import types with `import type`** when only using them as types, not runtime values
+
+### Import Path Standards
+- **Use relative imports** (`../interfaces/Trade`) instead of absolute path aliases (`@/interfaces/Trade`)
+- **Always verify import paths exist** before using them
+- **Create missing interface files** when referenced by imports
+
+### Required Code Patterns
+```typescript
+// ✅ Good - Proper typing and null safety
+interface TimeBasedObject {
+  time: number | bigint;
+}
+
+const result = data?.property ?? 'default';
+const payload = JSON.parse(text) as ExpectedType;
+
+// ❌ Bad - Will break build
+const result = data.property || 'default';
+const payload = JSON.parse(text);
+```
+
+### Build Validation Process
+- **ALWAYS run `bun run typecheck` before major changes**
+- **Fix TypeScript errors immediately** - don't ignore them
+- **Test import paths** by running typecheck after adding new files
+- **Use proper interface definitions** for all data structures
+
+### ESLint Rule Compliance
+- **Remove unused imports and variables** immediately
+- **Use proper dependency arrays** in React hooks
+- **Prefer const assertions** over type assertions where possible
+
 #### Database Development
 - PostgreSQL with pgvector extension for semantic search
 - Prisma migrations in `prisma/migrations/`

@@ -9,7 +9,7 @@ export class UserExchangeRepository {
     this.prisma = prisma;
   }
 
-  async getLastSyncTimes(userId: number): Promise<LastSyncTimes> {
+  async getLastSyncTimes(userId: string): Promise<LastSyncTimes> {
     const exchangeUsers = await this.prisma.exchangeUser.findMany({
       where: { userId },
       include: { exchange: true },

@@ -33,7 +33,9 @@ export class OrderRepository {
               closedPnL: order.closedPnL,
             },
           });
-          orders[index].id = created.id; // Update the order in the array with the new ID
+          if (orders[index]) {
+            orders[index].id = created.id; // Update the order in the array with the new ID
+          }
         } catch (error) {
           console.error('Error inserting order:', {
             error,
