@@ -80,6 +80,13 @@ export class UserExchangeRepository {
   }
 
   async findUserPairs(userId: string): Promise<Record<string, UserPair[]>> {
+    console.log('findUserPairs called with userId:', userId, 'type:', typeof userId);
+    
+    if (!userId) {
+      console.error('userId is undefined or null in findUserPairs');
+      return {};
+    }
+
     const userPairs = await this.prisma.userPair.findMany({
       where: { userId },
       include: { pair: true, exchange: true },

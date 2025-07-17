@@ -21,7 +21,7 @@ import { notifications } from '@mantine/notifications';
 import { TextToSpeech } from '~/app/_components/TextToSpeech';
 //import { VoiceInput } from './VoiceInput';
 import { speakText } from './utils/tts';
-import { Message, ChatResponse, ChatToolResult, CoinData, MarketScanResult, CoinSetup } from '~/types';
+import { type Message, type ChatResponse, type ChatToolResult, type CoinData, type MarketScanResult, type CoinSetup } from '~/types';
 
 
 export default function Chat( { initialMessages }: { initialMessages: Message[] }) {

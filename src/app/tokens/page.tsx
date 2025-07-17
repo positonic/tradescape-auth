@@ -2,7 +2,7 @@ import { auth } from "~/server/auth";
 import { db } from "~/server/db"; // Assuming Prisma client is in ~/server/db
 import { redirect } from "next/navigation";
 import { Table, Text } from "@mantine/core"; // Using Mantine Table and its parts
-import { VerificationToken } from "@prisma/client"; // For typing
+import { type VerificationToken } from "@prisma/client"; // For typing
 
 export default async function TokensPage() {
   const session = await auth();

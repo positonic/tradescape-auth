@@ -72,9 +72,7 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-interface ColorMap {
-  [key: string]: string;
-}
+type ColorMap = Record<string, string>;
 
 export const cryptoColors: ColorMap = {
   BTC: 'rgb(247, 147, 26)',

@@ -14,10 +14,19 @@ export async function initUserExchange(
   userId: string
 ): Promise<InitUserExchangeResult> {
   try {
+    console.log('initUserExchange called with userId:', userId, 'type:', typeof userId);
+    
+    if (!userId) {
+      return {
+        userExchange: null,
+        error: 'User ID is required',
+      };
+    }
+
     const userExchangeRepository = new UserExchangeRepository(db);
 
     const decryptedKeys = decryptFromTransmission(encryptedKeys);
-    if (!decryptedKeys || !decryptedKeys.length) {
+    if (!decryptedKeys?.length) {
       return {
         userExchange: null,
         error: 'No valid API keys found',

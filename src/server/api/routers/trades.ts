@@ -72,7 +72,7 @@ export const tradesRouter = createTRPCRouter({
     if (trades.allTrades && trades.allTrades.length > 0) {
       await Promise.all(
         trades.allTrades.map(async (trade) => {
-          if (!trade || !trade.tradeId) {
+          if (!trade?.tradeId) {
             console.log('Invalid trade:', trade);
             return;
           }

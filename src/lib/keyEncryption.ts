@@ -108,7 +108,7 @@ export function decryptFromDatabase(encryptedKeys: string): DecryptedKeys[] | nu
 export class KeyStorage {
   private static STORAGE_KEY = 'encrypted_exchange_keys';
   
-  static save(keys: DecryptedKeys[], remember: boolean = false): void {
+  static save(keys: DecryptedKeys[], remember = false): void {
     if (!remember) {
       // Clear any existing keys
       this.clear();

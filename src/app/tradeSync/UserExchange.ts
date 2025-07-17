@@ -215,7 +215,10 @@ class UserExchange {
     exchangeName: string,
     since?: number
   ): Promise<Set<string>> {
+    console.log('updateUserPairsForExchange called with exchangeName:', exchangeName);
+    console.log('updateUserPairsForExchange called with this.exchanges:', this.exchanges);
     const exchange = this.exchanges[exchangeName];
+    if (!exchange) throw new Error(`Exchange '${exchangeName}' not found in UserExchange`);
 
     const activePairs = await exchange.fetchTradePairs(exchangeName, since);
     await this.userExchangeRepository.updateUserPairs(
@@ -228,6 +231,7 @@ class UserExchange {
   }
 
   async loadUserPairs(): Promise<Record<string, string[]>> {
+    console.log('loadUserPairs called with this.userId:', this.userId, 'type:', typeof this.userId);
     this.pairs = await this.userExchangeRepository.findUserPairs(this.userId);
     // Convert UserPair[] to string[] by mapping to the symbol property
     return Object.fromEntries(

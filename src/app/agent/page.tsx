@@ -3,7 +3,7 @@ import { auth } from "~/server/auth";
 import { HydrateClient } from "~/trpc/server";
 import { LandingPage } from "~/app/_components/LandingPage";
 import { Suspense } from "react";
-import { Message } from "~/types";
+import { type Message } from "~/types";
 const initialMessages: Message[] = [
   {
     type: 'system',

@@ -24,6 +24,7 @@ import {
   encryptForTransmission,
   EXCHANGE_CONFIGS
 } from '~/lib/keyEncryption';
+import { api } from '~/trpc/react';
 
 interface KeyManagerProps {
   onKeysReady: (encryptedKeys: string) => void;
@@ -40,6 +41,24 @@ export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) 
   const [showSecrets, setShowSecrets] = useState<Record<number, boolean>>({});
   const [hasStoredKeys, setHasStoredKeys] = useState(false);
   const [showForm, setShowForm] = useState(false);
+
+  // Market synchronization mutation
+  const synchExchangePairsMutation = api.pairs.synchExchangePairs.useMutation({
+    onSuccess: (data) => {
+      notifications.show({
+        title: 'Success',
+        message: data.message,
+        color: 'green',
+      });
+    },
+    onError: (error) => {
+      notifications.show({
+        title: 'Error',
+        message: error.message,
+        color: 'red',
+      });
+    },
+  });
 
   useEffect(() => {
     // Load saved keys on mount
@@ -120,6 +139,25 @@ export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) 
     });
   };
 
+  const handleSynchMarkets = () => {
+    // Validate keys
+    const errors = validateKeys(keys);
+    if (errors.length > 0) {
+      notifications.show({
+        title: 'Validation Error',
+        message: errors.join(', '),
+        color: 'red',
+      });
+      return;
+    }
+
+    // Encrypt for transmission
+    const encrypted = encryptForTransmission(keys);
+    synchExchangePairsMutation.mutate({ encryptedKeys: encrypted });
+  };
+
+  const isSynchingMarkets = synchExchangePairsMutation.isPending;
+
   const isValidKey = (key: DecryptedKeys) => {
     if (!key.exchange) return false;
     
@@ -168,6 +206,14 @@ export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) 
             </Text>
           </Alert>
           <Group justify="space-between">
+          <Button
+            onClick={handleSynchMarkets}
+            loading={isSynchingMarkets}
+            variant="gradient"
+            gradient={{ from: '#23dd7a', to: '#1b9b57' }}
+          >
+            Synch exchange markets
+          </Button>
             <Button
               variant="outline"
               onClick={addNewExchange}

@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -26,7 +27,7 @@ async function fetchCoinsFromCoinGecko() {
 }
 
 async function main() {
-  console.log('Start seeding ...')
+  console.log('🌱 Start seeding ...')
 
   // Fetch coins from CoinGecko
   console.log('Fetching coins from CoinGecko...')
@@ -96,25 +97,91 @@ async function main() {
     }
   }
 
-  // Create some common trading pairs
-  console.log('Creating trading pairs...')
-  const commonSymbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT', 'MATIC']
-  const pairs = commonSymbols.map(symbol => ({ symbol: `${symbol}/USDT` }))
+  // Create exchanges
+  console.log('📈 Creating exchanges...')
+  const exchanges = [
+    { name: 'binance' },
+    { name: 'coinbase' },
+    { name: 'kraken' },
+    { name: 'kucoin' },
+    { name: 'bybit' },
+    { name: 'okx' },
+    { name: 'hyperliquid' }
+  ]
 
-  for (const pair of pairs) {
+  for (const exchange of exchanges) {
     try {
-      const result = await prisma.pair.upsert({
-        where: { symbol: pair.symbol },
-        update: pair,
-        create: pair,
+      const result = await prisma.exchange.upsert({
+        where: { name: exchange.name },
+        update: exchange,
+        create: exchange,
       })
-      console.log(`Created/Updated pair ${result.symbol} with id: ${result.id}`)
+      console.log(`✅ Created/Updated exchange ${result.name} with id: ${result.id}`)
     } catch (error) {
-      console.error(`Failed to create/update pair ${pair.symbol}:`, error)
+      console.error(`❌ Failed to create/update exchange ${exchange.name}:`, error)
     }
   }
 
-  console.log('Seeding finished')
+  // Create trading pairs based on the screenshot
+  console.log('💱 Creating trading pairs...')
+  const tradingPairs = [
+    'BTCUSDT',
+    'POPCAT/USDT',
+    'DOGE/USDT',
+    'GOAT/USDT',
+    'MOVE/USDT',
+    'PENGU/USDT',
+    'XRP/USDT',
+    'ZEREBRO/USDT',
+    'HFUN/USDC',
+    'HYPE/USDC',
+    'LICK/USDC',
+    'PANDA/USDC',
+    'PURR/USDC',
+    'VAULT/USDC',
+    'ALGO/USDT',
+    'SUI/USDT',
+    'HBARUSDT',
+    'AIXBT/USDC:USDC',
+    'FARTCOIN/USDC:USDC',
+    'HYPE/USDC:USDC',
+    'TRUMP/USDC:USDC',
+    // Add common pairs
+    'BTC/USDT',
+    'ETH/USDT',
+    'SOL/USDT',
+    'BNB/USDT',
+    'ADA/USDT',
+    'AVAX/USDT',
+    'DOT/USDT',
+    'MATIC/USDT'
+  ]
+
+  for (const pairSymbol of tradingPairs) {
+    try {
+      const result = await prisma.pair.upsert({
+        where: { symbol: pairSymbol },
+        update: { symbol: pairSymbol },
+        create: { symbol: pairSymbol },
+      })
+      console.log(`✅ Created/Updated pair ${result.symbol} with id: ${result.id}`)
+    } catch (error) {
+      console.error(`❌ Failed to create/update pair ${pairSymbol}:`, error)
+    }
+  }
+
+  // Create some sample UserPair associations (you'll need to replace 'sample-user-id' with actual user ID)
+  console.log('👤 Creating sample UserPair associations...')
+  const sampleUserId = 'sample-user-id' // Replace with actual user ID when testing
+  
+  // Skip UserPair creation for now since we don't have a real user ID
+  console.log('⚠️  Skipping UserPair creation - replace sampleUserId with actual user ID for testing')
+
+  console.log('\n📊 Seeding Summary:')
+  console.log(`✅ Created ${coins.length} coins`)
+  console.log(`✅ Created ${exchanges.length} exchanges`)
+  console.log(`✅ Created ${tradingPairs.length} trading pairs`)
+  console.log('🎉 Seeding finished successfully!')
 }
 
 await main()
@@ -122,7 +189,7 @@ await main()
     await prisma.$disconnect()
   })
   .catch(async (e) => {
-    console.error(e)
+    console.error('❌ Seeding failed:', e)
     await prisma.$disconnect()
     process.exit(1)
   }) 

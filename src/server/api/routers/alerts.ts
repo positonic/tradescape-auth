@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, type TRPCContext } from "~/server/api/trpc"; // Changed Context to TRPCContext
-import { AlertType, Direction, AlertStatus, Prisma } from "@prisma/client";
+import { AlertType, Direction, AlertStatus, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { Decimal } from "@prisma/client/runtime/library";
 import type Redis from "ioredis";
