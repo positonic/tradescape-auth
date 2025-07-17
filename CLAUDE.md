@@ -36,6 +36,7 @@ This is a **video transcription and trading analysis platform** built with the T
 - **Database**: PostgreSQL with Prisma ORM and pgvector extension for embeddings
 - **AI/ML**: LangChain with OpenAI integration for transcription and analysis
 - **Real-time**: Socket.io for live notifications and alerts
+- **Exchange Integration**: CCXT library for unified exchange API access
 
 ### Key Architecture Patterns
 
@@ -64,6 +65,13 @@ This is a **video transcription and trading analysis platform** built with the T
 - Socket.io client in `src/lib/socketService.ts`
 - Alert notifications with Mantine UI integration
 - User-specific notification channels
+
+#### Exchange Integration
+- **CCXT Library**: Unified interface for cryptocurrency exchange APIs
+- **Documentation**: https://docs.ccxt.com/
+- **Usage**: Primary exchange abstraction layer in `src/app/tradeSync/exchange/Exchange.ts`
+- **Supported Exchanges**: Binance, Kraken, Bybit, Hyperliquid
+- **Features**: Trade fetching, balance retrieval, order management, position tracking
 
 ### Development Notes
 

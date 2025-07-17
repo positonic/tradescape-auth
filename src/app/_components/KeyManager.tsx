@@ -27,7 +27,7 @@ import {
 import { api } from '~/trpc/react';
 
 interface KeyManagerProps {
-  onKeysReady: (encryptedKeys: string) => void;
+  onKeysReady?: (encryptedKeys: string) => void; // Made optional for backward compatibility
   isLoading?: boolean;
 }
 
@@ -36,14 +36,14 @@ const SUPPORTED_EXCHANGES = EXCHANGE_CONFIGS.map(config => ({
   label: config.name
 }));
 
-export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) {
+export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLoading }: KeyManagerProps) {
   const [keys, setKeys] = useState<DecryptedKeys[]>([]);
   const [showSecrets, setShowSecrets] = useState<Record<number, boolean>>({});
   const [hasStoredKeys, setHasStoredKeys] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  // Market synchronization mutation
-  const synchExchangePairsMutation = api.pairs.synchExchangePairs.useMutation({
+  // Trade synchronization mutation
+  const syncTradesMutation = api.pairs.syncTrades.useMutation({
     onSuccess: (data) => {
       notifications.show({
         title: 'Success',
@@ -123,9 +123,9 @@ export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) 
     setHasStoredKeys(true);
     setShowForm(false);
 
-    // Encrypt for transmission
+    // Encrypt for transmission and sync trades
     const encrypted = encryptForTransmission(keys);
-    onKeysReady(encrypted);
+    syncTradesMutation.mutate({ encryptedKeys: encrypted });
   };
 
   const clearStoredKeys = () => {
@@ -139,7 +139,7 @@ export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) 
     });
   };
 
-  const handleSynchMarkets = () => {
+  const handleIncrementalSync = () => {
     // Validate keys
     const errors = validateKeys(keys);
     if (errors.length > 0) {
@@ -151,12 +151,12 @@ export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) 
       return;
     }
 
-    // Encrypt for transmission
+    // Encrypt for transmission and perform incremental sync
     const encrypted = encryptForTransmission(keys);
-    synchExchangePairsMutation.mutate({ encryptedKeys: encrypted });
+    syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'incremental' });
   };
 
-  const isSynchingMarkets = synchExchangePairsMutation.isPending;
+  const isSyncing = syncTradesMutation.isPending;
 
   const isValidKey = (key: DecryptedKeys) => {
     if (!key.exchange) return false;
@@ -206,14 +206,14 @@ export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) 
             </Text>
           </Alert>
           <Group justify="space-between">
-          <Button
-            onClick={handleSynchMarkets}
-            loading={isSynchingMarkets}
-            variant="gradient"
-            gradient={{ from: '#23dd7a', to: '#1b9b57' }}
-          >
-            Synch exchange markets
-          </Button>
+            <Button
+              onClick={handleIncrementalSync}
+              loading={isSyncing}
+              variant="gradient"
+              gradient={{ from: '#23dd7a', to: '#1b9b57' }}
+            >
+              Quick Sync
+            </Button>
             <Button
               variant="outline"
               onClick={addNewExchange}
@@ -222,13 +222,13 @@ export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) 
             </Button>
             <Button
               onClick={() => {
-                // Use existing saved keys
+                // Use existing saved keys for full sync
                 const encrypted = encryptForTransmission(keys);
-                onKeysReady(encrypted);
+                syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'full' });
               }}
-              loading={isLoading}
+              loading={isSyncing}
             >
-              Sync Trades
+              Full Sync
             </Button>
           </Group>
         </Stack>
@@ -328,7 +328,7 @@ export default function KeyManager({ onKeysReady, isLoading }: KeyManagerProps) 
             </Text>
             <Button
               onClick={handleSyncTrades}
-              loading={isLoading}
+              loading={isSyncing}
               disabled={!allKeysValid}
             >
               Save & Sync Trades

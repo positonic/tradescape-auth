@@ -13,6 +13,8 @@ import { mapCCxtOrdersToOrders, mapToOrders } from './ orderMapper';
 import { createPositionsFromOrders } from './ PositionService';
 import { getExchangeFetchConfig } from '../exchange-config';
 import { ExchangeData } from '../interfaces/ExchangeData';
+import { getExchangeFilterConfig } from './filterConfig';
+import { validateRawTrade, filterTradesByBusinessLogic, logFilteringStats } from './tradeValidation';
 
 /**
  * Check if a symbol is a futures symbol
@@ -291,6 +293,81 @@ export default class Exchange {
       return orders;
     }
   }
+  /**
+   * Filter trades based on exchange-specific criteria
+   */
+  private filterTradesByExchange(trades: CCxtTrade[], since?: number): CCxtTrade[] {
+    let filteredTrades = trades;
+    const originalCount = trades.length;
+
+    // Step 1: Apply time-based filtering if 'since' is provided
+    if (since !== undefined) {
+      filteredTrades = filteredTrades.filter(trade => {
+        const tradeTime = Number(trade.timestamp);
+        return tradeTime > since;
+      });
+      logFilteringStats(this.id, originalCount, filteredTrades.length, 'time-based');
+    }
+
+    // Step 2: Validate raw trade data structure
+    const validatedTrades = filteredTrades.filter(trade => {
+      return validateRawTrade(this.id, trade.info || trade);
+    });
+    if (validatedTrades.length !== filteredTrades.length) {
+      logFilteringStats(this.id, filteredTrades.length, validatedTrades.length, 'validation');
+    }
+    filteredTrades = validatedTrades;
+
+    // Step 3: Apply exchange-specific configuration filters
+    const filterConfig = getExchangeFilterConfig(this.id);
+    const configFilteredTrades = filteredTrades.filter(trade => {
+      // Check minimum trade amount
+      if (trade.amount < filterConfig.minTradeAmount) {
+        return false;
+      }
+
+      // Check required timestamp
+      if (filterConfig.requireTimestamp && !trade.timestamp) {
+        return false;
+      }
+
+      // Check required trade ID
+      if (filterConfig.requireTradeId && !trade.id) {
+        return false;
+      }
+
+      // Apply custom filter if provided
+      if (filterConfig.customFilter && !filterConfig.customFilter(trade.info || trade)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (configFilteredTrades.length !== filteredTrades.length) {
+      logFilteringStats(this.id, filteredTrades.length, configFilteredTrades.length, 'config-based');
+    }
+    filteredTrades = configFilteredTrades;
+
+    // Step 4: Apply business logic filtering (dust trades, etc.)
+    const businessFilteredTrades = filterTradesByBusinessLogic(this.id, filteredTrades, {
+      excludeDustTrades: true,
+      minUsdValue: 0.10, // Filter out trades worth less than $0.10
+      onlyRecentTrades: false, // Don't filter by age during sync
+    });
+
+    if (businessFilteredTrades.length !== filteredTrades.length) {
+      logFilteringStats(this.id, filteredTrades.length, businessFilteredTrades.length, 'business-logic');
+    }
+
+    // Final summary
+    console.log(
+      `🔍 ${this.id} filtering summary: ${originalCount} → ${businessFilteredTrades.length} trades (${((originalCount - businessFilteredTrades.length) / originalCount * 100).toFixed(1)}% filtered)`
+    );
+
+    return businessFilteredTrades;
+  }
+
   async fetchTrades(
     market: string | undefined,
     since: number | undefined = undefined
@@ -317,7 +394,11 @@ export default class Exchange {
       if (this.id === 'hyperliquid') {
         console.log('Hyperliquid raw trades: ', rawTrades[0]);
       }
-      const sortedTrades = rawTrades.sort(
+      
+      // Apply comprehensive filtering (time-based + exchange-specific)
+      const filteredTrades = this.filterTradesByExchange(rawTrades, since);
+
+      const sortedTrades = filteredTrades.sort(
         (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)
       );
       const Trades = sortedTrades.map(

@@ -4,7 +4,7 @@ import {
   publicProcedure,
   protectedProcedure,
 } from "~/server/api/trpc";
-import { initUserExchange } from "~/lib/userExchangeInit";
+import { TradeSyncService } from "~/app/tradeSync/services/TradeSyncService";
 export const pairsRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
     const pairs = await ctx.db.pair.findMany({
@@ -18,40 +18,21 @@ export const pairsRouter = createTRPCRouter({
     });
     return pairs;
   }),
-  synchExchangePairs: protectedProcedure
+  syncTrades: protectedProcedure
     .input(
       z.object({
         encryptedKeys: z.string(),
+        mode: z.enum(['full', 'incremental']).optional(),
         since: z.number().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { encryptedKeys } = input;
+      const { encryptedKeys, mode, since } = input;
       const userId = ctx.session.user.id;
-      // const exchange = await ctx.db.exchange.findUnique({
-      //   where: { id: exchangeId },
-      // });
-      const { userExchange, error } = await initUserExchange(
-        encryptedKeys,
-        userId,
-      );
-      if (error || !userExchange) {
-        return {
-          success: false,
-          message: error || 'Failed to initialize exchange',
-        };
-      }
-      console.log("userExchange", userExchange);
-      // Synchronize pairs for all exchanges
-      await userExchange.updateUserPairs();
-      console.log("userExchange after updateUserPairs", userExchange);
-      // Load the updated pairs
-      const updatedPairs = await userExchange.loadUserPairs();
-
-      return {
-        success: true,
-        message: 'Successfully synchronized trading pairs',
-        pairs: updatedPairs,
-      }
+      
+      const tradeSyncService = new TradeSyncService();
+      const result = await tradeSyncService.syncTrades(userId, encryptedKeys, mode, since);
+      
+      return result;
     }),
 });
