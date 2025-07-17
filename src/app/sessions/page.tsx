@@ -71,7 +71,7 @@ export default function ScansPage() { // Removed async
         )}
       </Drawer>
     <Paper p="md" radius="sm">
-      <Title order={2} mb="lg">Transcription Sessions</Title>
+      <Title order={2} mb="lg">Recordings</Title>
       <Group gap="md" justify="center" wrap="wrap">
           {/* Use clientSession to determine auth state */}
           {!clientSession?.user ?  <SignInButton /> : <></>}

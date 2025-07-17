@@ -66,7 +66,6 @@ export default function SessionDetail({ sessionId, showFullDetails = true, onClo
         message: 'Setups created successfully',
         color: 'green',
       });
-      router.push('/setups');
     },
     onError: (error) => {
       notifications.show({
