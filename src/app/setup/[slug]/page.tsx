@@ -1,8 +1,8 @@
-import { Title, Text, Group, Badge, Card, Image, Stack, Divider, SimpleGrid, Button } from '@mantine/core';
+import { Title, Text, Group, Badge, Card, Image, Stack, Divider, SimpleGrid, Button, ScrollArea } from '@mantine/core';
 import Link from "next/link";
 import { auth } from "~/server/auth";
 import { api } from "~/trpc/server";
-import { IconCalendar, IconChartCandle, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
+import { IconCalendar, IconChartCandle, IconArrowUp, IconArrowDown, IconTrendingUp, IconTrendingDown } from '@tabler/icons-react';
 import { PriceEditor } from './_components/PriceEditor';
 import { PrivacyToggle } from './_components/PrivacyToggle';
 import { SetupContentEditor } from '~/app/_components/SetupContentEditor';
@@ -160,6 +160,61 @@ export default async function SetupPage({ params }: {
                   </Card>
                 </div>
               </SimpleGrid>
+
+              {/* Trades Section */}
+              {setup.trades && setup.trades.length > 0 && (
+                <Card shadow="sm" p="lg" radius="md" withBorder>
+                  <Title order={3} mb="md">Recent Trades ({setup.pair.symbol})</Title>
+                  <ScrollArea>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Date</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Type</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Price</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Volume</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Cost</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Fee</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Exchange</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {setup.trades.map((trade) => (
+                          <tr key={trade.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                            <td style={{ padding: '8px' }}>
+                              {new Date(Number(trade.time)).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge 
+                                size="sm" 
+                                variant="light" 
+                                color={trade.type === 'buy' ? 'green' : 'red'}
+                                leftSection={trade.type === 'buy' ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
+                              >
+                                {trade.type.toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>{parseFloat(trade.price).toFixed(8)}</td>
+                            <td style={{ padding: '8px' }}>{trade.vol}</td>
+                            <td style={{ padding: '8px' }}>${parseFloat(trade.cost).toFixed(2)}</td>
+                            <td style={{ padding: '8px' }}>${parseFloat(trade.fee).toFixed(2)}</td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge size="sm" variant="outline">
+                                {trade.exchange}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </Card>
+              )}
             </Stack>
           )}
         </div>

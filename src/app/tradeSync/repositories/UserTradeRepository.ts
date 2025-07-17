@@ -100,10 +100,37 @@ export class UserTradeRepository {
     }
     
     try {
+      // Get unique pair symbols from trades
+      const uniquePairSymbols = [...new Set(uniqueTrades.map(trade => trade.pair))];
+      
+      // Look up existing Pairs and create missing ones
+      const pairMap = new Map<string, number>();
+      
+      for (const symbol of uniquePairSymbols) {
+        let pairRecord = await this.prisma.pair.findUnique({
+          where: { symbol }
+        });
+        
+        if (!pairRecord) {
+          // Create new Pair record if it doesn't exist
+          pairRecord = await this.prisma.pair.create({
+            data: {
+              symbol,
+              baseCoinId: 1,  // Default base coin
+              quoteCoinId: 1, // Default quote coin
+            }
+          });
+          console.log(`📝 [UserTradeRepository] Created new Pair record for ${symbol}`);
+        }
+        
+        pairMap.set(symbol, pairRecord.id);
+      }
+      
       const tradeData = uniqueTrades.map((trade) => ({
         tradeId: trade.tradeId,
         ordertxid: trade.ordertxid,
         pair: trade.pair,
+        pairId: pairMap.get(trade.pair),
         time: trade.time, // Use this instead of date
         type: trade.type || '',
         ordertype: trade.ordertype,

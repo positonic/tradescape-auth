@@ -308,6 +308,7 @@ model Pair {
   userPairs UserPair[]
   setups    Setup[]
   alerts    Alert[]
+  userTrades UserTrade[]
 
   @@index([baseCoinId])
   @@index([quoteCoinId])
@@ -414,6 +415,8 @@ model UserTrade {
   id        Int    @id @default(autoincrement())
   ordertxid String
   pair      String
+  pairId    Int?
+  pairRecord Pair?  @relation(fields: [pairId], references: [id])
   time      BigInt
   type      String
   ordertype String
@@ -431,6 +434,8 @@ model UserTrade {
   user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   orderId   Int?
   order     Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([pairId])
 }
 
 model Order {

@@ -238,12 +238,114 @@ export const setupsRouter = createTRPCRouter({
         throw new Error('Not authorized to view this setup');
       }
 
-      // Convert Decimal fields to numbers
+      // Debug logging
+      console.log('🔍 [Setup Debug] Setup ID:', setup.id);
+      console.log('🔍 [Setup Debug] Setup pairId:', setup.pairId);
+      console.log('🔍 [Setup Debug] Pair symbol:', setup.pair?.symbol);
+      console.log('🔍 [Setup Debug] User ID:', ctx.session.user.id);
+
+      // Check if there are any UserTrades for this user at all
+      const totalUserTrades = await ctx.db.userTrade.count({
+        where: {
+          userId: ctx.session.user.id,
+        }
+      });
+      console.log('🔍 [Setup Debug] Total user trades:', totalUserTrades);
+
+      // Check how many UserTrades have pairId set
+      const tradesWithPairId = await ctx.db.userTrade.count({
+        where: {
+          userId: ctx.session.user.id,
+          pairId: { not: null }
+        }
+      });
+      console.log('🔍 [Setup Debug] Trades with pairId:', tradesWithPairId);
+
+      // Check if any trades exist for this specific pair symbol (string match)
+      const tradesForPairSymbol = await ctx.db.userTrade.count({
+        where: {
+          userId: ctx.session.user.id,
+          pair: setup.pair?.symbol
+        }
+      });
+      console.log('🔍 [Setup Debug] Trades for pair symbol:', tradesForPairSymbol);
+
+      // Let's see what trade pair symbols actually exist
+      const sampleTrades = await ctx.db.userTrade.findMany({
+        where: {
+          userId: ctx.session.user.id,
+        },
+        select: {
+          pair: true,
+        },
+        distinct: ['pair'],
+        take: 10
+      });
+      console.log('🔍 [Setup Debug] Sample trade pair symbols:', sampleTrades.map(t => t.pair));
+
+      // Check if there are trades with similar symbols (like SOL/USDT)
+      const solTrades = await ctx.db.userTrade.count({
+        where: {
+          userId: ctx.session.user.id,
+          pair: {
+            contains: 'SOL'
+          }
+        }
+      });
+      console.log('🔍 [Setup Debug] Trades containing "SOL":', solTrades);
+
+      // Fetch trades for this setup's pair
+      let trades = await ctx.db.userTrade.findMany({
+        where: {
+          userId: ctx.session.user.id,
+          pairId: setup.pairId,
+        },
+        orderBy: {
+          time: 'desc'
+        },
+        take: 50 // Limit to recent 50 trades
+      });
+
+      // If no trades found with pairId, try string matching as fallback
+      if (trades.length === 0 && setup.pair?.symbol) {
+        console.log('🔍 [Setup Debug] No trades found with pairId, trying string matching...');
+        trades = await ctx.db.userTrade.findMany({
+          where: {
+            userId: ctx.session.user.id,
+            pair: {
+              contains: setup.pair.symbol
+            }
+          },
+          orderBy: {
+            time: 'desc'
+          },
+          take: 50 // Limit to recent 50 trades
+        });
+        console.log(`🔍 [Setup Debug] Found ${trades.length} trades with string matching`);
+      }
+
+      console.log('🔍 [Setup Debug] Found trades:', trades.length);
+      if (trades.length > 0) {
+        console.log('🔍 [Setup Debug] Sample trade:', {
+          id: trades[0]?.id,
+          pair: trades[0]?.pair,
+          pairId: trades[0]?.pairId,
+          time: trades[0]?.time
+        });
+      }
+
+      // Convert Decimal fields to numbers for both setup and trades
+      const serializedTrades = trades.map(trade => ({
+        ...trade,
+        closedPnL: trade.closedPnL ? Number(trade.closedPnL) : null,
+      }));
+
       return {
         ...setup,
         entryPrice: setup.entryPrice ? Number(setup.entryPrice) : null,
         takeProfitPrice: setup.takeProfitPrice ? Number(setup.takeProfitPrice) : null,
         stopPrice: setup.stopPrice ? Number(setup.stopPrice) : null,
+        trades: serializedTrades,
       };
     }),
 
