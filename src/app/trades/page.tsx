@@ -12,12 +12,17 @@ import {
   Table,
   Badge,
   Pagination,
+  Tabs,
+  Flex,
+  ActionIcon,
 } from '@mantine/core';
+import { IconKey } from '@tabler/icons-react';
 import { useSession } from "next-auth/react";
 import SignInButton from "~/app/_components/SignInButton";
 import KeyManager from "~/app/_components/KeyManager";
 import { formatCurrency, formatDateTime } from '~/lib/tradeUtils';
 import { useSyncTrades } from '~/hooks/useSyncTrades';
+import { KeyStorage, encryptForTransmission } from '~/lib/keyEncryption';
 
 export default function TradesPage() {
   const { data: clientSession, status: sessionStatus } = useSession();
@@ -49,6 +54,25 @@ export default function TradesPage() {
     });
   };
 
+  const handleQuickSync = () => {
+    const keys = KeyStorage.getKeys();
+    if (keys && keys.length > 0) {
+      const encrypted = encryptForTransmission(keys);
+      syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'incremental' });
+    }
+  };
+
+  const handleFullSync = () => {
+    const keys = KeyStorage.getKeys();
+    if (keys && keys.length > 0) {
+      const encrypted = encryptForTransmission(keys);
+      syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'full' });
+    }
+  };
+
+  const hasStoredKeys = KeyStorage.hasKeys();
+  const [showKeyManager, setShowKeyManager] = useState(!hasStoredKeys);
+
   if (sessionStatus === "loading") {
     return <Skeleton height={400} />;
   }
@@ -70,54 +94,76 @@ export default function TradesPage() {
 
   return (
     <Paper p="md" radius="sm">
-      <Title order={2} mb="lg">Trades Management</Title>
+      <Flex justify="space-between" align="center" mb="lg">
+        <Title order={2}>Trades Management</Title>
+        
+        <Group gap="sm">
+          {/* Key icon to toggle key manager */}
+          <ActionIcon
+            variant="subtle"
+            size="lg"
+            onClick={() => setShowKeyManager(!showKeyManager)}
+            title="Manage Exchange API Keys"
+          >
+            <IconKey size={20} />
+          </ActionIcon>
+          
+          {/* Sync buttons - only show if we have keys */}
+          {hasStoredKeys && (
+            <Group gap="sm">
+              <Button
+                onClick={handleQuickSync}
+                loading={syncTradesMutation.isPending}
+                variant="gradient"
+                gradient={{ from: '#23dd7a', to: '#1b9b57' }}
+                size="sm"
+              >
+                ⚡ Quick Sync
+              </Button>
+              <Button
+                onClick={handleFullSync}
+                loading={syncTradesMutation.isPending}
+                size="sm"
+              >
+                🔄 Full Sync
+              </Button>
+            </Group>
+          )}
+        </Group>
+      </Flex>
       
-      {/* Key Management and Sync Section */}
-      <KeyManager 
-        onKeysReady={handleKeysReady} 
-        isLoading={syncTradesMutation.isPending}
-      />
+      {/* Key Management Section - Hidden by default, shown if no keys or when key icon clicked */}
+      {(!hasStoredKeys || showKeyManager) && (
+        <Paper p="md" withBorder mb="xl">
+          <Title order={4} mb="md">Exchange API Keys</Title>
+          <KeyManager 
+            onKeysReady={handleKeysReady} 
+            isLoading={syncTradesMutation.isPending}
+          />
+        </Paper>
+      )}
       
-      {/* Optional: Since timestamp input */}
-      {/* <Paper p="md" withBorder mb="xl">
-        <TextInput
-          label="Since (timestamp)"
-          placeholder="Optional: Only sync trades after this timestamp"
-          value={since?.toString() || ''}
-          onChange={(e) => setSince(e.currentTarget.value ? parseInt(e.currentTarget.value) : undefined)}
-          type="number"
-        />
-      </Paper> */}
 
-      {/* Tab Navigation */}
-      <Group mb="lg">
-        <Button
-          variant={activeTab === 'trades' ? 'filled' : 'outline'}
-          onClick={() => {
-            setActiveTab('trades');
-            setCurrentPage(1);
-          }}
-        >
-          Trades ({tradesData?.totalCount ?? 0})
-        </Button>
-        <Button
-          variant={activeTab === 'orders' ? 'filled' : 'outline'}
-          onClick={() => {
-            setActiveTab('orders');
-            setCurrentPage(1);
-          }}
-        >
-          Orders ({ordersData?.totalCount ?? 0})
-        </Button>
-      </Group>
+      {/* Tabs for Trades and Orders */}
+      <Tabs value={activeTab} onChange={(value) => {
+        setActiveTab(value as 'trades' | 'orders');
+        setCurrentPage(1);
+      }}>
+        <Tabs.List>
+          <Tabs.Tab value="trades">
+            Trades ({tradesData?.totalCount ?? 0})
+          </Tabs.Tab>
+          <Tabs.Tab value="orders">
+            Orders ({ordersData?.totalCount ?? 0})
+          </Tabs.Tab>
+        </Tabs.List>
 
-      {/* Content */}
-      {isLoading ? (
-        <Skeleton height={400} />
-      ) : (
-        <>
-          {activeTab === 'trades' && (
-            <Table highlightOnHover>
+        <Tabs.Panel value="trades">
+          {isLoading ? (
+            <Skeleton height={400} />
+          ) : (
+            <>
+              <Table highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Time</Table.Th>
@@ -157,11 +203,29 @@ export default function TradesPage() {
                   </Table.Tr>
                 )}
               </Table.Tbody>
-            </Table>
+              </Table>
+              
+              {/* Pagination for trades */}
+              {totalPages > 1 && (
+                <Group justify="center" mt="lg">
+                  <Pagination
+                    value={currentPage}
+                    onChange={setCurrentPage}
+                    total={totalPages}
+                    size="sm"
+                  />
+                </Group>
+              )}
+            </>
           )}
+        </Tabs.Panel>
 
-          {activeTab === 'orders' && (
-            <Table highlightOnHover>
+        <Tabs.Panel value="orders">
+          {isLoading ? (
+            <Skeleton height={400} />
+          ) : (
+            <>
+              <Table highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Time</Table.Th>
@@ -203,22 +267,23 @@ export default function TradesPage() {
                   </Table.Tr>
                 )}
               </Table.Tbody>
-            </Table>
+              </Table>
+              
+              {/* Pagination for orders */}
+              {totalPages > 1 && (
+                <Group justify="center" mt="lg">
+                  <Pagination
+                    value={currentPage}
+                    onChange={setCurrentPage}
+                    total={totalPages}
+                    size="sm"
+                  />
+                </Group>
+              )}
+            </>
           )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Group justify="center" mt="lg">
-              <Pagination
-                value={currentPage}
-                onChange={setCurrentPage}
-                total={totalPages}
-                size="sm"
-              />
-            </Group>
-          )}
-        </>
-      )}
+        </Tabs.Panel>
+      </Tabs>
     </Paper>
   );
 }

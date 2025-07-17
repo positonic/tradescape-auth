@@ -139,22 +139,6 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
     });
   };
 
-  const handleIncrementalSync = () => {
-    // Validate keys
-    const errors = validateKeys(keys);
-    if (errors.length > 0) {
-      notifications.show({
-        title: 'Validation Error',
-        message: errors.join(', '),
-        color: 'red',
-      });
-      return;
-    }
-
-    // Encrypt for transmission and perform incremental sync
-    const encrypted = encryptForTransmission(keys);
-    syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'incremental' });
-  };
 
   const isSyncing = syncTradesMutation.isPending;
 
@@ -205,40 +189,13 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
               ✅ Exchange API keys are saved and encrypted in your browser.
             </Text>
           </Alert>
-          <Stack gap="sm">
-            <Group justify="space-between">
-              <Button
-                onClick={handleIncrementalSync}
-                loading={isSyncing}
-                variant="gradient"
-                gradient={{ from: '#23dd7a', to: '#1b9b57' }}
-                style={{ flex: 1 }}
-              >
-                ⚡ Quick Sync
-              </Button>
-              <Button
-                onClick={() => {
-                  // Use existing saved keys for full sync
-                  const encrypted = encryptForTransmission(keys);
-                  syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'full' });
-                }}
-                loading={isSyncing}
-                style={{ flex: 1 }}
-              >
-                🔄 Full Sync
-              </Button>
-            </Group>
-            <Text size="xs" c="dimmed" ta="center">
-              Quick: Sync trades from known pairs • Full: Rediscover all pairs + sync trades
-            </Text>
-            <Button
-              variant="outline"
-              onClick={addNewExchange}
-              size="sm"
-            >
-              Add New Exchange
-            </Button>
-          </Stack>
+          <Button
+            variant="outline"
+            onClick={addNewExchange}
+            size="sm"
+          >
+            Add New Exchange
+          </Button>
         </Stack>
       ) : (
         <Stack gap="lg">
