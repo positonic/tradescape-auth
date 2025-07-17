@@ -3,7 +3,7 @@ import tradeAggregator from './aggregation/TradeAggregator';
 import { PositionAggregator } from './aggregation/PositionAggregator';
 import { Trade } from './interfaces/Trade';
 import Exchange from './exchange/Exchange';
-import { FetchTradesReturnType } from './exchange/types';
+import { FetchTradesReturnType, Position } from './exchange/types';
 import {
   LastSyncTimes,
   UserExchangeRepository,

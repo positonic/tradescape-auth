@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from "~/trpc/react";
 import { 
   Paper, 
@@ -93,8 +93,15 @@ export default function TradesPage() {
     }
   };
 
-  const hasStoredKeys = KeyStorage.hasKeys();
-  const [showKeyManager, setShowKeyManager] = useState(!hasStoredKeys);
+  const [hasStoredKeys, setHasStoredKeys] = useState(false);
+  const [showKeyManager, setShowKeyManager] = useState(true);
+
+  useEffect(() => {
+    // Check for stored keys on client-side only
+    const keys = KeyStorage.hasKeys();
+    setHasStoredKeys(keys);
+    setShowKeyManager(!keys);
+  }, []);
 
   if (sessionStatus === "loading") {
     return <Skeleton height={400} />;
