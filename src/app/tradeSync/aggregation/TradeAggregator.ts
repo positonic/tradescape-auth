@@ -1,5 +1,5 @@
-import { Order } from '@/interfaces/Order';
-import { Trade } from '@/interfaces/Trade';
+import { Order } from '../interfaces/Order';
+import { Trade } from '../interfaces/Trade';
 
 export default function tradeAggregator(trades: Trade[]): Order[] {
   const ordersMap: { [ordertxid: string]: Order } = {};
@@ -8,7 +8,7 @@ export default function tradeAggregator(trades: Trade[]): Order[] {
     const price = parseFloat(trade.price);
     const vol = trade.vol;
 
-    console.log('log> trade.closedPnL is ', trade.closedPnL);
+    //console.log('log> trade.closedPnL is ', trade.closedPnL);
     if (!ordersMap[trade.ordertxid]) {
       // Initialize a new order with the current trade
       ordersMap[trade.ordertxid] = {

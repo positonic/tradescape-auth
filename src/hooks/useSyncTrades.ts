@@ -4,11 +4,11 @@ import { notifications } from '@mantine/notifications';
 export const useSyncTrades = () => {
   const utils = api.useUtils();
 
-  return api.trades.syncTrades.useMutation({
+  return api.pairs.syncTrades.useMutation({
     onSuccess: (data) => {
       notifications.show({
         title: 'Success',
-        message: `Synced ${data.trades.length} trades and ${data.orders.length} orders`,
+        message: `${data.message} (${data.tradesFound} trades, ${data.pairsFound} pairs)`,
         color: 'green',
       });
       

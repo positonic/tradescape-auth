@@ -695,10 +695,10 @@ export default class Exchange {
         };
         
         if (this.id === 'hyperliquid') {
-          console.log('log> ccxtTrade.info.closedPnL is ', ccxtTrade.info.closedPnl);
-          console.log('log> Number(ccxtTrade.info.closedPnL) ?? 0 ', Number(ccxtTrade.info.closedPnL) ?? 0);
-          console.log('log> trade.closedPnL is ', trade.closedPnL);
-          console.log('log> ccxtTrade.info is ', ccxtTrade.info);
+          // console.log('log> ccxtTrade.info.closedPnL is ', ccxtTrade.info.closedPnl);
+          // console.log('log> Number(ccxtTrade.info.closedPnL) ?? 0 ', Number(ccxtTrade.info.closedPnL) ?? 0);
+          // console.log('log> trade.closedPnL is ', trade.closedPnL);
+          // console.log('log> ccxtTrade.info is ', ccxtTrade.info);
         }
 
         return [trade.tradeId, trade];

@@ -170,7 +170,7 @@ class UserExchange {
             console.log(`⚠️  [${exchangeName}] No trades found for symbol: '${symbol}'`);
           }
           if (exchangeName === 'hyperliquid') {
-            console.log('Hyperliquid trades: ', trades[0]);
+            console.log('Hyperliquid trades: ', trades.length);
           }
           console.log('_________________________\n');
           allTrades = allTrades.concat(trades);

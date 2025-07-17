@@ -1,5 +1,7 @@
-export function formatDateTime(timestamp: number): string {
-  const date = new Date(timestamp);
+export function formatDateTime(timestamp: number | bigint): string {
+  // Convert BigInt to number if needed
+  const numericTimestamp = typeof timestamp === 'bigint' ? Number(timestamp) : timestamp;
+  const date = new Date(numericTimestamp);
 
   // Extract date components
   const year = date.getFullYear();
@@ -64,12 +66,14 @@ export function transformExchangePairFormat(input: string): string {
   return transformedString;
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | string): string {
+  // Convert string to number if needed
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
-  }).format(amount);
+  }).format(numericAmount);
 }
 
 type ColorMap = Record<string, string>;
@@ -106,8 +110,16 @@ export const cryptoColors: ColorMap = {
   SOL: '#24AEA9',
 };
 
-export const sortDescending = (a: any, b: any) => b.time - a.time;
-export const sortAscending = (a: any, b: any) => a.time - b.time;
+export const sortDescending = (a: any, b: any) => {
+  const aTime = typeof a.time === 'bigint' ? Number(a.time) : a.time;
+  const bTime = typeof b.time === 'bigint' ? Number(b.time) : b.time;
+  return bTime - aTime;
+};
+export const sortAscending = (a: any, b: any) => {
+  const aTime = typeof a.time === 'bigint' ? Number(a.time) : a.time;
+  const bTime = typeof b.time === 'bigint' ? Number(b.time) : b.time;
+  return aTime - bTime;
+};
 
 /**
  *

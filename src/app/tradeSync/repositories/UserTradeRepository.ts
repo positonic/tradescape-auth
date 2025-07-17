@@ -85,48 +85,77 @@ export class UserTradeRepository {
     return dbOrders.map((order) => this.orderMapper.mapDbOrderToOrder(order));
   }
 
-  async saveAll(trades: Trade[], userId: number): Promise<void> {
+  async saveAll(trades: Trade[], userId: string): Promise<void> {
+    if (trades.length === 0) {
+      console.log('ℹ️ [UserTradeRepository] No trades to save, skipping');
+      return;
+    }
+    
     const uniqueTrades: Trade[] = await this.filterExistingTrades(trades);
-    //console.log('uniqueTrade is ', uniqueTrades[0]);
     console.log('uniqueTrades.length is ', uniqueTrades.length);
-    const tradeCreations = uniqueTrades.map((trade) =>
-      this.prisma.userTrade.create({
-        data: {
-          tradeId: trade.tradeId,
-          ordertxid: trade.ordertxid,
-          pair: trade.pair,
-          time: trade.time, // Use this instead of date
-          type: trade.type || '',
-          ordertype: trade.ordertype,
-          price: trade.price,
-          cost: trade.cost,
-          fee: trade.fee,
-          vol: trade.vol,
-          margin: trade.margin,
-          leverage: trade.leverage,
-          misc: trade.misc,
-          exchange: trade.exchange || '',
-          userId: userId,
-          closedPnL: trade.closedPnL
-            ? new Prisma.Decimal(trade.closedPnL)
-            : null,
-        },
-      })
-    );
-    await this.prisma.$transaction(tradeCreations);
+    
+    if (uniqueTrades.length === 0) {
+      console.log('ℹ️ [UserTradeRepository] All trades already exist, skipping database save');
+      return;
+    }
+    
+    try {
+      const tradeData = uniqueTrades.map((trade) => ({
+        tradeId: trade.tradeId,
+        ordertxid: trade.ordertxid,
+        pair: trade.pair,
+        time: trade.time, // Use this instead of date
+        type: trade.type || '',
+        ordertype: trade.ordertype,
+        price: trade.price,
+        cost: trade.cost,
+        fee: trade.fee,
+        vol: trade.vol,
+        margin: trade.margin,
+        leverage: trade.leverage,
+        misc: trade.misc,
+        exchange: trade.exchange || '',
+        userId: userId,
+        closedPnL: trade.closedPnL
+          ? new Prisma.Decimal(trade.closedPnL)
+          : null,
+      }));
+      
+      // Use createMany with skipDuplicates as a fallback for any remaining duplicates
+      const result = await this.prisma.userTrade.createMany({
+        data: tradeData,
+        skipDuplicates: true,
+      });
+      
+      console.log(`✅ [UserTradeRepository] Successfully saved ${result.count} trades to database`);
+      
+    } catch (error) {
+      console.error(`❌ [UserTradeRepository] Failed to save trades:`, error);
+      throw error;
+    }
   }
   private async filterExistingTrades(trades: Trade[]): Promise<Trade[]> {
+    // Check for existing trades by both tradeId and ordertxid to prevent duplicates
     const existingTrades = await this.prisma.userTrade.findMany({
       where: {
         OR: trades.map((trade) => ({
-          ordertxid: trade.ordertxid,
+          tradeId: trade.tradeId,
         })),
       },
     });
+    
+    // Create a Set of existing tradeIds for fast lookup
     const existingTradeIds = new Set(
-      existingTrades.map((trade) => trade.ordertxid)
+      existingTrades.map((trade) => trade.tradeId)
     );
-    return trades.filter((trade) => !existingTradeIds.has(trade.ordertxid));
+    
+    console.log(`🔍 [UserTradeRepository] Filtering: ${trades.length} total trades, ${existingTradeIds.size} existing trades`);
+    
+    const filteredTrades = trades.filter((trade) => !existingTradeIds.has(trade.tradeId));
+    
+    console.log(`✨ [UserTradeRepository] After filtering: ${filteredTrades.length} unique trades to save`);
+    
+    return filteredTrades;
   }
 
   async updateTradeOrderRelations(orders: Order[]) {
