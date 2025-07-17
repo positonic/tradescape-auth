@@ -334,10 +334,41 @@ export const setupsRouter = createTRPCRouter({
         });
       }
 
-      // Convert Decimal fields to numbers for both setup and trades
+      // Fetch orders for this setup's pair (using string matching for now until server restart)
+      console.log('🔍 [Setup Debug] Fetching orders for pair:', setup.pair?.symbol);
+      const orders = await ctx.db.order.findMany({
+        where: {
+          userId: ctx.session.user.id,
+          pair: {
+            contains: setup.pair?.symbol || ''
+          }
+        },
+        include: {
+          trades: true,
+        },
+        orderBy: {
+          time: 'desc'
+        },
+        take: 20
+      });
+      console.log(`🔍 [Setup Debug] Found ${orders.length} orders with string matching`);
+
+      // Convert Decimal fields to numbers for setup, trades, and orders
       const serializedTrades = trades.map(trade => ({
         ...trade,
         closedPnL: trade.closedPnL ? Number(trade.closedPnL) : null,
+      }));
+
+      const serializedOrders = orders.map(order => ({
+        ...order,
+        amount: Number(order.amount),
+        totalCost: Number(order.totalCost),
+        fee: Number(order.fee),
+        highestPrice: Number(order.highestPrice),
+        lowestPrice: Number(order.lowestPrice),
+        averagePrice: Number(order.averagePrice),
+        closedPnL: order.closedPnL ? Number(order.closedPnL) : null,
+        tradeCount: order.trades.length,
       }));
 
       return {
@@ -346,6 +377,7 @@ export const setupsRouter = createTRPCRouter({
         takeProfitPrice: setup.takeProfitPrice ? Number(setup.takeProfitPrice) : null,
         stopPrice: setup.stopPrice ? Number(setup.stopPrice) : null,
         trades: serializedTrades,
+        orders: serializedOrders,
       };
     }),
 

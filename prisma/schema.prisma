@@ -309,6 +309,7 @@ model Pair {
   setups    Setup[]
   alerts    Alert[]
   userTrades UserTrade[]
+  orders    Order[]
 
   @@index([baseCoinId])
   @@index([quoteCoinId])
@@ -444,6 +445,8 @@ model Order {
   time          BigInt
   type          String
   pair          String
+  pairId        Int?
+  pairRecord    Pair?      @relation(fields: [pairId], references: [id])
   amount        Decimal
   totalCost     Decimal
   fee           Decimal
@@ -462,6 +465,7 @@ model Order {
   @@index([time])
   @@index([userId])
   @@index([pair])
+  @@index([pairId])
 }
 
 model Position {

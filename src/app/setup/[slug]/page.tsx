@@ -161,6 +161,67 @@ export default async function SetupPage({ params }: {
                 </div>
               </SimpleGrid>
 
+              {/* Orders Section */}
+              {setup.orders && setup.orders.length > 0 && (
+                <Card shadow="sm" p="lg" radius="md" withBorder>
+                  <Title order={3} mb="md">Recent Orders ({setup.pair.symbol})</Title>
+                  <ScrollArea>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Date</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Type</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Amount</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Avg Price</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Total Cost</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Fees</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Trades</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Exchange</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {setup.orders.map((order) => (
+                          <tr key={order.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                            <td style={{ padding: '8px' }}>
+                              {new Date(Number(order.time)).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge 
+                                size="sm" 
+                                variant="light" 
+                                color={order.type === 'buy' ? 'green' : 'red'}
+                                leftSection={order.type === 'buy' ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
+                              >
+                                {order.type.toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>{order.amount}</td>
+                            <td style={{ padding: '8px' }}>{order.averagePrice.toFixed(8)}</td>
+                            <td style={{ padding: '8px' }}>${order.totalCost.toFixed(2)}</td>
+                            <td style={{ padding: '8px' }}>${order.fee.toFixed(2)}</td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge size="sm" variant="outline">
+                                {order.tradeCount}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge size="sm" variant="outline">
+                                {order.exchange}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </Card>
+              )}
+
               {/* Trades Section */}
               {setup.trades && setup.trades.length > 0 && (
                 <Card shadow="sm" p="lg" radius="md" withBorder>
