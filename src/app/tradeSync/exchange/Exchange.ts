@@ -607,7 +607,7 @@ export default class Exchange {
       
       // Check for partial matches
       const partialMatches = availableSymbols.filter(symbol => 
-        symbol.includes(market) || market.includes(symbol.split('/')[0]) || market.includes(symbol.split(':')[0])
+        symbol.includes(market) || market.includes(symbol.split('/')[0] ?? '') || market.includes(symbol.split(':')[0] ?? '')
       );
       if (partialMatches.length > 0) {
         console.log(`🔍 [${this.id}] Potential symbol matches for '${market}':`, partialMatches);
