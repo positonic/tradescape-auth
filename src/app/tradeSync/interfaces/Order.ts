@@ -6,7 +6,7 @@ export interface Order {
   time: number; // The time the trade position was opened
   date: Date;
   type: 'buy' | 'sell';
-  direction?: string; // From Hyperliquid: "Close Long", "Open Long", etc.
+  direction?: string | null; // From Hyperliquid: "Close Long", "Open Long", etc.
   pair: string;
   amount: number;
   highestPrice: number;

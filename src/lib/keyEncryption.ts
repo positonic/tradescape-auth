@@ -137,16 +137,24 @@ export class KeyStorage {
   }
   
   static load(): DecryptedKeys[] | null {
+    console.log('🔍 Loading keys from localStorage...');
     const encrypted = localStorage.getItem(this.STORAGE_KEY);
-    if (!encrypted) return null;
     
+    if (!encrypted) {
+      console.log('❌ No encrypted keys found in localStorage');
+      return null;
+    }
+    
+    console.log('🔐 Found encrypted keys, attempting to decrypt...');
     const keys = decryptFromStorage(encrypted);
+    
     if (!keys) {
-      // Clear invalid/expired keys
+      console.warn('⚠️ Failed to decrypt keys or keys expired, clearing storage');
       this.clear();
       return null;
     }
     
+    console.log('✅ Successfully loaded and decrypted keys:', keys.map(k => k.exchange));
     return keys;
   }
   
@@ -155,7 +163,9 @@ export class KeyStorage {
   }
   
   static hasKeys(): boolean {
-    return !!localStorage.getItem(this.STORAGE_KEY);
+    const hasKeys = !!localStorage.getItem(this.STORAGE_KEY);
+    console.log('🔍 Checking if keys exist in localStorage:', hasKeys);
+    return hasKeys;
   }
 }
 

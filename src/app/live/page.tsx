@@ -63,13 +63,26 @@ export default function LivePage() {
 
   // tRPC mutations
   const subscribeMutation = api.live.subscribeToLiveData.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       setIsConnected(true);
       notifications.show({
         title: "Connected",
         message: "Live data stream connected successfully",
         color: "green",
       });
+      
+      // Immediately fetch initial data
+      setTimeout(async () => {
+        try {
+          const data = await refetch();
+          if (data.data) {
+            setLiveData(data.data);
+            setLastUpdate(new Date());
+          }
+        } catch (error) {
+          console.error("Failed to fetch initial data:", error);
+        }
+      }, 1000);
     },
     onError: (error) => {
       notifications.show({
@@ -82,7 +95,7 @@ export default function LivePage() {
 
   const unsubscribeMutation = api.live.unsubscribeFromLiveData.useMutation();
 
-  const { data: currentData, refetch } = api.live.getCurrentLiveData.useQuery(
+  const { refetch } = api.live.getCurrentLiveData.useQuery(
     undefined,
     {
       enabled: false, // Only fetch manually
@@ -178,12 +191,31 @@ export default function LivePage() {
     }
   };
 
-  // Auto-connect on mount
+  // Auto-connect on mount and start polling
   useEffect(() => {
     if (status === "authenticated" && !isConnected) {
       connectToLiveData();
     }
   }, [status]);
+
+  // Poll for data every 5 seconds when connected
+  useEffect(() => {
+    if (!isConnected) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        const data = await refetch();
+        if (data.data) {
+          setLiveData(data.data);
+          setLastUpdate(new Date());
+        }
+      } catch (error) {
+        console.error("Failed to poll live data:", error);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isConnected, refetch]);
 
   // Cleanup on unmount
   useEffect(() => {

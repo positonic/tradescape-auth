@@ -142,3 +142,70 @@ const payload = JSON.parse(text);
 - **User Management**: Discord authentication, personalized dashboards
 - **Real-time Notifications**: WebSocket-based alert system
 - **AI Chat Interface**: LangChain-powered assistant with tool integration
+
+## API Key Storage & Security
+
+### Key Storage Mechanism
+The application uses a sophisticated encrypted key storage system for exchange API credentials:
+
+#### Client-Side Storage
+- **Encryption**: AES encryption using `CLIENT_ENCRYPTION_KEY` environment variable
+- **Storage**: Encrypted keys stored in browser's `localStorage`
+- **Expiration**: Keys expire after 24 hours for security
+- **Location**: `src/lib/keyEncryption.ts` - `KeyStorage` class
+
+#### Transmission Security
+- **Double Encryption**: Keys are re-encrypted for each server transmission
+- **Timestamp Validation**: Server validates timestamp (5-minute window)
+- **Client ID**: Each transmission includes a unique client identifier
+- **Automatic Cleanup**: Invalid/expired keys are automatically removed
+
+#### Usage Pattern
+```typescript
+// Check if keys exist
+const hasKeys = KeyStorage.hasKeys();
+
+// Load and decrypt keys
+const keys = KeyStorage.load();
+
+// Save keys with optional persistence
+KeyStorage.save(keys, rememberMe);
+
+// Encrypt for server transmission
+const encrypted = encryptForTransmission(keys);
+```
+
+### Debugging Key Storage Issues
+
+#### Common Issues
+1. **No Keys Found**: Check if keys are stored with "Remember Keys" option
+2. **Expired Keys**: Keys expire after 24 hours, need to re-add
+3. **Encryption Errors**: Check `CLIENT_ENCRYPTION_KEY` environment variable
+
+#### Debugging Commands
+```bash
+# Check browser localStorage for keys
+localStorage.getItem('encrypted_exchange_keys')
+
+# Enable detailed logging (already added)
+# Check browser console for key-related logs with emojis:
+# 🔍 🔑 🔐 ⚠️ ❌ ✅
+```
+
+#### Debug Environment Variables
+```bash
+# Client-side encryption (in .env.local)
+NEXT_PUBLIC_CLIENT_ENCRYPTION_KEY=your-client-key
+
+# Server-side encryption (in .env)
+SERVER_ENCRYPTION_KEY=your-server-key
+```
+
+### Supported Exchanges
+- **Binance**: API Key + Secret
+- **Kraken**: API Key + Secret  
+- **Bybit**: API Key + Secret
+- **Coinbase Pro**: API Key + Secret + Passphrase
+- **KuCoin**: API Key + Secret + Passphrase
+- **OKX**: API Key + Secret + Passphrase
+- **Hyperliquid**: Wallet Address only

@@ -5,7 +5,14 @@ export const useSyncTrades = () => {
   const utils = api.useUtils();
 
   return api.pairs.syncTrades.useMutation({
+    onMutate: (variables) => {
+      console.log('🚀 Sync mutation starting with variables:', { 
+        mode: variables.mode,
+        hasEncryptedKeys: !!variables.encryptedKeys 
+      });
+    },
     onSuccess: (data) => {
+      console.log('✅ Sync mutation succeeded:', data);
       notifications.show({
         title: 'Success',
         message: `${data.message} (${data.tradesFound} trades, ${data.pairsFound} pairs)`,
@@ -17,6 +24,7 @@ export const useSyncTrades = () => {
       void utils.trades.getOrders.invalidate();
     },
     onError: (error) => {
+      console.error('❌ Sync mutation failed:', error);
       notifications.show({
         title: 'Error',
         message: error.message,

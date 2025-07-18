@@ -157,6 +157,14 @@ export default function SessionDetail({ sessionId, showFullDetails = true, onClo
           )}
         </Group>
         <Group>
+          {!showFullDetails && (
+            <Button
+              variant="filled"
+              onClick={() => router.push(`/session/${sessionId}`)}
+            >
+              View Full Details
+            </Button>
+          )}
           {session.transcription && (
             <Button
               loading={createSetupsMutation.isPending}

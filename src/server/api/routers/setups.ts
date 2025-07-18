@@ -112,8 +112,8 @@ export const setupsRouter = createTRPCRouter({
       }
 
       console.log("session.transcription is ", session.transcription);
-      // Get setups from transcription with type assertion
-      const setupsData = await getSetups(session.transcription, 'trade-setups') as SetupResponse;
+      // Get setups from transcription
+      const setupsData = await getSetups(session.transcription, 'trade-setups');
       
       console.log("setupsData is ", setupsData);
       // Validate the response structure
@@ -294,11 +294,14 @@ export const setupsRouter = createTRPCRouter({
       });
       console.log('🔍 [Setup Debug] Trades containing "SOL":', solTrades);
 
-      // Fetch trades for this setup's pair
+      // Fetch trades for this setup's pair (only those created after the setup)
       let trades = await ctx.db.userTrade.findMany({
         where: {
           userId: ctx.session.user.id,
           pairId: setup.pairId,
+          time: {
+            gte: setup.createdAt
+          }
         },
         orderBy: {
           time: 'desc'
@@ -314,6 +317,9 @@ export const setupsRouter = createTRPCRouter({
             userId: ctx.session.user.id,
             pair: {
               contains: setup.pair.symbol
+            },
+            time: {
+              gte: setup.createdAt
             }
           },
           orderBy: {

@@ -60,18 +60,26 @@ export class OrderRepository {
       }
     }
 
-    await Promise.all(
-      orders.map(async (order, index) => {
-        if (!order || !order.ordertxid || !order.pair) {
-          console.error('Invalid order:', order);
-          return;
-        }
+    // Process orders in batches to prevent connection pool exhaustion
+    const BATCH_SIZE = 10;
+    const savedOrders: any[] = [];
+    
+    for (let i = 0; i < orders.length; i += BATCH_SIZE) {
+      const batch = orders.slice(i, i + BATCH_SIZE);
+      console.log(`📦 Processing order batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(orders.length/BATCH_SIZE)} (${batch.length} orders)`);
+      
+      const batchResults = await Promise.all(
+        batch.map(async (order, index) => {
+          if (!order || !order.ordertxid || !order.pair) {
+            console.error('Invalid order:', order);
+            return null;
+          }
 
-        const normalizedPair = this.normalizeSymbol(order.pair);
-        const pairId = pairMap.get(normalizedPair) ?? null;
+          const normalizedPair = this.normalizeSymbol(order.pair);
+          const pairId = pairMap.get(normalizedPair) ?? null;
 
-        try {
-          const created = await this.prisma.order.create({
+          try {
+            const created = await this.prisma.order.create({
             data: {
               id: order.id,
               ordertxid: order.ordertxid || '',
@@ -91,9 +99,10 @@ export class OrderRepository {
               closedPnL: order.closedPnL,
             },
           });
-          if (orders[index]) {
-            orders[index].id = created.id; // Update the order in the array with the new ID
+          if (order) {
+            order.id = created.id; // Update the order with the new ID
           }
+          return created;
         } catch (error) {
           console.error('Error inserting order:', {
             error,
@@ -101,10 +110,22 @@ export class OrderRepository {
             pair: order.pair,
             time: order.time,
           });
+          return null;
         }
       })
     );
-
-    return orders;
+    
+    // Collect successful results
+    const validResults = batchResults.filter(result => result !== null);
+    savedOrders.push(...validResults);
+    
+    // Small delay between batches to prevent overwhelming the database
+    if (i + BATCH_SIZE < orders.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+  
+  console.log(`✅ Successfully saved ${savedOrders.length}/${orders.length} orders in batches`);
+  return orders;
   }
 }

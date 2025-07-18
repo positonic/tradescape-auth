@@ -58,7 +58,7 @@ export default function ScansPage() { // Removed async
         opened={drawerOpened}
         onClose={handleCloseDrawer}
         title="Session Details"
-        size="80%"
+        size="50%"
         position="right"
         padding="md"
       >

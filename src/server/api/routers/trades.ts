@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { TRPCError } from "@trpc/server";
 
 export const tradesRouter = createTRPCRouter({
   // Removed: syncTrades endpoint moved to pairs.syncTrades for consistency
@@ -46,11 +47,11 @@ export const tradesRouter = createTRPCRouter({
         
       } catch (error) {
         console.error('Failed to fetch trades:', error);
-        return {
-          trades: [],
-          totalCount: 0,
-          hasMore: false,
-        };
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch trades",
+          cause: error,
+        });
       }
     }),
 
@@ -96,11 +97,11 @@ export const tradesRouter = createTRPCRouter({
         
       } catch (error) {
         console.error('Failed to fetch orders:', error);
-        return {
-          orders: [],
-          totalCount: 0,
-          hasMore: false,
-        };
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch orders",
+          cause: error,
+        });
       }
     }),
 
@@ -146,11 +147,11 @@ export const tradesRouter = createTRPCRouter({
         
       } catch (error) {
         console.error('Failed to fetch positions:', error);
-        return {
-          positions: [],
-          totalCount: 0,
-          hasMore: false,
-        };
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch positions",
+          cause: error,
+        });
       }
     }),
 
@@ -187,9 +188,11 @@ export const tradesRouter = createTRPCRouter({
         
       } catch (error) {
         console.error('Failed to fetch trades for position:', error);
-        return {
-          trades: [],
-        };
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch trades for position",
+          cause: error,
+        });
       }
     }),
 
@@ -221,9 +224,11 @@ export const tradesRouter = createTRPCRouter({
         
       } catch (error) {
         console.error('Failed to fetch orders for position:', error);
-        return {
-          orders: [],
-        };
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch orders for position",
+          cause: error,
+        });
       }
     }),
 
@@ -257,7 +262,11 @@ export const tradesRouter = createTRPCRouter({
         
       } catch (error) {
         console.error('Failed to fetch position:', error);
-        return null;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch position",
+          cause: error,
+        });
       }
     }),
 });

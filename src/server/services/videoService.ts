@@ -557,9 +557,27 @@ export async function getSetups(
     }
 
     const data = (await response.json()) as OpenAIResponse;
-    const content = JSON.parse(data.choices[0]?.message?.content ?? '{}') as TranscriptionSetups;
+    const rawContent = data.choices[0]?.message?.content ?? '{}';
+    
+    console.log('🔍 Raw OpenAI response:', rawContent);
+    
+    let content: TranscriptionSetups;
+    try {
+        content = JSON.parse(rawContent) as TranscriptionSetups;
+    } catch (parseError) {
+        console.error('❌ Failed to parse OpenAI response as JSON:', parseError);
+        throw new Error(`Failed to parse OpenAI response: ${parseError}`);
+    }
+    
+    console.log('🔍 Parsed content:', JSON.stringify(content, null, 2));
     
     if (!content.generalMarketContext || !Array.isArray(content.coins)) {
+        console.error('❌ Invalid response structure:', {
+            hasGeneralMarketContext: !!content.generalMarketContext,
+            coinsIsArray: Array.isArray(content.coins),
+            contentKeys: Object.keys(content),
+            content: content
+        });
         throw new Error('Invalid response format from OpenAI');
     }
 

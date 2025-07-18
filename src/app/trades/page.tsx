@@ -20,6 +20,7 @@ import {
   Select,
   Anchor,
 } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { IconKey } from '@tabler/icons-react';
 import { useSession } from "next-auth/react";
 import SignInButton from "~/app/_components/SignInButton";
@@ -47,7 +48,7 @@ interface Order {
   time: number | bigint;
   pair: string;
   type: string;
-  direction?: string;
+  direction?: string | null;
   amount: Decimal;
   averagePrice: Decimal;
   totalCost: Decimal;
@@ -135,18 +136,45 @@ export default function TradesPage() {
   };
 
   const handleQuickSync = () => {
+    console.log('⚡ Quick Sync button clicked');
     const keys = KeyStorage.load();
+    console.log('🔑 Keys loaded:', keys ? `${keys.length} keys found` : 'No keys found');
+    
     if (keys && keys.length > 0) {
+      console.log('🔐 Encrypting keys for transmission...');
       const encrypted = encryptForTransmission(keys);
+      console.log('📤 Sending quick sync request...');
       syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'incremental' });
+    } else {
+      console.warn('⚠️ No API keys found - cannot perform Quick Sync');
+      notifications.show({
+        title: 'No API Keys Found',
+        message: 'Please add your exchange API keys using the Key Manager below before syncing.',
+        color: 'orange',
+      });
     }
   };
 
   const handleFullSync = () => {
+    console.log('🔄 Full Sync button clicked');
     const keys = KeyStorage.load();
+    console.log('🔑 Keys loaded:', keys ? `${keys.length} keys found` : 'No keys found');
+    
     if (keys && keys.length > 0) {
+      console.log('🔐 Encrypting keys for transmission...');
       const encrypted = encryptForTransmission(keys);
+      console.log('📤 Sending full sync request...');
       syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'full' });
+    } else {
+      console.warn('⚠️ No API keys found - cannot perform Full Sync');
+      console.log('💡 Please add API keys using the Key Manager first');
+      
+      // Show user notification about missing keys
+      notifications.show({
+        title: 'No API Keys Found',
+        message: 'Please add your exchange API keys using the Key Manager below before syncing.',
+        color: 'orange',
+      });
     }
   };
 

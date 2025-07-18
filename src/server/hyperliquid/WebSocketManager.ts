@@ -380,17 +380,14 @@ export class HyperliquidWebSocketManager {
   }
 
   private emitLiveDataUpdate(userId: string, data: LiveData): void {
-    // Import Socket.io server instance and emit to user-specific room
-    // Note: This would need to be integrated with your existing Socket.io server
-    // For now, we'll store the data and let the client poll via tRPC
     console.log(`Live data update for user ${userId}:`, {
       positions: data.positions.length,
       balances: data.balances.length,
       totalUsdValue: data.totalUsdValue,
     });
     
-    // In a full implementation, you would emit to a Socket.io room like:
-    // io.to(`live-${userId}`).emit('liveUpdate', data);
+    // Data is stored in connection.lastData and can be accessed via tRPC
+    // Client will poll for updates using the getCurrentLiveData endpoint
   }
 
   private scheduleReconnect(userId: string): void {

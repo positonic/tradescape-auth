@@ -30,7 +30,7 @@ const tradingData = {
 
 function TradingDashboard() {
   return (
-    <Container size="xl" className="py-8">
+    <Container size="xl" className="">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Portfolio Value Card */}
         <Card className="bg-gray-800 border-gray-700">
@@ -119,7 +119,7 @@ function TradingDashboard() {
           />
         </Card>
       </div>
-      
+      <br/>
       {/* Lifetime PNL Chart */}
       <LifetimePNLChart />
     </Container>

@@ -253,9 +253,18 @@ export const pairsRouter = createTRPCRouter({
         const { encryptedKeys, mode, since } = input;
         const userId = ctx.session.user.id;
         
+        console.log('🔄 Starting sync trades mutation:', { 
+          userId, 
+          mode, 
+          since,
+          hasEncryptedKeys: !!encryptedKeys 
+        });
+        
         // 1. Run the sync to get sync status
         const tradeSyncService = new TradeSyncService();
+        console.log('🚀 Calling TradeSyncService.syncTrades...');
         const syncResult = await tradeSyncService.syncTrades(userId, encryptedKeys, mode, since);
+        console.log('📊 TradeSyncService result:', syncResult);
         
         // 2. If sync was successful, fetch and save the trades
         if (syncResult.success && syncResult.tradesFound > 0) {

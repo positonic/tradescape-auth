@@ -73,9 +73,13 @@ export function LifetimePNLChart() {
         {/* TradeStream Logo Overlay */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="flex items-center gap-2 opacity-20">
-            <div className="w-6 h-6 border-2 border-teal-400 transform rotate-45"></div>
+          <img 
+              src="/tradescape-logo-trans.png" 
+              alt="TradeScape Logo" 
+              className="h-8 w-auto"
+            />
             <Text size="lg" c="dimmed" fw={600}>
-              TradeStream
+              Tradescape.ai
             </Text>
           </div>
         </div>
