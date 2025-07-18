@@ -500,7 +500,7 @@ export default function TradesPage() {
         style={{
           position: 'sticky',
           bottom: 0,
-          zIndex: 1000,
+          zIndex: 800,
           maxHeight: '300px',
           overflowY: 'auto',
           backgroundColor: 'var(--mantine-color-body)',
