@@ -17,15 +17,19 @@ export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {
     <>
       <nav className="w-20 bg-white border-r flex flex-col items-center py-4 space-y-4">
         <div className="p-2">
-          <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-            <span className="text-white text-xl font-bold">H</span>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+            <img 
+              src="/tradescape-logo-trans.png" 
+              alt="TradeScape Logo" 
+              className="h-8 w-auto"
+            />
           </div>
         </div>
         
         <div className="flex-1 flex flex-col space-y-2">
           <NavItem href="/" icon={<IconHome size={24} />} />
           <button
-            onClick={() => setChatDrawerOpened(true)}
+            onClick={() => setChatDrawerOpened(!chatDrawerOpened)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <IconRobot size={24} />
