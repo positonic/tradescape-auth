@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from "~/trpc/react";
+import type { Decimal } from '@prisma/client/runtime/library';
 import { 
   Paper, 
   Title, 
@@ -15,6 +16,7 @@ import {
   Tabs,
   Flex,
   ActionIcon,
+  Drawer,
 } from '@mantine/core';
 import { IconKey } from '@tabler/icons-react';
 import { useSession } from "next-auth/react";
@@ -23,6 +25,8 @@ import KeyManager from "~/app/_components/KeyManager";
 import { formatCurrency, formatDateTime } from '~/lib/tradeUtils';
 import { useSyncTrades } from '~/hooks/useSyncTrades';
 import { KeyStorage, encryptForTransmission } from '~/lib/keyEncryption';
+import { CreatePositionsButton } from '~/app/setup/[slug]/_components/CreatePositionsButton';
+import { PositionValidationButton } from './_components/PositionValidationButton';
 
 interface Trade {
   tradeId: string;
@@ -37,21 +41,36 @@ interface Trade {
 }
 
 interface Order {
-  id: string;
+  id: number;
   time: number | bigint;
   pair: string;
   type: string;
-  vol: number;
-  price: string;
-  status: string;
+  amount: Decimal;
+  averagePrice: Decimal;
+  totalCost: Decimal;
   exchange: string;
+}
+
+interface Position {
+  id: number;
+  time: number | bigint;
+  pair: string;
+  direction: string;
+  status: string;
+  amount: Decimal;
+  averageEntryPrice: Decimal;
+  averageExitPrice: Decimal;
+  profitLoss: Decimal;
+  duration: string;
 }
 
 export default function TradesPage() {
   const { data: clientSession, status: sessionStatus } = useSession();
   const [since] = useState<number | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeTab, setActiveTab] = useState<'trades' | 'orders'>('trades');
+  const [activeTab, setActiveTab] = useState<'trades' | 'orders' | 'positions'>('trades');
+  const [drawerOpened, setDrawerOpened] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const pageSize = 20;
 
   const { data: tradesData, isLoading: isLoadingTrades } = api.trades.getTrades.useQuery({
@@ -66,6 +85,19 @@ export default function TradesPage() {
     offset: (currentPage - 1) * pageSize,
   }, {
     enabled: !!clientSession?.user && activeTab === 'orders',
+  });
+
+  const { data: positionsData, isLoading: isLoadingPositions } = api.trades.getPositions.useQuery({
+    limit: pageSize,
+    offset: (currentPage - 1) * pageSize,
+  }, {
+    enabled: !!clientSession?.user && activeTab === 'positions',
+  });
+
+  const { data: positionTradesData, isLoading: isLoadingPositionTrades } = api.trades.getTradesForPosition.useQuery({
+    positionId: selectedPosition?.id ?? 0,
+  }, {
+    enabled: !!selectedPosition,
   });
 
   const syncTradesMutation = useSyncTrades();
@@ -93,6 +125,11 @@ export default function TradesPage() {
     }
   };
 
+  const handlePositionClick = (position: Position) => {
+    setSelectedPosition(position);
+    setDrawerOpened(true);
+  };
+
   const [hasStoredKeys, setHasStoredKeys] = useState(false);
   const [showKeyManager, setShowKeyManager] = useState(true);
 
@@ -118,8 +155,8 @@ export default function TradesPage() {
     );
   }
 
-  const isLoading = activeTab === 'trades' ? isLoadingTrades : isLoadingOrders;
-  const currentData = activeTab === 'trades' ? tradesData : ordersData;
+  const isLoading = activeTab === 'trades' ? isLoadingTrades : activeTab === 'orders' ? isLoadingOrders : isLoadingPositions;
+  const currentData = activeTab === 'trades' ? tradesData : activeTab === 'orders' ? ordersData : positionsData;
   const totalPages = Math.ceil((currentData?.totalCount ?? 0) / pageSize);
 
   return (
@@ -157,6 +194,8 @@ export default function TradesPage() {
               >
                 🔄 Full Sync
               </Button>
+              <CreatePositionsButton />
+              <PositionValidationButton />
             </Group>
           )}
         </Group>
@@ -174,9 +213,9 @@ export default function TradesPage() {
       )}
       
 
-      {/* Tabs for Trades and Orders */}
+      {/* Tabs for Trades, Orders, and Positions */}
       <Tabs value={activeTab} onChange={(value) => {
-        setActiveTab(value as 'trades' | 'orders');
+        setActiveTab(value as 'trades' | 'orders' | 'positions');
         setCurrentPage(1);
       }}>
         <Tabs.List>
@@ -185,6 +224,9 @@ export default function TradesPage() {
           </Tabs.Tab>
           <Tabs.Tab value="orders">
             Orders ({ordersData?.totalCount ?? 0})
+          </Tabs.Tab>
+          <Tabs.Tab value="positions">
+            Positions ({positionsData?.totalCount ?? 0})
           </Tabs.Tab>
         </Tabs.List>
 
@@ -261,9 +303,9 @@ export default function TradesPage() {
                   <Table.Th>Time</Table.Th>
                   <Table.Th>Pair</Table.Th>
                   <Table.Th>Type</Table.Th>
-                  <Table.Th>Volume</Table.Th>
-                  <Table.Th>Price</Table.Th>
-                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Amount</Table.Th>
+                  <Table.Th>Avg Price</Table.Th>
+                  <Table.Th>Total Cost</Table.Th>
                   <Table.Th>Exchange</Table.Th>
                 </Table.Tr>
               </Table.Thead>
@@ -277,13 +319,9 @@ export default function TradesPage() {
                         {order.type}
                       </Badge>
                     </Table.Td>
-                    <Table.Td>{order.vol}</Table.Td>
-                    <Table.Td>{formatCurrency(order.price)}</Table.Td>
-                    <Table.Td>
-                      <Badge color={order.status === 'closed' ? 'blue' : 'yellow'}>
-                        {order.status}
-                      </Badge>
-                    </Table.Td>
+                    <Table.Td>{order.amount.toString()}</Table.Td>
+                    <Table.Td>{formatCurrency(order.averagePrice.toString())}</Table.Td>
+                    <Table.Td>{formatCurrency(order.totalCost.toString())}</Table.Td>
                     <Table.Td>{order.exchange}</Table.Td>
                   </Table.Tr>
                 ))}
@@ -313,7 +351,151 @@ export default function TradesPage() {
             </>
           )}
         </Tabs.Panel>
+
+        <Tabs.Panel value="positions">
+          {isLoading ? (
+            <Skeleton height={400} />
+          ) : (
+            <>
+              <Table highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Time</Table.Th>
+                  <Table.Th>Pair</Table.Th>
+                  <Table.Th>Direction</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Amount</Table.Th>
+                  <Table.Th>Entry Price</Table.Th>
+                  <Table.Th>Exit Price</Table.Th>
+                  <Table.Th>P&L</Table.Th>
+                  <Table.Th>Duration</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {positionsData?.positions.map((position: Position) => (
+                  <Table.Tr 
+                    key={position.id}
+                    onClick={() => handlePositionClick(position)}
+                    style={{ cursor: 'pointer' }}
+                    className="hover:bg-gray-50"
+                  >
+                    <Table.Td>{formatDateTime(position.time)}</Table.Td>
+                    <Table.Td>{position.pair}</Table.Td>
+                    <Table.Td>
+                      <Badge color={position.direction === 'long' ? 'green' : 'red'}>
+                        {position.direction}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={position.status === 'closed' ? 'blue' : position.status === 'open' ? 'yellow' : 'gray'}>
+                        {position.status}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>{position.amount.toString()}</Table.Td>
+                    <Table.Td>{formatCurrency(position.averageEntryPrice.toString())}</Table.Td>
+                    <Table.Td>{formatCurrency(position.averageExitPrice.toString())}</Table.Td>
+                    <Table.Td>
+                      <Badge color={Number(position.profitLoss.toString()) >= 0 ? 'green' : 'red'}>
+                        {formatCurrency(position.profitLoss.toString())}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>{position.duration}</Table.Td>
+                  </Table.Tr>
+                ))}
+                {!positionsData?.positions.length && (
+                  <Table.Tr>
+                    <Table.Td colSpan={9}>
+                      <Text ta="center" c="dimmed">
+                        No positions found
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+              </Table.Tbody>
+              </Table>
+              
+              {/* Pagination for positions */}
+              {totalPages > 1 && (
+                <Group justify="center" mt="lg">
+                  <Pagination
+                    value={currentPage}
+                    onChange={setCurrentPage}
+                    total={totalPages}
+                    size="sm"
+                  />
+                </Group>
+              )}
+            </>
+          )}
+        </Tabs.Panel>
       </Tabs>
+
+      {/* Drawer for Position Trades */}
+      <Drawer
+        opened={drawerOpened}
+        onClose={() => setDrawerOpened(false)}
+        title={selectedPosition ? `Trades for Position ${selectedPosition.pair} - ${selectedPosition.direction}` : 'Position Trades'}
+        position="bottom"
+        size="25%"
+        padding="lg"
+        withOverlay={false}
+      >
+        {selectedPosition && (
+          <>
+            <Group mb="md">
+              <Text size="sm" c="dimmed">
+                Position: {selectedPosition.pair} | Direction: {selectedPosition.direction} | Status: {selectedPosition.status}
+              </Text>
+            </Group>
+            
+            {isLoadingPositionTrades ? (
+              <Skeleton height={300} />
+            ) : (
+              <Table highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Time</Table.Th>
+                    <Table.Th>Pair</Table.Th>
+                    <Table.Th>Type</Table.Th>
+                    <Table.Th>Volume</Table.Th>
+                    <Table.Th>Price</Table.Th>
+                    <Table.Th>Cost</Table.Th>
+                    <Table.Th>Fee</Table.Th>
+                    <Table.Th>Exchange</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {positionTradesData?.trades.map((trade: Trade) => (
+                    <Table.Tr key={trade.tradeId}>
+                      <Table.Td>{formatDateTime(trade.time)}</Table.Td>
+                      <Table.Td>{trade.pair}</Table.Td>
+                      <Table.Td>
+                        <Badge color={trade.type === 'buy' ? 'green' : 'red'}>
+                          {trade.type}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>{trade.vol}</Table.Td>
+                      <Table.Td>{formatCurrency(trade.price)}</Table.Td>
+                      <Table.Td>{formatCurrency(trade.cost)}</Table.Td>
+                      <Table.Td>{formatCurrency(trade.fee)}</Table.Td>
+                      <Table.Td>{trade.exchange}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                  {!positionTradesData?.trades.length && (
+                    <Table.Tr>
+                      <Table.Td colSpan={8}>
+                        <Text ta="center" c="dimmed">
+                          No trades found for this position
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  )}
+                </Table.Tbody>
+              </Table>
+            )}
+          </>
+        )}
+      </Drawer>
     </Paper>
   );
 }
