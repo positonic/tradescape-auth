@@ -1,165 +1,174 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
   extensions = [vector]
 }
 
 model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
 
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
-
-    @@index([name])
+  @@index([name])
 }
 
-// Necessary for Next auth
 model Account {
-    id                       String  @id @default(cuid())
-    userId                   String
-    type                     String
-    provider                 String
-    providerAccountId        String
-    refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
-    expires_at               Int?
-    token_type               String?
-    scope                    String?
-    id_token                 String? // @db.Text
-    session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    refresh_token_expires_in Int?
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([provider, providerAccountId])
+  @@unique([provider, providerAccountId])
 }
 
 model Session {
-    id           String   @id @default(cuid())
-    sessionToken String   @unique
-    userId       String
-    expires      DateTime
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    image         String?
-    accounts      Account[]
-    sessions      Session[]
-    posts         Post[]
-    projects      Project[]
-    actions       Action[]
-    userVideos    UserVideo[]
-    exercises     UserExercise[]
-    goals         Goal[]
-    userPairs     UserPair[]
-    exchangeUsers ExchangeUser[]
-    setups        Setup[]
-    transcriptionSessions TranscriptionSession[]
-    verificationTokens VerificationToken[]
-    alerts        Alert[]
-    orders        Order[]
-    userTrades    UserTrade[]
-    positions     Position[]
+  id                    String                 @id @default(cuid())
+  name                  String?
+  email                 String?                @unique
+  emailVerified         DateTime?
+  image                 String?
+  accounts              Account[]
+  actions               Action[]
+  alerts                Alert[]
+  exchangeUsers         ExchangeUser[]
+  goals                 Goal[]
+  Note                  Note[]
+  orders                Order[]
+  Outcome               Outcome[]
+  positions             Position[]
+  posts                 Post[]
+  projects              Project[]
+  sessions              Session[]
+  setups                Setup[]
+  TeamMember            TeamMember[]
+  transcriptionSessions TranscriptionSession[]
+  UserDay               UserDay[]
+  exercises             UserExercise[]
+  userPairs             UserPair[]
+  userTrades            UserTrade[]
+  userVideos            UserVideo[]
+  verificationTokens    VerificationToken[]
+  Workflow              Workflow[]
 }
 
 model VerificationToken {
-    identifier String
-    token      String   @unique
-    expires    DateTime
-    userId     String
-    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([identifier, token])
-    @@index([userId])
+  @@unique([identifier, token])
+  @@index([userId])
 }
 
 model Action {
-    id              String   @id @default(cuid())
-    name            String
-    description     String?
-    dueDate         DateTime?
-    status          String   @default("ACTIVE")
-    priority        String   @default("Quick")
-    project         Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-    projectId       String?
-    createdBy       User     @relation(fields: [createdById], references: [id])
-    createdById     String
+  id           String         @id @default(cuid())
+  name         String
+  description  String?
+  dueDate      DateTime?
+  status       String         @default("ACTIVE")
+  priority     String         @default("Quick")
+  projectId    String?
+  createdById  String
+  createdBy    User           @relation(fields: [createdById], references: [id])
+  project      Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  WorkflowStep WorkflowStep[]
 
-    @@index([projectId])
-    @@index([createdById])
+  @@index([projectId])
+  @@index([createdById])
 }
 
 model Outcome {
-    id          String   @id @default(cuid())
-    description String
-    projects    Project[]  @relation("ProjectOutcomes")
-    goals       Goal[]     @relation("GoalOutcomes")
+  id          String    @id @default(cuid())
+  description String
+  dueDate     DateTime?
+  type        String?   @default("daily")
+  projectId   String?
+  userId      String?
+  User        User?     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  goals       Goal[]    @relation("GoalOutcomes")
+  projects    Project[] @relation("ProjectOutcomes")
+
+  @@index([projectId])
+  @@index([userId])
 }
 
 model Project {
-    id              String    @id @default(cuid())
-    name            String
-    slug            String   @unique
-    status          String    @default("ACTIVE")
-    priority        String    @default("NONE")
-    progress        Float     @default(0)
-    
-    // Dates
-    createdAt       DateTime    @default(now())
-    reviewDate      DateTime?
-    nextActionDate  DateTime?
-    
-    // Text fields
-    actions         Action[]
-    outcomes        Outcome[]   @relation("ProjectOutcomes")
-    
-    // User relation (same as your existing Post model)
-    createdBy       User        @relation(fields: [createdById], references: [id])
-    createdById     String
-    transcriptionSessions TranscriptionSession[]
+  id                    String                 @id @default(cuid())
+  name                  String
+  status                String                 @default("ACTIVE")
+  priority              String                 @default("NONE")
+  progress              Float                  @default(0)
+  createdAt             DateTime               @default(now())
+  reviewDate            DateTime?
+  nextActionDate        DateTime?
+  createdById           String
+  slug                  String                 @unique
+  description           String?
+  actions               Action[]
+  createdBy             User                   @relation(fields: [createdById], references: [id])
+  TeamMember            TeamMember[]
+  transcriptionSessions TranscriptionSession[]
+  Goal                  Goal[]                 @relation("GoalProjects")
+  outcomes              Outcome[]              @relation("ProjectOutcomes")
 
-    @@index([name])
-    @@index([status])
-    @@index([priority])
+  @@index([name])
+  @@index([status])
+  @@index([priority])
 }
 
 model Video {
-  id            String   @id @default(uuid())
-  slug          String? @unique
+  id            String       @id @default(uuid())
+  slug          String?      @unique
   title         String?
-  videoUrl      String  @unique
-  summary       String?  @db.Text    // Added field for short summary
-  description   String?  @db.Text    // Added field for longer description
+  videoUrl      String       @unique
   transcription String?
   status        String
   createdAt     DateTime?    @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime?    @default(now()) @updatedAt @db.Timestamptz(6)
   isSearchable  Boolean?     @default(false)
+  description   String?
+  summary       String?
   setups        Setup[]
-  VideoChunk    VideoChunk[]
   users         UserVideo[]
+  VideoChunk    VideoChunk[]
 }
 
 model UserVideo {
   id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
-  video     Video    @relation(fields: [videoId], references: [id])
   videoId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  video     Video    @relation(fields: [videoId], references: [id])
 
   @@unique([userId, videoId])
   @@index([userId])
@@ -167,16 +176,15 @@ model UserVideo {
 }
 
 model VideoChunk {
-  id              Int                    @id @default(autoincrement())
-  video_id        String?
-  chunk_text      String
-  //chunk_embedding Unsupported("vector(1536)") @map("chunk_embedding") // OpenAI embeddings are 1536 dimensions
-  chunk_start     Int?                   // character position start
-  chunk_end       Int?                   // character position end
-  chunk_start_time Float?                // timestamp in seconds
-  chunk_end_time   Float?                // timestamp in seconds
-  created_at      DateTime?              @default(now()) @db.Timestamptz(6)
-  Video           Video?                 @relation(fields: [video_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id               Int       @id @default(autoincrement())
+  video_id         String?
+  chunk_text       String
+  chunk_start      Int?
+  chunk_end        Int?
+  chunk_start_time Float?
+  chunk_end_time   Float?
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  Video            Video?    @relation(fields: [video_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model Week {
@@ -187,31 +195,33 @@ model Week {
 }
 
 model Day {
-  id          Int       @id @default(autoincrement())
-  date        DateTime
-  week        Week      @relation(fields: [weekId], references: [id])
-  weekId      Int
-  exercises   UserExercise[]
-  journals    Journal[]
-  
+  id        Int            @id @default(autoincrement())
+  date      DateTime
+  weekId    Int
+  week      Week           @relation(fields: [weekId], references: [id])
+  journals  Journal[]
+  Note      Note[]
+  UserDay   UserDay[]
+  exercises UserExercise[]
+
   @@index([weekId])
 }
 
 model Exercise {
-  id           Int            @id @default(autoincrement())
-  title        String
-  description  String?
+  id            Int            @id @default(autoincrement())
+  title         String
+  description   String?
   userExercises UserExercise[]
 }
 
 model UserExercise {
-  id          Int      @id @default(autoincrement())
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String
-  exercise    Exercise @relation(fields: [exerciseId], references: [id])
-  exerciseId  Int
-  day         Day      @relation(fields: [dayId], references: [id])
-  dayId       Int
+  id         Int      @id @default(autoincrement())
+  userId     String
+  exerciseId Int
+  dayId      Int
+  day        Day      @relation(fields: [dayId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([exerciseId])
@@ -219,63 +229,63 @@ model UserExercise {
 }
 
 model Goal {
-  id           Int         @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   title        String
   description  String?
   dueDate      DateTime?
-  lifeDomain   LifeDomain  @relation(fields: [lifeDomainId], references: [id])
   lifeDomainId Int
-  user         User        @relation(fields: [userId], references: [id])
   userId       String
-  outcomes     Outcome[]   @relation("GoalOutcomes")
+  lifeDomain   LifeDomain @relation(fields: [lifeDomainId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+  outcomes     Outcome[]  @relation("GoalOutcomes")
+  Project      Project[]  @relation("GoalProjects")
 
   @@index([lifeDomainId])
   @@index([userId])
 }
 
 model LifeDomain {
-  id          Int      @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   title       String
   description String?
   goals       Goal[]
 }
 
 model Journal {
-  id          Int      @id @default(autoincrement())
-  content     String   @db.Text
-  day         Day      @relation(fields: [dayId], references: [id])
-  dayId       Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  content   String
+  dayId     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  day       Day      @relation(fields: [dayId], references: [id])
 
   @@index([dayId])
 }
 
-// Aka 'Idea'
 model Setup {
-  id              String   @id @default(uuid())
-  content         String   @db.Text
-  entryPrice      Decimal?
-  takeProfitPrice Decimal?
-  stopPrice       Decimal?
-  timeframe       String?  // e.g., "short_term", "long_term"
-  confidence      Int?     // 1-5 scale
-  direction       String
-  status          String   @default("active") // active, expired, completed
-  privacy         String   @default("private") // public, private
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  videoId         String?
-  video           Video?    @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  pairId          Int
-  pair            Pair     @relation(fields: [pairId], references: [id])
-  coinId          Int?
-  coin            Coin?    @relation(fields: [coinId], references: [id])
+  id                     String                @id @default(uuid())
+  content                String
+  entryPrice             Decimal?
+  takeProfitPrice        Decimal?
+  stopPrice              Decimal?
+  timeframe              String?
+  confidence             Int?
+  status                 String                @default("active")
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  videoId                String?
+  pairId                 Int
+  direction              String
+  coinId                 Int?
+  privacy                String                @default("private")
+  userId                 String
   transcriptionSessionId String?
-  transcriptionSession  TranscriptionSession? @relation("TranscriptionSetups", fields: [transcriptionSessionId], references: [id])
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  alerts        Alert[]
+  alerts                 Alert[]
+  coin                   Coin?                 @relation(fields: [coinId], references: [id])
+  pair                   Pair                  @relation(fields: [pairId], references: [id])
+  transcriptionSession   TranscriptionSession? @relation("TranscriptionSetups", fields: [transcriptionSessionId], references: [id])
+  user                   User                  @relation(fields: [userId], references: [id])
+  video                  Video?                @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([videoId])
@@ -285,81 +295,78 @@ model Setup {
 }
 
 model Coin {
-  id        Int        @id @default(autoincrement())
-  name      String
-  symbol    String
-  imageUrl  String?
-  coinId    String?    @unique
-  setups    Setup[]
-  basePairs  Pair[] @relation("BaseCoinPairs")  // Pairs where this coin is the base
-  quotePairs Pair[] @relation("QuoteCoinPairs") // Pairs where this coin is the quote
+  id         Int     @id @default(autoincrement())
+  name       String
+  symbol     String
+  imageUrl   String?
+  coinId     String? @unique
+  basePairs  Pair[]  @relation("BaseCoinPairs")
+  quotePairs Pair[]  @relation("QuoteCoinPairs")
+  setups     Setup[]
 }
 
-// Represents a canonical trading pair symbol (e.g., "BTC/USDT"), independent of users or exchanges.
 model Pair {
-  id        Int        @id @default(autoincrement())
-  symbol    String     @unique
-
-  baseCoinId Int      @default(1) // Foreign Key for Base Coin - Added default
-  baseCoin   Coin     @relation("BaseCoinPairs", fields: [baseCoinId], references: [id])
-  quoteCoinId Int     @default(1) // Foreign Key for Quote Coin - Added default
-  quoteCoin  Coin     @relation("QuoteCoinPairs", fields: [quoteCoinId], references: [id])
-
-  userPairs UserPair[]
-  setups    Setup[]
-  alerts    Alert[]
-  userTrades UserTrade[]
-  orders    Order[]
+  id          Int         @id @default(autoincrement())
+  symbol      String      @unique
+  baseCoinId  Int         @default(1)
+  quoteCoinId Int         @default(1)
+  alerts      Alert[]
+  orders      Order[]
+  positions   Position[]
+  baseCoin    Coin        @relation("BaseCoinPairs", fields: [baseCoinId], references: [id])
+  quoteCoin   Coin        @relation("QuoteCoinPairs", fields: [quoteCoinId], references: [id])
+  setups      Setup[]
+  userPairs   UserPair[]
+  userTrades  UserTrade[]
 
   @@index([baseCoinId])
   @@index([quoteCoinId])
 }
 
-// Links a User to a specific Pair on a specific Exchange, storing user-specific tracking data.
 model UserPair {
-  id         Int     @id @default(autoincrement())
-  userId     String
-  pairId     Int
-  exchangeId Int
+  id                 Int       @id @default(autoincrement())
+  userId             String
+  pairId             Int
+  exchangeId         Int
   lastTradesSyncTime DateTime?
-  
-  user       User     @relation(fields: [userId], references: [id])
-  pair       Pair     @relation(fields: [pairId], references: [id])
-  exchange   Exchange @relation(fields: [exchangeId], references: [id])
+  exchange           Exchange  @relation(fields: [exchangeId], references: [id])
+  pair               Pair      @relation(fields: [pairId], references: [id])
+  user               User      @relation(fields: [userId], references: [id])
 
   @@unique([userId, pairId, exchangeId])
 }
 
 model Exchange {
-  id           Int        @id @default(autoincrement())
-  name         String     @unique
-  userPairs    UserPair[]
+  id            Int            @id @default(autoincrement())
+  name          String         @unique
   exchangeUsers ExchangeUser[]
+  userPairs     UserPair[]
 }
 
 model ExchangeUser {
-  id           Int        @id @default(autoincrement())
-  userId       String
-  exchangeId   Int
+  id                 Int       @id @default(autoincrement())
+  userId             String
+  exchangeId         Int
   lastTradesSyncTime DateTime?
-  user       User     @relation(fields: [userId], references: [id])
-  exchange   Exchange @relation(fields: [exchangeId], references: [id])
+  exchange           Exchange  @relation(fields: [exchangeId], references: [id])
+  user               User      @relation(fields: [userId], references: [id])
 }
 
 model TranscriptionSession {
-  id            String   @id @default(cuid())
-  title         String?
-  sessionId     String   @unique
-  transcription String?  @db.Text
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id            String       @id @default(cuid())
+  sessionId     String       @unique
+  transcription String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   userId        String?
-  user          User?    @relation(fields: [userId], references: [id])
   setupId       String?
-  setups        Setup[]  @relation("TranscriptionSetups")
-  screenshots   Screenshot[]
   projectId     String?
-  project       Project? @relation(fields: [projectId], references: [id])
+  title         String?
+  description   String?
+  screenshots   Screenshot[]
+  setups        Setup[]      @relation("TranscriptionSetups")
+  project       Project?     @relation(fields: [projectId], references: [id])
+  user          User?        @relation(fields: [userId], references: [id])
 
   @@index([projectId])
   @@index([sessionId])
@@ -367,32 +374,215 @@ model TranscriptionSession {
 }
 
 model Screenshot {
-  id                    String              @id @default(cuid())
-  url                   String
-  timestamp             String
-  transcriptionSession  TranscriptionSession @relation(fields: [transcriptionSessionId], references: [id])
+  id                     String               @id @default(cuid())
+  url                    String
+  timestamp              String
   transcriptionSessionId String
-  createdAt             DateTime            @default(now())
+  createdAt              DateTime             @default(now())
+  transcriptionSession   TranscriptionSession @relation(fields: [transcriptionSessionId], references: [id])
 }
 
 model Alert {
-  id         String      @id @default(uuid())
-  userId     String      // Foreign Key for User
-  user       User        @relation(fields: [userId], references: [id])
-  pairId     Int         // Foreign Key for Pair
-  pair       Pair        @relation(fields: [pairId], references: [id])
-  setupId    String?     // Optional Foreign Key for Setup
-  setup      Setup?      @relation(fields: [setupId], references: [id])
-  type       AlertType
-  threshold  Decimal     // Using Decimal for precision
-  direction  Direction
-  interval   String?     // e.g., '1m', '5m', '1h', '4h', '1d' (nullable for PRICE alerts)
-  status     AlertStatus @default(PENDING)
-  createdAt  DateTime    @default(now())
+  id        String      @id @default(uuid())
+  userId    String
+  type      AlertType
+  threshold Decimal
+  direction Direction
+  interval  String?
+  status    AlertStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  pairId    Int
+  setupId   String?
+  pair      Pair        @relation(fields: [pairId], references: [id])
+  setup     Setup?      @relation(fields: [setupId], references: [id])
+  user      User        @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([pairId])
   @@index([setupId])
+}
+
+model UserTrade {
+  id            Int      @id @default(autoincrement())
+  ordertxid     String
+  pair          String
+  time          BigInt
+  type          String
+  ordertype     String
+  price         String
+  cost          String
+  fee           String
+  vol           Float
+  margin        String
+  leverage      String
+  misc          String
+  closedPnL     Decimal?
+  tradeId       String   @unique
+  transactionId String?  // from Hyperliquid: hash
+  direction     String?  // from Hyperliquid: "Close Long", "Open Long", etc.
+  exchange      String
+  userId        String
+  orderId       Int?
+  pairId        Int?
+  order         Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  pairRecord    Pair?    @relation(fields: [pairId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([pairId])
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  ordertxid     String
+  time          BigInt
+  type          String
+  direction     String?     // from Hyperliquid: "Close Long", "Open Long", etc.
+  pair          String
+  amount        Decimal
+  totalCost     Decimal
+  fee           Decimal
+  highestPrice  Decimal
+  lowestPrice   Decimal
+  averagePrice  Decimal
+  exchange      String
+  userId        String
+  closedPnL     Decimal?
+  createdAt     DateTime    @default(now())
+  positionId    Int?
+  pairId        Int?
+  pairRecord    Pair?       @relation(fields: [pairId], references: [id])
+  position      Position?   @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades        UserTrade[]
+
+  @@index([time])
+  @@index([userId])
+  @@index([pair])
+  @@index([pairId])
+}
+
+model Position {
+  id                Int      @id @default(autoincrement())
+  status            String
+  positionType      String
+  direction         String
+  pair              String
+  pairId            Int?
+  pairRecord        Pair?    @relation(fields: [pairId], references: [id])
+  averageEntryPrice Decimal
+  averageExitPrice  Decimal
+  totalCostBuy      Decimal
+  totalCostSell     Decimal
+  amount            Decimal
+  profitLoss        Decimal
+  duration          String
+  time              BigInt
+  userId            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  orders            Order[]
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([pair])
+  @@index([pairId])
+  @@index([time])
+  @@index([status])
+}
+
+model Audience {
+  id          String   @id
+  value       String   @unique
+  label       String
+  description String   @default("")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model Differentiator {
+  id          String   @id
+  value       String   @unique
+  label       String
+  description String   @default("")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model Note {
+  id        Int      @id @default(autoincrement())
+  content   String
+  type      String
+  title     String?
+  dayId     Int
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Day       Day      @relation(fields: [dayId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@index([dayId])
+  @@index([type])
+  @@index([userId])
+}
+
+model TeamMember {
+  id               String   @id
+  name             String
+  role             String
+  responsibilities String[]
+  avatarUrl        String?
+  projectId        String
+  userId           String
+  Project          Project  @relation(fields: [projectId], references: [id])
+  User             User     @relation(fields: [userId], references: [id])
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+model UserDay {
+  id        String   @id
+  userId    String
+  dayId     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Day       Day      @relation(fields: [dayId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, dayId])
+  @@index([dayId])
+  @@index([userId])
+}
+
+model Workflow {
+  id           String         @id
+  title        String
+  description  String?
+  type         String
+  createdById  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  User         User           @relation(fields: [createdById], references: [id])
+  WorkflowStep WorkflowStep[]
+
+  @@index([createdById])
+  @@index([type])
+}
+
+model WorkflowStep {
+  id         String   @id
+  workflowId String
+  order      Int
+  title      String
+  actionId   String?
+  status     String   @default("PENDING")
+  Action     Action?  @relation(fields: [actionId], references: [id])
+  Workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([actionId])
+  @@index([workflowId])
 }
 
 enum AlertType {
@@ -406,90 +596,7 @@ enum Direction {
 }
 
 enum AlertStatus {
-  PENDING   // Alert is active and waiting to be triggered
-  TRIGGERED // Alert condition was met
-  CANCELLED // Alert was cancelled by the user or system
-}
-
-// Trades tables from Tradescape.ai
-model UserTrade {
-  id        Int    @id @default(autoincrement())
-  ordertxid String
-  pair      String
-  pairId    Int?
-  pairRecord Pair?  @relation(fields: [pairId], references: [id])
-  time      BigInt
-  type      String
-  ordertype String
-  price     String
-  cost      String
-  fee       String
-  vol       Float
-  margin    String
-  leverage  String
-  misc      String
-  closedPnL Decimal?
-  tradeId   String @unique
-  exchange  String
-  userId    String
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderId   Int?
-  order     Order?    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([pairId])
-}
-
-model Order {
-  id            Int         @id @default(autoincrement())
-  ordertxid     String
-  time          BigInt
-  type          String
-  pair          String
-  pairId        Int?
-  pairRecord    Pair?      @relation(fields: [pairId], references: [id])
-  amount        Decimal
-  totalCost     Decimal
-  fee           Decimal
-  highestPrice  Decimal
-  lowestPrice   Decimal
-  averagePrice  Decimal
-  exchange      String
-  userId        String
-  closedPnL     Decimal?
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trades        UserTrade[]
-  createdAt     DateTime   @default(now())
-  positionId    Int?
-  position      Position? @relation(fields: [positionId], references: [id], onDelete: Cascade)
-
-  @@index([time])
-  @@index([userId])
-  @@index([pair])
-  @@index([pairId])
-}
-
-model Position {
-  id            Int         @id @default(autoincrement())
-  status            String    // e.g., "draft", "open", "closed"
-  positionType      String    // e.g., "manual", "automated"
-  direction         String    // e.g., "long", "short"
-  pair              String
-  averageEntryPrice Decimal
-  averageExitPrice  Decimal
-  totalCostBuy      Decimal
-  totalCostSell     Decimal
-  amount            Decimal
-  profitLoss        Decimal
-  duration          String
-  time              BigInt
-  userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders            Order[]
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@index([userId])
-  @@index([pair])
-  @@index([time])
-  @@index([status])
+  PENDING
+  TRIGGERED
+  CANCELLED
 }

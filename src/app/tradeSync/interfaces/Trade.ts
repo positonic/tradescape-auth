@@ -17,4 +17,11 @@ export interface Trade {
   date?: Date;
   closedPnL: number;
   orderId?: number;
+  direction?: string; // From Hyperliquid: "Close Long", "Open Long", etc.
+  transactionId?: string; // From Hyperliquid: hash
+  info?: {
+    dir?: string; // Hyperliquid direction: "Close Long", "Open Long", etc.
+    hash?: string; // Hyperliquid transaction hash
+    [key: string]: any; // Allow other exchange-specific fields
+  };
 }

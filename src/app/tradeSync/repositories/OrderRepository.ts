@@ -77,6 +77,7 @@ export class OrderRepository {
               ordertxid: order.ordertxid || '',
               time: BigInt(order.time),
               type: order.type,
+              direction: order.direction,
               pair: order.pair,
               pairId: pairId,
               amount: order.amount,

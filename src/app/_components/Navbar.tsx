@@ -1,6 +1,6 @@
 import { auth } from "~/server/auth";
 import Link from "next/link";
-import { IconHome, IconRobot, IconMicrophone, IconSettings, IconLogout, IconLogin, IconTargetArrow, IconChartLine, IconCalculator} from "@tabler/icons-react";
+import { IconHome, IconRobot, IconMicrophone, IconSettings, IconLogout, IconLogin, IconTargetArrow, IconChartLine, IconCalculator, IconActivity} from "@tabler/icons-react";
 
 export default async function Navbar() {
   const session = await auth();
@@ -19,6 +19,7 @@ export default async function Navbar() {
         {/* <NavItem href="/videos" icon={<IconVideo size={24} />} /> */}
         <NavItem href="/setups" icon={<IconTargetArrow size={24} />} />
         <NavItem href="/trades" icon={<IconChartLine size={24} />} />
+        <NavItem href="/live" icon={<IconActivity size={24} />} />
         <NavItem href="/calculator" icon={<IconCalculator size={24} />} />
         {/* <NavItem href="/alerts" icon={<IconBell size={24} />} /> */}
       </div>

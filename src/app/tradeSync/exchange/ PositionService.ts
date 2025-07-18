@@ -13,108 +13,177 @@ export function createPositionsFromOrders(
   exchangeName: string
 ): Position[] {
   const positions: Position[] = [];
-  const openPosition = 0;
-  const positionCost = 0;
-  const positionBuyCost = 0;
-  const positionSellCost = 0;
-  const tempOrders: Order[] = [];
-
-  orders.forEach((order: Order) => {
-    tempOrders.push(order);
-
-    if (order.type === 'buy') {
-      handleBuyOrder(order, openPosition, positionBuyCost, positionCost);
-    } else {
-      const position = handleSellOrder(
-        order,
-        tempOrders,
-        openPosition,
-        positionCost,
-        positionBuyCost,
-        positionSellCost,
-        exchangeName
-      );
-
-      if (position) {
-        positions.push(position);
-        resetPositionTracking(positionBuyCost, positionSellCost);
-      }
-    }
-  });
+  
+  // Group orders by pair for proper position tracking
+  const ordersByPair = groupOrdersByPair(orders);
+  
+  for (const [pair, pairOrders] of Object.entries(ordersByPair)) {
+    const pairPositions = createPositionsForPair(pairOrders, exchangeName);
+    positions.push(...pairPositions);
+  }
 
   return positions;
 }
 
-function handleBuyOrder(
-  order: Order,
-  openPosition: number,
-  positionBuyCost: number,
-  positionCost: number
-): void {
-  openPosition += order.amount;
+function groupOrdersByPair(orders: Order[]): Record<string, Order[]> {
+  return orders.reduce((groups: Record<string, Order[]>, order) => {
+    const pair = order.pair;
+    if (!groups[pair]) {
+      groups[pair] = [];
+    }
+    groups[pair].push(order);
+    return groups;
+  }, {});
+}
+
+function createPositionsForPair(orders: Order[], exchangeName: string): Position[] {
+  const positions: Position[] = [];
+  const positionState = {
+    openPosition: 0,
+    positionCost: 0,
+    positionBuyCost: 0,
+    positionSellCost: 0,
+    tempOrders: [] as Order[]
+  };
+
+  // Sort orders by time to ensure proper chronological processing
+  const sortedOrders = [...orders].sort((a, b) => Number(a.time) - Number(b.time));
+
+  for (const order of sortedOrders) {
+    positionState.tempOrders.push(order);
+
+    if (order.type === 'buy') {
+      handleBuyOrder(order, positionState);
+    } else {
+      const position = handleSellOrder(order, positionState, exchangeName);
+
+      if (position) {
+        positions.push(position);
+        resetPositionTracking(positionState);
+      }
+    }
+  }
+
+  // Handle any remaining open position
+  if (positionState.tempOrders.length > 0 && Math.abs(positionState.openPosition) > 0.00001) {
+    const openPosition = createOpenPosition(positionState, exchangeName);
+    if (openPosition) {
+      positions.push(openPosition);
+    }
+  }
+
+  return positions;
+}
+
+interface PositionState {
+  openPosition: number;
+  positionCost: number;
+  positionBuyCost: number;
+  positionSellCost: number;
+  tempOrders: Order[];
+}
+
+function handleBuyOrder(order: Order, state: PositionState): void {
+  state.openPosition += order.amount;
   const buyCost = order.amount * order.averagePrice;
-  positionBuyCost += buyCost;
-  positionCost += buyCost;
+  state.positionBuyCost += buyCost;
+  state.positionCost += buyCost;
 }
 
 function handleSellOrder(
   order: Order,
-  tempOrders: Order[],
-  openPosition: number,
-  positionCost: number,
-  positionBuyCost: number,
-  positionSellCost: number,
+  state: PositionState,
   exchangeName: string
 ): Position | null {
   const amountSold = order.amount;
   const sellCost = order.amount * order.averagePrice;
-  positionSellCost += sellCost;
+  state.positionSellCost += sellCost;
 
-  const relativePositionCost = (positionCost / openPosition) * amountSold;
+  // Calculate proportional costs for the sold amount
+  const relativePositionCost = state.openPosition > 0 
+    ? (state.positionCost / state.openPosition) * amountSold 
+    : 0;
   const profitLoss = sellCost - relativePositionCost;
-  const relativePositionBuyCost = (positionBuyCost / openPosition) * amountSold;
+  const relativePositionBuyCost = state.openPosition > 0 
+    ? (state.positionBuyCost / state.openPosition) * amountSold 
+    : 0;
 
-  openPosition -= amountSold;
-  positionCost -= relativePositionCost;
+  state.openPosition -= amountSold;
+  state.positionCost -= relativePositionCost;
 
-  const firstOrderTime = tempOrders[0]?.time ?? order.time;
-
+  const firstOrderTime = state.tempOrders[0]?.time ?? order.time;
   const duration = minutesBetweenTimestamps(order.time, firstOrderTime);
 
-  return {
-    time: firstOrderTime,
-    date: new Date(order.time),
-    price: Number(order.averagePrice),
-    type: 'long',
-    buyCost: relativePositionBuyCost,
-    sellCost: positionSellCost,
-    profitLoss,
-    exchange: exchangeName,
-    orders: [...tempOrders],
-    pair: order.pair,
-    quantity: order.amount,
-    duration,
-    lastTime: order.time,
-  };
+  // Check if position should be closed
+  if (Math.abs(state.openPosition) < 0.00001 || 
+      isVolumeDifferenceWithinThreshold(
+        state.positionBuyCost,
+        state.positionSellCost,
+        VOLUME_THRESHOLD_PERCENT
+      )) {
+    return {
+      time: firstOrderTime,
+      date: new Date(Number(order.time)),
+      price: Number(order.averagePrice),
+      type: 'long',
+      buyCost: relativePositionBuyCost,
+      sellCost: state.positionSellCost,
+      profitLoss,
+      exchange: exchangeName,
+      orders: [...state.tempOrders],
+      pair: order.pair,
+      quantity: order.amount,
+      duration,
+      lastTime: order.time,
+    };
+  }
+
+  return null;
 }
 
-function resetPositionTracking(
-  positionBuyCost: number,
-  positionSellCost: number
-): void {
+function resetPositionTracking(state: PositionState): void {
   if (
-    positionSoldOut(positionBuyCost, positionSellCost) ||
+    positionSoldOut(state.positionBuyCost, state.positionSellCost) ||
     isVolumeDifferenceWithinThreshold(
-      positionBuyCost,
-      positionSellCost,
+      state.positionBuyCost,
+      state.positionSellCost,
       VOLUME_THRESHOLD_PERCENT
     )
   ) {
-    positionBuyCost = 0;
-    positionSellCost = 0;
+    state.positionBuyCost = 0;
+    state.positionSellCost = 0;
+    state.tempOrders = [];
   } else {
-    positionBuyCost = positionBuyCost - positionSellCost;
+    state.positionBuyCost = state.positionBuyCost - state.positionSellCost;
+    state.positionSellCost = 0;
   }
+}
+
+function createOpenPosition(state: PositionState, exchangeName: string): Position | null {
+  if (state.tempOrders.length === 0) return null;
+
+  const firstOrder = state.tempOrders[0];
+  const lastOrder = state.tempOrders[state.tempOrders.length - 1];
+  
+  if (!firstOrder || !lastOrder) return null;
+
+  const duration = minutesBetweenTimestamps(lastOrder.time, firstOrder.time);
+  
+  return {
+    time: firstOrder.time,
+    date: new Date(Number(firstOrder.time)),
+    price: Number(firstOrder.averagePrice),
+    type: state.openPosition > 0 ? 'long' : 'short',
+    buyCost: state.positionBuyCost,
+    sellCost: state.positionSellCost,
+    profitLoss: state.positionSellCost - state.positionBuyCost, // Unrealized P&L
+    exchange: exchangeName,
+    orders: [...state.tempOrders],
+    pair: firstOrder.pair,
+    quantity: Math.abs(state.openPosition),
+    duration,
+    lastTime: lastOrder.time,
+  };
 }
 
 export function aggregatePositions(orders: Order[]): Position[] {

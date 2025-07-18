@@ -7,6 +7,7 @@ import { transcriptionRouter } from "./routers/transcription";
 import { alertsRouter } from "./routers/alerts";
 import { pairsRouter } from "./routers/pairs";
 import { tradesRouter } from "./routers/trades";
+import { liveRouter } from "./routers/live";
 
 /**
  * This is the primary router for your server.
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
   alerts: alertsRouter,
   pairs: pairsRouter,
   trades: tradesRouter,
+  live: liveRouter,
 });
 
 // export type definition of API

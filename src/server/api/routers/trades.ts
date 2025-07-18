@@ -9,16 +9,23 @@ export const tradesRouter = createTRPCRouter({
       z.object({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
+        pairFilter: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-      const { limit, offset } = input;
+      const { limit, offset, pairFilter } = input;
 
       try {
+        // Build where clause
+        const whereClause: any = { userId };
+        if (pairFilter) {
+          whereClause.pair = pairFilter;
+        }
+
         // Fetch trades from database
         const trades = await ctx.db.userTrade.findMany({
-          where: { userId },
+          where: whereClause,
           orderBy: { time: 'desc' },
           take: limit,
           skip: offset,
@@ -26,7 +33,7 @@ export const tradesRouter = createTRPCRouter({
         
         // Get total count for pagination
         const totalCount = await ctx.db.userTrade.count({
-          where: { userId },
+          where: whereClause,
         });
         
         console.log(`📊 Retrieved ${trades.length} trades from database for user ${userId}`);
@@ -52,16 +59,23 @@ export const tradesRouter = createTRPCRouter({
       z.object({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
+        pairFilter: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-      const { limit, offset } = input;
+      const { limit, offset, pairFilter } = input;
 
       try {
+        // Build where clause
+        const whereClause: any = { userId };
+        if (pairFilter) {
+          whereClause.pair = pairFilter;
+        }
+
         // Fetch orders from database
         const orders = await ctx.db.order.findMany({
-          where: { userId },
+          where: whereClause,
           orderBy: { time: 'desc' },
           take: limit,
           skip: offset,
@@ -69,7 +83,7 @@ export const tradesRouter = createTRPCRouter({
         
         // Get total count for pagination
         const totalCount = await ctx.db.order.count({
-          where: { userId },
+          where: whereClause,
         });
         
         console.log(`📊 Retrieved ${orders.length} orders from database for user ${userId}`);
@@ -95,16 +109,23 @@ export const tradesRouter = createTRPCRouter({
       z.object({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
+        pairFilter: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-      const { limit, offset } = input;
+      const { limit, offset, pairFilter } = input;
 
       try {
+        // Build where clause
+        const whereClause: any = { userId };
+        if (pairFilter) {
+          whereClause.pair = pairFilter;
+        }
+
         // Fetch positions from database
         const positions = await ctx.db.position.findMany({
-          where: { userId },
+          where: whereClause,
           orderBy: { time: 'desc' },
           take: limit,
           skip: offset,
@@ -112,7 +133,7 @@ export const tradesRouter = createTRPCRouter({
         
         // Get total count for pagination
         const totalCount = await ctx.db.position.count({
-          where: { userId },
+          where: whereClause,
         });
         
         console.log(`📊 Retrieved ${positions.length} positions from database for user ${userId}`);
@@ -169,6 +190,74 @@ export const tradesRouter = createTRPCRouter({
         return {
           trades: [],
         };
+      }
+    }),
+
+  getOrdersForPosition: protectedProcedure
+    .input(
+      z.object({
+        positionId: z.number(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const { positionId } = input;
+
+      try {
+        // Fetch orders for the position
+        const orders = await ctx.db.order.findMany({
+          where: {
+            userId,
+            positionId,
+          },
+          orderBy: { time: 'desc' },
+        });
+        
+        console.log(`📊 Retrieved ${orders.length} orders for position ${positionId} for user ${userId}`);
+        
+        return {
+          orders,
+        };
+        
+      } catch (error) {
+        console.error('Failed to fetch orders for position:', error);
+        return {
+          orders: [],
+        };
+      }
+    }),
+
+  getPositionById: protectedProcedure
+    .input(
+      z.object({
+        positionId: z.number(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const { positionId } = input;
+
+      try {
+        // Fetch position details
+        const position = await ctx.db.position.findFirst({
+          where: {
+            id: positionId,
+            userId,
+          },
+        });
+        
+        if (!position) {
+          console.log(`❌ Position ${positionId} not found for user ${userId}`);
+          return null;
+        }
+        
+        console.log(`📊 Retrieved position ${positionId} for user ${userId}`);
+        
+        return position;
+        
+      } catch (error) {
+        console.error('Failed to fetch position:', error);
+        return null;
       }
     }),
 });

@@ -146,6 +146,8 @@ export class UserTradeRepository {
         closedPnL: trade.closedPnL
           ? new Prisma.Decimal(trade.closedPnL)
           : null,
+        direction: trade.direction,
+        transactionId: trade.transactionId,
       }));
       
       // Use createMany with skipDuplicates as a fallback for any remaining duplicates

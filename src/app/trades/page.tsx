@@ -17,6 +17,8 @@ import {
   Flex,
   ActionIcon,
   Drawer,
+  Select,
+  Anchor,
 } from '@mantine/core';
 import { IconKey } from '@tabler/icons-react';
 import { useSession } from "next-auth/react";
@@ -45,10 +47,12 @@ interface Order {
   time: number | bigint;
   pair: string;
   type: string;
+  direction?: string;
   amount: Decimal;
   averagePrice: Decimal;
   totalCost: Decimal;
   exchange: string;
+  positionId: number | null;
 }
 
 interface Position {
@@ -69,13 +73,16 @@ export default function TradesPage() {
   const [since] = useState<number | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState<'trades' | 'orders' | 'positions'>('trades');
-  const [drawerOpened, setDrawerOpened] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
+  const [selectedPair, setSelectedPair] = useState<string | null>(null);
+  const [selectedPositionId, setSelectedPositionId] = useState<number | null>(null);
+  const [bottomBlockContent, setBottomBlockContent] = useState<'orders' | 'position-details' | null>(null);
   const pageSize = 20;
 
   const { data: tradesData, isLoading: isLoadingTrades } = api.trades.getTrades.useQuery({
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
+    pairFilter: selectedPair ?? undefined,
   }, {
     enabled: !!clientSession?.user && activeTab === 'trades',
   });
@@ -83,6 +90,7 @@ export default function TradesPage() {
   const { data: ordersData, isLoading: isLoadingOrders } = api.trades.getOrders.useQuery({
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
+    pairFilter: selectedPair ?? undefined,
   }, {
     enabled: !!clientSession?.user && activeTab === 'orders',
   });
@@ -90,6 +98,7 @@ export default function TradesPage() {
   const { data: positionsData, isLoading: isLoadingPositions } = api.trades.getPositions.useQuery({
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
+    pairFilter: selectedPair ?? undefined,
   }, {
     enabled: !!clientSession?.user && activeTab === 'positions',
   });
@@ -98,6 +107,22 @@ export default function TradesPage() {
     positionId: selectedPosition?.id ?? 0,
   }, {
     enabled: !!selectedPosition,
+  });
+
+  const { data: positionOrdersData, isLoading: isLoadingPositionOrders } = api.trades.getOrdersForPosition.useQuery({
+    positionId: selectedPosition?.id ?? 0,
+  }, {
+    enabled: !!selectedPosition,
+  });
+
+  const { data: selectedPositionData, isLoading: isLoadingSelectedPosition } = api.trades.getPositionById.useQuery({
+    positionId: selectedPositionId ?? 0,
+  }, {
+    enabled: !!selectedPositionId,
+  });
+
+  const { data: pairsData } = api.pairs.getAll.useQuery(undefined, {
+    enabled: !!clientSession?.user,
   });
 
   const syncTradesMutation = useSyncTrades();
@@ -127,7 +152,12 @@ export default function TradesPage() {
 
   const handlePositionClick = (position: Position) => {
     setSelectedPosition(position);
-    setDrawerOpened(true);
+    setBottomBlockContent('orders');
+  };
+
+  const handlePositionLinkClick = (positionId: number) => {
+    setSelectedPositionId(positionId);
+    setBottomBlockContent('position-details');
   };
 
   const [hasStoredKeys, setHasStoredKeys] = useState(false);
@@ -212,6 +242,25 @@ export default function TradesPage() {
         </Paper>
       )}
       
+
+      {/* Pair Filter */}
+      <Group mb="md">
+        <Select
+          placeholder="All pairs"
+          data={[
+            { value: '', label: 'All pairs' },
+            ...(pairsData?.map(pair => ({ value: pair.symbol, label: pair.symbol })) ?? [])
+          ]}
+          value={selectedPair}
+          onChange={(value) => {
+            setSelectedPair(value);
+            setCurrentPage(1);
+          }}
+          clearable
+          searchable
+          style={{ minWidth: 200 }}
+        />
+      </Group>
 
       {/* Tabs for Trades, Orders, and Positions */}
       <Tabs value={activeTab} onChange={(value) => {
@@ -307,6 +356,7 @@ export default function TradesPage() {
                   <Table.Th>Avg Price</Table.Th>
                   <Table.Th>Total Cost</Table.Th>
                   <Table.Th>Exchange</Table.Th>
+                  <Table.Th>Position</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -323,11 +373,23 @@ export default function TradesPage() {
                     <Table.Td>{formatCurrency(order.averagePrice.toString())}</Table.Td>
                     <Table.Td>{formatCurrency(order.totalCost.toString())}</Table.Td>
                     <Table.Td>{order.exchange}</Table.Td>
+                    <Table.Td>
+                      {order.positionId ? (
+                        <Anchor
+                          onClick={() => handlePositionLinkClick(order.positionId!)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          Position #{order.positionId}
+                        </Anchor>
+                      ) : (
+                        <Text c="dimmed" size="sm">No position</Text>
+                      )}
+                    </Table.Td>
                   </Table.Tr>
                 ))}
                 {!ordersData?.orders.length && (
                   <Table.Tr>
-                    <Table.Td colSpan={7}>
+                    <Table.Td colSpan={9}>
                       <Text ta="center" c="dimmed">
                         No orders found
                       </Text>
@@ -429,26 +491,45 @@ export default function TradesPage() {
           )}
         </Tabs.Panel>
       </Tabs>
-
-      {/* Drawer for Position Trades */}
-      <Drawer
-        opened={drawerOpened}
-        onClose={() => setDrawerOpened(false)}
-        title={selectedPosition ? `Trades for Position ${selectedPosition.pair} - ${selectedPosition.direction}` : 'Position Trades'}
-        position="bottom"
-        size="25%"
-        padding="lg"
-        withOverlay={false}
+      
+      {/* Permanent Bottom Block - Sticky to bottom of viewport */}
+      <Paper 
+        p="md" 
+        mt="lg"
+        withBorder
+        style={{
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 1000,
+          maxHeight: '300px',
+          overflowY: 'auto',
+          backgroundColor: 'var(--mantine-color-body)',
+          borderTop: '1px solid var(--mantine-color-gray-3)',
+          borderRadius: '8px 8px 0 0',
+        }}
       >
-        {selectedPosition && (
+        {bottomBlockContent === 'orders' && selectedPosition && (
           <>
+            <Group mb="md" justify="space-between">
+              <Text size="lg" fw={500}>
+                Orders for Position {selectedPosition.pair} - {selectedPosition.direction}
+              </Text>
+              <Button
+                size="xs"
+                variant="subtle"
+                onClick={() => setBottomBlockContent(null)}
+              >
+                Clear
+              </Button>
+            </Group>
+            
             <Group mb="md">
               <Text size="sm" c="dimmed">
                 Position: {selectedPosition.pair} | Direction: {selectedPosition.direction} | Status: {selectedPosition.status}
               </Text>
             </Group>
             
-            {isLoadingPositionTrades ? (
+            {isLoadingPositionOrders ? (
               <Skeleton height={300} />
             ) : (
               <Table highlightOnHover>
@@ -457,35 +538,33 @@ export default function TradesPage() {
                     <Table.Th>Time</Table.Th>
                     <Table.Th>Pair</Table.Th>
                     <Table.Th>Type</Table.Th>
-                    <Table.Th>Volume</Table.Th>
-                    <Table.Th>Price</Table.Th>
-                    <Table.Th>Cost</Table.Th>
-                    <Table.Th>Fee</Table.Th>
+                    <Table.Th>Amount</Table.Th>
+                    <Table.Th>Avg Price</Table.Th>
+                    <Table.Th>Total Cost</Table.Th>
                     <Table.Th>Exchange</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {positionTradesData?.trades.map((trade: Trade) => (
-                    <Table.Tr key={trade.tradeId}>
-                      <Table.Td>{formatDateTime(trade.time)}</Table.Td>
-                      <Table.Td>{trade.pair}</Table.Td>
+                  {positionOrdersData?.orders.map((order: Order) => (
+                    <Table.Tr key={order.id}>
+                      <Table.Td>{formatDateTime(order.time)}</Table.Td>
+                      <Table.Td>{order.pair}</Table.Td>
                       <Table.Td>
-                        <Badge color={trade.type === 'buy' ? 'green' : 'red'}>
-                          {trade.type}
+                        <Badge color={order.type === 'buy' ? 'green' : 'red'}>
+                          {order.type}
                         </Badge>
                       </Table.Td>
-                      <Table.Td>{trade.vol}</Table.Td>
-                      <Table.Td>{formatCurrency(trade.price)}</Table.Td>
-                      <Table.Td>{formatCurrency(trade.cost)}</Table.Td>
-                      <Table.Td>{formatCurrency(trade.fee)}</Table.Td>
-                      <Table.Td>{trade.exchange}</Table.Td>
+                      <Table.Td>{order.amount.toString()}</Table.Td>
+                      <Table.Td>{formatCurrency(order.averagePrice.toString())}</Table.Td>
+                      <Table.Td>{formatCurrency(order.totalCost.toString())}</Table.Td>
+                      <Table.Td>{order.exchange}</Table.Td>
                     </Table.Tr>
                   ))}
-                  {!positionTradesData?.trades.length && (
+                  {!positionOrdersData?.orders.length && (
                     <Table.Tr>
-                      <Table.Td colSpan={8}>
+                      <Table.Td colSpan={7}>
                         <Text ta="center" c="dimmed">
-                          No trades found for this position
+                          No orders found for this position
                         </Text>
                       </Table.Td>
                     </Table.Tr>
@@ -495,7 +574,89 @@ export default function TradesPage() {
             )}
           </>
         )}
-      </Drawer>
+        
+        {bottomBlockContent === 'position-details' && selectedPositionData && (
+          <>
+            <Group mb="md" justify="space-between">
+              <Text size="lg" fw={500}>
+                Position Details - {selectedPositionData.pair}
+              </Text>
+              <Button
+                size="xs"
+                variant="subtle"
+                onClick={() => setBottomBlockContent(null)}
+              >
+                Clear
+              </Button>
+            </Group>
+            
+            <Flex direction="row" gap="xl" wrap="wrap">
+              <Group>
+                <Text size="lg" fw={500}>
+                  Position #{selectedPositionData.id}
+                </Text>
+                <Badge color={selectedPositionData.status === 'closed' ? 'blue' : selectedPositionData.status === 'open' ? 'yellow' : 'gray'}>
+                  {selectedPositionData.status}
+                </Badge>
+              </Group>
+              
+              <Group>
+                <Text size="sm" c="dimmed">Pair:</Text>
+                <Text size="sm" fw={500}>{selectedPositionData.pair}</Text>
+              </Group>
+              
+              <Group>
+                <Text size="sm" c="dimmed">Direction:</Text>
+                <Badge color={selectedPositionData.direction === 'long' ? 'green' : 'red'}>
+                  {selectedPositionData.direction}
+                </Badge>
+              </Group>
+              
+              <Group>
+                <Text size="sm" c="dimmed">Amount:</Text>
+                <Text size="sm" fw={500}>{selectedPositionData.amount.toString()}</Text>
+              </Group>
+              
+              <Group>
+                <Text size="sm" c="dimmed">Entry Price:</Text>
+                <Text size="sm" fw={500}>{formatCurrency(selectedPositionData.averageEntryPrice.toString())}</Text>
+              </Group>
+              
+              <Group>
+                <Text size="sm" c="dimmed">Exit Price:</Text>
+                <Text size="sm" fw={500}>{formatCurrency(selectedPositionData.averageExitPrice.toString())}</Text>
+              </Group>
+              
+              <Group>
+                <Text size="sm" c="dimmed">P&L:</Text>
+                <Badge color={Number(selectedPositionData.profitLoss.toString()) >= 0 ? 'green' : 'red'}>
+                  {formatCurrency(selectedPositionData.profitLoss.toString())}
+                </Badge>
+              </Group>
+              
+              <Group>
+                <Text size="sm" c="dimmed">Duration:</Text>
+                <Text size="sm" fw={500}>{selectedPositionData.duration}</Text>
+              </Group>
+              
+              <Group>
+                <Text size="sm" c="dimmed">Created:</Text>
+                <Text size="sm" fw={500}>{formatDateTime(selectedPositionData.time)}</Text>
+              </Group>
+            </Flex>
+          </>
+        )}
+        
+        {isLoadingSelectedPosition && bottomBlockContent === 'position-details' && (
+          <Skeleton height={200} />
+        )}
+        
+        {!bottomBlockContent && (
+          <Text ta="center" c="dimmed" size="sm">
+            Click on a position to view its orders, or click on a position link in the orders table to view position details.
+          </Text>
+        )}
+      </Paper>
     </Paper>
   );
 }

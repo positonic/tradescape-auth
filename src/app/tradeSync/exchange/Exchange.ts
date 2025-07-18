@@ -692,6 +692,13 @@ export default class Exchange {
           exchange: this.client.name?.toString() ?? '',
           date: new Date(Number(ccxtTrade.timestamp)),
           closedPnL: Number(ccxtTrade.info.closedPnl) ?? 0,
+          direction: ccxtTrade.info?.dir,
+          transactionId: ccxtTrade.info?.hash,
+          info: ccxtTrade.info ? {
+            dir: ccxtTrade.info.dir,
+            hash: ccxtTrade.info.hash,
+            ...ccxtTrade.info
+          } : undefined,
         };
         
         if (this.id === 'hyperliquid') {

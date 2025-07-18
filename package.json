@@ -38,6 +38,7 @@
     "@trpc/react-query": "^11.0.0-rc.446",
     "@trpc/server": "^11.0.0-rc.446",
     "@types/crypto-js": "^4.2.2",
+    "@types/ws": "^8.18.1",
     "@vercel/blob": "^0.27.3",
     "asana": "^3.0.15",
     "ccxt": "^4.4.94",

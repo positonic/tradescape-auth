@@ -17,6 +17,7 @@ export default function tradeAggregator(trades: Trade[]): Order[] {
         time: trade.time,
         date: new Date(trade.time),
         type: trade.type as 'buy' | 'sell',
+        direction: trade.direction, // Use direction from trade
         pair: trade.pair,
         amount: vol,
         highestPrice: price,

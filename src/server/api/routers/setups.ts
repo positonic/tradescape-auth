@@ -353,10 +353,38 @@ export const setupsRouter = createTRPCRouter({
       });
       console.log(`🔍 [Setup Debug] Found ${orders.length} orders with string matching`);
 
-      // Convert Decimal fields to numbers for setup, trades, and orders
+      // Fetch positions for this setup's pair
+      console.log('🔍 [Setup Debug] Fetching positions for pair:', setup.pair?.symbol);
+      const positions = await ctx.db.position.findMany({
+        where: {
+          userId: ctx.session.user.id,
+          pair: {
+            contains: setup.pair?.symbol || ''
+          }
+        },
+        include: {
+          orders: {
+            include: {
+              trades: true,
+            },
+          },
+        },
+        orderBy: {
+          time: 'desc'
+        },
+        take: 10
+      });
+      console.log(`🔍 [Setup Debug] Found ${positions.length} positions`);
+
+      // Convert Decimal fields to numbers for setup, trades, orders, and positions
       const serializedTrades = trades.map(trade => ({
         ...trade,
         closedPnL: trade.closedPnL ? Number(trade.closedPnL) : null,
+        price: trade.price ? Number(trade.price) : null,
+        cost: trade.cost ? Number(trade.cost) : null,
+        fee: trade.fee ? Number(trade.fee) : null,
+        vol: trade.vol ? Number(trade.vol) : null,
+        margin: trade.margin ? Number(trade.margin) : null,
       }));
 
       const serializedOrders = orders.map(order => ({
@@ -371,6 +399,18 @@ export const setupsRouter = createTRPCRouter({
         tradeCount: order.trades.length,
       }));
 
+      const serializedPositions = positions.map(position => ({
+        ...position,
+        averageEntryPrice: Number(position.averageEntryPrice),
+        averageExitPrice: Number(position.averageExitPrice),
+        totalCostBuy: Number(position.totalCostBuy),
+        totalCostSell: Number(position.totalCostSell),
+        amount: Number(position.amount),
+        profitLoss: Number(position.profitLoss),
+        orderCount: position.orders.length,
+        tradeCount: position.orders.reduce((sum, order) => sum + order.trades.length, 0),
+      }));
+
       return {
         ...setup,
         entryPrice: setup.entryPrice ? Number(setup.entryPrice) : null,
@@ -378,6 +418,7 @@ export const setupsRouter = createTRPCRouter({
         stopPrice: setup.stopPrice ? Number(setup.stopPrice) : null,
         trades: serializedTrades,
         orders: serializedOrders,
+        positions: serializedPositions,
       };
     }),
 

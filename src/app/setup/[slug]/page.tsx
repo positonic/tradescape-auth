@@ -161,6 +161,77 @@ export default async function SetupPage({ params }: {
                 </div>
               </SimpleGrid>
 
+              {/* Positions Section */}
+              {setup.positions && setup.positions.length > 0 && (
+                <Card shadow="sm" p="lg" radius="md" withBorder>
+                  <Title order={3} mb="md">Positions ({setup.pair.symbol})</Title>
+                  <ScrollArea>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Date</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Status</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Type</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Amount</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Entry</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Exit</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>P&L</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Duration</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Orders</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {setup.positions.map((position) => (
+                          <tr key={position.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                            <td style={{ padding: '8px' }}>
+                              {new Date(Number(position.time)).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge 
+                                size="sm" 
+                                variant="light" 
+                                color={position.status === 'open' ? 'blue' : position.status === 'closed' ? 'green' : 'gray'}
+                              >
+                                {position.status.toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge 
+                                size="sm" 
+                                variant="light" 
+                                color={position.direction === 'long' ? 'green' : 'red'}
+                                leftSection={position.direction === 'long' ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
+                              >
+                                {position.direction.toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>{position.amount}</td>
+                            <td style={{ padding: '8px' }}>{position.averageEntryPrice.toFixed(8)}</td>
+                            <td style={{ padding: '8px' }}>{position.averageExitPrice.toFixed(8)}</td>
+                            <td style={{ padding: '8px' }}>
+                              <span style={{ color: position.profitLoss >= 0 ? 'green' : 'red' }}>
+                                ${position.profitLoss.toFixed(2)}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px' }}>{position.duration}</td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge size="sm" variant="outline">
+                                {position.orderCount}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </Card>
+              )}
+
               {/* Orders Section */}
               {setup.orders && setup.orders.length > 0 && (
                 <Card shadow="sm" p="lg" radius="md" withBorder>
