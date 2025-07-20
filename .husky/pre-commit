@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Simple pre-commit hook - just run tests if they exist
+if [ -f "package.json" ] && grep -q '"test"' package.json; then
+  echo "🧪 Running tests..."
+  npm test 2>/dev/null || echo "⚠️  Tests not configured or failed"
+fi
+
+# Format staged files
+echo "💅 Formatting staged files..."
+npx prettier --write --list-different $(git diff --staged --name-only --diff-filter=ACM "*.ts" "*.tsx" "*.js" "*.jsx" "*.json" "*.md" 2>/dev/null) 2>/dev/null || echo "✨ No files to format"

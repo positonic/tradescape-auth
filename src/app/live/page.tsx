@@ -36,6 +36,15 @@ interface LivePosition {
   timestamp: number;
   stopLoss?: number;
   riskAmount: number;
+  riskType?: string;
+  leverage?: number;
+  marginUsed?: number;
+  positionValue?: number;
+  liquidationPrice?: number;
+  funding?: {
+    allTime: number;
+    sinceOpen: number;
+  };
 }
 
 interface LiveBalance {
@@ -46,9 +55,28 @@ interface LiveBalance {
   usdValue: number;
 }
 
+interface LiveOrder {
+  id: string;
+  symbol: string;
+  side: "buy" | "sell";
+  type: string;
+  amount: number;
+  price: number;
+  filled: number;
+  remaining: number;
+  status: string;
+  timestamp: number;
+  triggerPrice?: number;
+  triggerCondition?: string;
+  reduceOnly: boolean;
+  timeInForce?: string;
+  isStopOrder: boolean;
+}
+
 interface LiveData {
   positions: LivePosition[];
   balances: LiveBalance[];
+  orders: LiveOrder[];
   totalUsdValue: number;
   timestamp: number;
 }
@@ -325,8 +353,8 @@ export default function LivePage() {
           <>
             {/* Balance Overview */}
             <Card mb="md" p="md">
-              <Title order={3} mb="md">Account Balance</Title>
-              <SimpleGrid cols={5} spacing="md">
+              <Title order={3} mb="md">Account Overview</Title>
+              <SimpleGrid cols={7} spacing="md">
                 <div>
                   <Text size="sm" c="dimmed">Total USD Value</Text>
                   <Text size="xl" fw={700}>
@@ -334,21 +362,21 @@ export default function LivePage() {
                   </Text>
                 </div>
                 <div>
-                  <Text size="sm" c="dimmed">Free Balance</Text>
-                  <Text size="lg" fw={600}>
-                    ${liveData.balances.reduce((sum, b) => sum + b.free * (b.usdValue / b.total), 0).toLocaleString()}
-                  </Text>
-                </div>
-                <div>
-                  <Text size="sm" c="dimmed">Used Balance</Text>
-                  <Text size="lg" fw={600}>
-                    ${liveData.balances.reduce((sum, b) => sum + b.used * (b.usdValue / b.total), 0).toLocaleString()}
-                  </Text>
-                </div>
-                <div>
                   <Text size="sm" c="dimmed">Open Positions</Text>
                   <Text size="lg" fw={600}>
                     {liveData.positions.length}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    ${liveData.positions.reduce((sum, p) => sum + (p.positionValue || 0), 0).toLocaleString()} total
+                  </Text>
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">Open Orders</Text>
+                  <Text size="lg" fw={600}>
+                    {liveData.orders?.length || 0}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {liveData.orders?.filter(o => o.isStopOrder).length || 0} stops, {liveData.orders?.filter(o => !o.isStopOrder).length || 0} limit
                   </Text>
                 </div>
                 <div>
@@ -364,6 +392,41 @@ export default function LivePage() {
                       </Text>
                     </Group>
                   )}
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">Total Margin Used</Text>
+                  <Text size="lg" fw={600}>
+                    ${liveData.positions.reduce((sum, p) => sum + (p.marginUsed || 0), 0).toLocaleString()}
+                  </Text>
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">Unrealized PnL</Text>
+                  <Text 
+                    size="lg" 
+                    fw={600} 
+                    c={liveData.positions.reduce((sum, p) => sum + p.unrealizedPnl, 0) >= 0 ? "green" : "red"}
+                  >
+                    ${liveData.positions.reduce((sum, p) => sum + p.unrealizedPnl, 0).toFixed(2)}
+                  </Text>
+                  <Text 
+                    size="xs" 
+                    c={liveData.positions.reduce((sum, p) => sum + p.unrealizedPnl, 0) >= 0 ? "green" : "red"}
+                  >
+                    {liveData.positions.length > 0 ? 
+                      (liveData.positions.reduce((sum, p) => sum + p.percentage, 0) / liveData.positions.length).toFixed(2) 
+                      : '0.00'}% avg
+                  </Text>
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">Total Funding</Text>
+                  <Text 
+                    size="lg" 
+                    fw={600}
+                    c={liveData.positions.reduce((sum, p) => sum + (p.funding?.allTime || 0), 0) >= 0 ? "green" : "red"}
+                  >
+                    ${liveData.positions.reduce((sum, p) => sum + (p.funding?.allTime || 0), 0).toFixed(2)}
+                  </Text>
+                  <Text size="xs" c="dimmed">all time</Text>
                 </div>
               </SimpleGrid>
             </Card>
@@ -381,48 +444,203 @@ export default function LivePage() {
                       <Table.Th>Side</Table.Th>
                       <Table.Th>Size</Table.Th>
                       <Table.Th>Entry Price</Table.Th>
-                      <Table.Th>Mark Price</Table.Th>
+                      <Table.Th>Leverage</Table.Th>
                       <Table.Th>Unrealized PnL</Table.Th>
-                      <Table.Th>%</Table.Th>
                       <Table.Th>Risk</Table.Th>
+                      <Table.Th>Margin Used</Table.Th>
+                      <Table.Th>Funding</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
                     {liveData.positions.map((position, index) => (
                       <Table.Tr key={index}>
-                        <Table.Td>{position.pair}</Table.Td>
+                        <Table.Td>
+                          <div>
+                            <Text size="sm" fw={500}>
+                              {position.pair?.split('/')[0] || position.pair}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {position.positionValue ? `$${position.positionValue.toFixed(2)}` : ''}
+                            </Text>
+                          </div>
+                        </Table.Td>
                         <Table.Td>
                           <Badge color={position.side === "long" ? "green" : "red"} variant="light">
                             {position.side.toUpperCase()}
                           </Badge>
                         </Table.Td>
-                        <Table.Td>{position.size.toFixed(4)}</Table.Td>
-                        <Table.Td>${position.entryPrice.toFixed(2)}</Table.Td>
-                        <Table.Td>${position.markPrice.toFixed(2)}</Table.Td>
                         <Table.Td>
-                          <Text c={position.unrealizedPnl >= 0 ? "green" : "red"}>
-                            ${position.unrealizedPnl.toFixed(2)}
-                          </Text>
+                          <Text size="sm">{position.size.toFixed(4)}</Text>
                         </Table.Td>
                         <Table.Td>
-                          <Text c={position.percentage >= 0 ? "green" : "red"}>
+                          <Text size="sm">${position.entryPrice.toFixed(4)}</Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge variant="outline" size="sm">
+                            {position.leverage ? `${position.leverage}x` : 'N/A'}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text c={position.unrealizedPnl >= 0 ? "green" : "red"} size="sm" fw={500}>
+                            ${position.unrealizedPnl.toFixed(2)}
+                          </Text>
+                          <Text c={position.percentage >= 0 ? "green" : "red"} size="xs">
                             {position.percentage.toFixed(2)}%
                           </Text>
                         </Table.Td>
                         <Table.Td>
-                          <Group gap={4}>
-                            <Text size="sm" c="red">
+                          <div>
+                            <Text size="sm" c="red" fw={500}>
                               ${position.riskAmount.toFixed(2)}
                             </Text>
-                            {!position.stopLoss && (
-                              <Group gap={4}>
-                                <IconAlertTriangle size={12} color="red" />
-                                <Text size="xs" c="red">
-                                  no stop
+                            {position.stopLoss ? (
+                              <Text size="xs" c="green">
+                                Stop: ${position.stopLoss.toFixed(4)}
+                              </Text>
+                            ) : (
+                              <div>
+                                <Group gap={4} mt={2}>
+                                  <IconAlertTriangle size={12} color="red" />
+                                  <Text size="xs" c="red">
+                                    no stop
+                                  </Text>
+                                </Group>
+                                <Text size="xs" c="dimmed">
+                                  {position.riskType === "margin-based" && "margin risk"}
+                                  {position.riskType === "liquidation-based" && "to liquidation"}
+                                  {position.riskType === "full-loss" && "full loss"}
                                 </Text>
-                              </Group>
+                              </div>
                             )}
-                          </Group>
+                          </div>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm">
+                            ${position.marginUsed?.toFixed(2) || 'N/A'}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          {position.funding ? (
+                            <div>
+                              <Text size="xs" c="dimmed">
+                                All: ${position.funding.allTime.toFixed(4)}
+                              </Text>
+                              <Text size="xs" c={position.funding.sinceOpen >= 0 ? "green" : "red"}>
+                                Open: ${position.funding.sinceOpen.toFixed(4)}
+                              </Text>
+                            </div>
+                          ) : (
+                            <Text size="xs" c="dimmed">N/A</Text>
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              )}
+            </Card>
+
+            {/* Open Orders Table */}
+            <Card mb="md" p="md">
+              <Title order={3} mb="md">Open Orders</Title>
+              {!liveData.orders || liveData.orders.length === 0 ? (
+                <Text ta="center" c="dimmed">No open orders</Text>
+              ) : (
+                <Table>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Pair</Table.Th>
+                      <Table.Th>Side</Table.Th>
+                      <Table.Th>Type</Table.Th>
+                      <Table.Th>Amount</Table.Th>
+                      <Table.Th>Price</Table.Th>
+                      <Table.Th>Filled</Table.Th>
+                      <Table.Th>Status</Table.Th>
+                      <Table.Th>Actions</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {liveData.orders.map((order, index) => (
+                      <Table.Tr key={index}>
+                        <Table.Td>
+                          <Text size="sm" fw={500}>
+                            {order.symbol?.split('/')[0] || order.symbol}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge color={order.side === "buy" ? "green" : "red"} variant="light" size="sm">
+                            {order.side.toUpperCase()}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <div>
+                            <Badge 
+                              color={order.isStopOrder ? "orange" : "blue"} 
+                              variant={order.isStopOrder ? "filled" : "outline"} 
+                              size="sm"
+                            >
+                              {order.isStopOrder ? "STOP" : order.type?.toUpperCase()}
+                            </Badge>
+                            {order.reduceOnly && (
+                              <Badge color="gray" variant="outline" size="xs" mt={2}>
+                                Reduce Only
+                              </Badge>
+                            )}
+                          </div>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm">{order.amount.toFixed(4)}</Text>
+                          {order.filled > 0 && (
+                            <Text size="xs" c="dimmed">
+                              {order.remaining.toFixed(4)} left
+                            </Text>
+                          )}
+                        </Table.Td>
+                        <Table.Td>
+                          <div>
+                            <Text size="sm">${order.price.toFixed(4)}</Text>
+                            {order.triggerPrice && (
+                              <Text size="xs" c="orange">
+                                Trigger: ${order.triggerPrice.toFixed(4)}
+                              </Text>
+                            )}
+                            {order.triggerCondition && (
+                              <Text size="xs" c="dimmed">
+                                {order.triggerCondition}
+                              </Text>
+                            )}
+                          </div>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm">{order.filled.toFixed(4)}</Text>
+                          {order.amount > 0 && (
+                            <Text size="xs" c="dimmed">
+                              {((order.filled / order.amount) * 100).toFixed(1)}%
+                            </Text>
+                          )}
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge 
+                            color={
+                              order.status === "open" ? "green" : 
+                              order.status === "closed" ? "gray" : 
+                              order.status === "canceled" ? "red" : "blue"
+                            } 
+                            variant="light" 
+                            size="sm"
+                          >
+                            {order.status.toUpperCase()}
+                          </Badge>
+                          {order.timeInForce && (
+                            <Text size="xs" c="dimmed" mt={2}>
+                              {order.timeInForce}
+                            </Text>
+                          )}
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="xs" c="dimmed">
+                            {new Date(order.timestamp).toLocaleTimeString()}
+                          </Text>
                         </Table.Td>
                       </Table.Tr>
                     ))}

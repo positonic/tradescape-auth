@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "next build",
-    "check": "next lint && tsc --noEmit",
+    "check": "next lint && tsc --noEmit && jest --passWithNoTests",
     "db:generate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
@@ -16,8 +16,14 @@
     "postinstall": "prisma generate",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
+    "precommit": "lint-staged",
+    "prepare": "husky",
     "preview": "next build && next start",
     "start": "next start",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --watchAll=false",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -67,6 +73,7 @@
   "devDependencies": {
     "@types/eslint": "^8.56.10",
     "@types/ioredis": "^5.0.0",
+    "@types/jest": "^29.5.12",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -74,11 +81,16 @@
     "@typescript-eslint/parser": "^8.1.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "^15.0.1",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "jest-environment-node": "^29.7.0",
+    "lint-staged": "^16.1.2",
     "postcss": "^8.4.39",
     "prettier": "^3.3.2",
     "prettier-plugin-tailwindcss": "^0.6.5",
     "prisma": "^5.14.0",
     "tailwindcss": "^3.4.3",
+    "ts-jest": "^29.1.2",
     "typescript": "^5.5.3"
   },
   "ct3aMetadata": {

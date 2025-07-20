@@ -19,6 +19,15 @@ interface LivePosition {
   timestamp: number;
   stopLoss?: number;
   riskAmount: number;
+  riskType?: string;
+  leverage?: number;
+  marginUsed?: number;
+  positionValue?: number;
+  liquidationPrice?: number;
+  funding?: {
+    allTime: number;
+    sinceOpen: number;
+  };
 }
 
 interface LiveBalance {
@@ -29,9 +38,28 @@ interface LiveBalance {
   usdValue: number;
 }
 
+interface LiveOrder {
+  id: string;
+  symbol: string;
+  side: "buy" | "sell";
+  type: string;
+  amount: number;
+  price: number;
+  filled: number;
+  remaining: number;
+  status: string;
+  timestamp: number;
+  triggerPrice?: number;
+  triggerCondition?: string;
+  reduceOnly: boolean;
+  timeInForce?: string;
+  isStopOrder: boolean;
+}
+
 interface LiveData {
   positions: LivePosition[];
   balances: LiveBalance[];
+  orders: LiveOrder[];
   totalUsdValue: number;
   timestamp: number;
 }
@@ -319,6 +347,7 @@ export class HyperliquidWebSocketManager {
       const liveData: LiveData = {
         positions: this.transformPositions(positions, openOrders),
         balances: this.transformBalances(balances),
+        orders: this.transformOrders(openOrders),
         totalUsdValue: this.calculateTotalUsdValue(balances),
         timestamp: Date.now(),
       };
@@ -367,17 +396,40 @@ export class HyperliquidWebSocketManager {
       
       // Look for stop orders related to this position
       const positionSymbol = position.symbol || position.pair || position.coin;
+      const positionCoin = position.info?.position?.coin || positionSymbol?.split('/')[0];
       let stopLoss: number | undefined;
       
       if (openOrders && openOrders.length > 0) {
-        const stopOrder = openOrders.find(order => 
-          (order.symbol === positionSymbol || order.pair === positionSymbol || order.coin === positionSymbol) &&
-          (order.type?.toLowerCase().includes('stop') || order.orderType?.toLowerCase().includes('stop'))
-        );
+        const stopOrder = openOrders.find(order => {
+          // Match by symbol or coin
+          const orderCoin = order.info?.coin || order.symbol?.split('/')[0];
+          const symbolMatch = order.symbol === positionSymbol || orderCoin === positionCoin;
+          
+          // Check if it's a stop order and reduce-only (closing position)
+          const isStopOrder = order.info?.isTrigger === true || 
+                             order.info?.orderType?.toLowerCase().includes('stop') ||
+                             order.type?.toLowerCase().includes('stop') ||
+                             order.info?.triggerCondition !== "N/A";
+          
+          const isReduceOnly = order.reduceOnly === true || order.info?.reduceOnly === true;
+          
+          return symbolMatch && isStopOrder && isReduceOnly;
+        });
         
         if (stopOrder) {
-          stopLoss = parseFloat(stopOrder.price || stopOrder.stopPrice || stopOrder.triggerPrice || 0);
-          console.log(`🎯 Found stop order for ${positionSymbol}:`, stopOrder);
+          stopLoss = parseFloat(
+            stopOrder.triggerPrice || 
+            stopOrder.info?.triggerPx || 
+            stopOrder.stopPrice || 
+            stopOrder.price || 
+            0
+          );
+          console.log(`🎯 Found stop order for ${positionSymbol} (${positionCoin}):`, {
+            triggerPrice: stopOrder.triggerPrice,
+            triggerPx: stopOrder.info?.triggerPx,
+            triggerCondition: stopOrder.info?.triggerCondition,
+            reduceOnly: stopOrder.reduceOnly
+          });
         }
       }
       
@@ -393,17 +445,50 @@ export class HyperliquidWebSocketManager {
       
       // Calculate risk amount
       let riskAmount: number;
+      let riskType: string;
+      
       if (stopLoss && entryPrice && size) {
         // Calculate risk based on stop loss: (entry price - stop price) * quantity
         const priceDiff = Math.abs(entryPrice - stopLoss);
         riskAmount = priceDiff * size;
+        riskType = "stop-based";
         console.log(`💰 Risk with stop: ${priceDiff} * ${size} = ${riskAmount}`);
       } else {
-        // If no stop loss, calculate full loss: entry price * quantity
-        riskAmount = entryPrice * size;
-        console.log(`💰 Risk without stop: ${entryPrice} * ${size} = ${riskAmount}`);
+        // No stop loss - use best available risk calculation
+        const liquidationPrice = parseFloat(position.info?.position?.liquidationPx || 0) || undefined;
+        const marginUsed = parseFloat(position.collateral || position.initialMargin || position.info?.position?.marginUsed || 0);
+        
+        if (liquidationPrice && liquidationPrice > 0 && entryPrice && size) {
+          // Use liquidation-based risk (more realistic)
+          const priceDiff = Math.abs(entryPrice - liquidationPrice);
+          riskAmount = priceDiff * size;
+          riskType = "liquidation-based";
+          console.log(`💰 Risk without stop (liquidation): ${priceDiff} * ${size} = ${riskAmount}`);
+        } else if (marginUsed > 0) {
+          // Use margin-based risk (actual capital at risk)
+          riskAmount = marginUsed;
+          riskType = "margin-based";
+          console.log(`💰 Risk without stop (margin): ${marginUsed}`);
+        } else {
+          // Fallback to full loss scenario
+          riskAmount = entryPrice * size;
+          riskType = "full-loss";
+          console.log(`💰 Risk without stop (full loss): ${entryPrice} * ${size} = ${riskAmount}`);
+        }
       }
       
+      // Extract additional trading data
+      const leverage = parseFloat(position.leverage || position.info?.position?.leverage?.value || 0);
+      const marginUsed = parseFloat(position.collateral || position.initialMargin || position.info?.position?.marginUsed || 0);
+      const positionValue = parseFloat(position.notional || position.info?.position?.positionValue || 0);
+      const liquidationPrice = parseFloat(position.info?.position?.liquidationPx || 0) || undefined;
+      
+      // Extract funding data
+      const funding = position.info?.position?.cumFunding ? {
+        allTime: parseFloat(position.info.position.cumFunding.allTime || 0),
+        sinceOpen: parseFloat(position.info.position.cumFunding.sinceOpen || 0),
+      } : undefined;
+
       const result = {
         pair: positionSymbol || "UNKNOWN",
         side: position.side === "buy" || position.side === "long" || (position.side === "sell" && size < 0) ? "long" : "short",
@@ -415,10 +500,43 @@ export class HyperliquidWebSocketManager {
         timestamp: position.timestamp || Date.now(),
         stopLoss,
         riskAmount,
+        riskType,
+        leverage: leverage || undefined,
+        marginUsed: marginUsed || undefined,
+        positionValue: positionValue || undefined,
+        liquidationPrice,
+        funding,
       };
       
       console.log(`✅ Transformed position:`, result);
       return result;
+    });
+  }
+
+  private transformOrders(orders: any[]): LiveOrder[] {
+    return orders.map(order => {
+      const isStopOrder = order.info?.isTrigger === true || 
+                         order.info?.orderType?.toLowerCase().includes('stop') ||
+                         order.type?.toLowerCase().includes('stop') ||
+                         order.info?.triggerCondition !== "N/A";
+
+      return {
+        id: order.id || order.info?.oid || 'unknown',
+        symbol: order.symbol || 'UNKNOWN',
+        side: order.side as "buy" | "sell",
+        type: order.type || order.info?.orderType || 'unknown',
+        amount: parseFloat(order.amount || order.info?.sz || 0),
+        price: parseFloat(order.price || order.info?.limitPx || 0),
+        filled: parseFloat(order.filled || 0),
+        remaining: parseFloat(order.remaining || order.info?.sz || 0),
+        status: order.status || 'unknown',
+        timestamp: order.timestamp || Date.now(),
+        triggerPrice: order.triggerPrice || parseFloat(order.info?.triggerPx || 0) || undefined,
+        triggerCondition: order.info?.triggerCondition !== "N/A" ? order.info?.triggerCondition : undefined,
+        reduceOnly: order.reduceOnly === true || order.info?.reduceOnly === true,
+        timeInForce: order.timeInForce || order.info?.tif || undefined,
+        isStopOrder,
+      };
     });
   }
 
