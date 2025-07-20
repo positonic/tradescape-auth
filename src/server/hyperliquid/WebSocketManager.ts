@@ -89,7 +89,10 @@ export class HyperliquidWebSocketManager {
     return HyperliquidWebSocketManager.instance;
   }
 
-  async subscribeUser(userId: string, credentials: HyperliquidCredentials): Promise<void> {
+  async subscribeUser(
+    userId: string,
+    credentials: HyperliquidCredentials,
+  ): Promise<void> {
     try {
       // Clean up existing connection if any
       if (this.userConnections.has(userId)) {
@@ -116,7 +119,6 @@ export class HyperliquidWebSocketManager {
 
       // Get initial data via REST API
       await this.fetchInitialData(userId);
-
     } catch (error) {
       console.error(`Failed to subscribe user ${userId}:`, error);
       this.userConnections.delete(userId);
@@ -212,7 +214,10 @@ export class HyperliquidWebSocketManager {
           const message = JSON.parse(data.toString());
           this.handleWebSocketMessage(userId, message);
         } catch (error) {
-          console.error(`Failed to parse WebSocket message for user ${userId}:`, error);
+          console.error(
+            `Failed to parse WebSocket message for user ${userId}:`,
+            error,
+          );
         }
       });
 
@@ -226,9 +231,11 @@ export class HyperliquidWebSocketManager {
         console.error(`WebSocket error for user ${userId}:`, error);
         connection.isConnected = false;
       });
-
     } catch (error) {
-      console.error(`Failed to create WebSocket connection for user ${userId}:`, error);
+      console.error(
+        `Failed to create WebSocket connection for user ${userId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -269,7 +276,10 @@ export class HyperliquidWebSocketManager {
 
       console.log(`Subscribed to channels for user ${userId}`);
     } catch (error) {
-      console.error(`Failed to subscribe to channels for user ${userId}:`, error);
+      console.error(
+        `Failed to subscribe to channels for user ${userId}:`,
+        error,
+      );
     }
   }
 
@@ -296,7 +306,10 @@ export class HyperliquidWebSocketManager {
       // Trigger data refresh after receiving updates
       this.debouncedDataRefresh(userId);
     } catch (error) {
-      console.error(`Failed to handle WebSocket message for user ${userId}:`, error);
+      console.error(
+        `Failed to handle WebSocket message for user ${userId}:`,
+        error,
+      );
     }
   }
 
@@ -322,7 +335,7 @@ export class HyperliquidWebSocketManager {
     try {
       // Use CCXT exchange directly for data fetching
       const exchange = connection.exchange;
-      
+
       // Fetch positions and balances
       const [positions, balances] = await Promise.all([
         exchange.fetchPositions ? exchange.fetchPositions() : [],
@@ -330,17 +343,26 @@ export class HyperliquidWebSocketManager {
       ]);
 
       // Debug: Log raw position data
-      console.log(`🔍 Raw positions data for user ${userId}:`, JSON.stringify(positions, null, 2));
-      
+      console.log(
+        `🔍 Raw positions data for user ${userId}:`,
+        JSON.stringify(positions, null, 2),
+      );
+
       // Also fetch open orders to check for stop orders
       let openOrders: any[] = [];
       try {
         if (exchange.fetchOpenOrders) {
           openOrders = await exchange.fetchOpenOrders();
-          console.log(`🔍 Raw open orders for user ${userId}:`, JSON.stringify(openOrders, null, 2));
+          console.log(
+            `🔍 Raw open orders for user ${userId}:`,
+            JSON.stringify(openOrders, null, 2),
+          );
         }
       } catch (orderError) {
-        console.warn(`Failed to fetch open orders for user ${userId}:`, orderError);
+        console.warn(
+          `Failed to fetch open orders for user ${userId}:`,
+          orderError,
+        );
       }
 
       // Transform data to our format
@@ -353,117 +375,133 @@ export class HyperliquidWebSocketManager {
       };
 
       connection.lastData = liveData;
-      
+
       // Emit to client if this is an update
       this.emitLiveDataUpdate(userId, liveData);
-
     } catch (error) {
       console.error(`Failed to fetch initial data for user ${userId}:`, error);
     }
   }
 
-  private transformPositions(positions: any[], openOrders: any[] = []): LivePosition[] {
-    return positions.map(position => {
+  private transformPositions(
+    positions: any[],
+    openOrders: any[] = [],
+  ): LivePosition[] {
+    return positions.map((position) => {
       // Debug: Log each position
       console.log(`🔍 Processing position:`, JSON.stringify(position, null, 2));
-      
+
       // Try different fields for size - Hyperliquid might use different field names
       const size = Math.abs(
-        parseFloat(position.size) || 
-        parseFloat(position.amount) || 
-        parseFloat(position.contracts) ||
-        parseFloat(position.szi) || // Hyperliquid specific field
-        0
+        parseFloat(position.size) ||
+          parseFloat(position.amount) ||
+          parseFloat(position.contracts) ||
+          parseFloat(position.szi) || // Hyperliquid specific field
+          0,
       );
-      
+
       const entryPrice = parseFloat(
-        position.entryPrice || 
-        position.price || 
-        position.avgPrice ||
-        position.averagePrice ||
-        0
+        position.entryPrice ||
+          position.price ||
+          position.avgPrice ||
+          position.averagePrice ||
+          0,
       );
-      
+
       const markPrice = parseFloat(
-        position.markPrice || 
-        position.price || 
-        position.lastPrice ||
-        0
+        position.markPrice || position.price || position.lastPrice || 0,
       );
-      
+
       const pnl = parseFloat(position.unrealizedPnl || position.pnl || 0);
-      const percentage = parseFloat(position.percentage || position.percent || 0);
-      
+      const percentage = parseFloat(
+        position.percentage || position.percent || 0,
+      );
+
       // Look for stop orders related to this position
       const positionSymbol = position.symbol || position.pair || position.coin;
-      const positionCoin = position.info?.position?.coin || positionSymbol?.split('/')[0];
+      const positionCoin =
+        position.info?.position?.coin || positionSymbol?.split("/")[0];
       let stopLoss: number | undefined;
-      
+
       if (openOrders && openOrders.length > 0) {
-        const stopOrder = openOrders.find(order => {
+        const stopOrder = openOrders.find((order) => {
           // Match by symbol or coin
-          const orderCoin = order.info?.coin || order.symbol?.split('/')[0];
-          const symbolMatch = order.symbol === positionSymbol || orderCoin === positionCoin;
-          
+          const orderCoin = order.info?.coin || order.symbol?.split("/")[0];
+          const symbolMatch =
+            order.symbol === positionSymbol || orderCoin === positionCoin;
+
           // Check if it's a stop order and reduce-only (closing position)
-          const isStopOrder = order.info?.isTrigger === true || 
-                             order.info?.orderType?.toLowerCase().includes('stop') ||
-                             order.type?.toLowerCase().includes('stop') ||
-                             order.info?.triggerCondition !== "N/A";
-          
-          const isReduceOnly = order.reduceOnly === true || order.info?.reduceOnly === true;
-          
+          const isStopOrder =
+            order.info?.isTrigger === true ||
+            order.info?.orderType?.toLowerCase().includes("stop") ||
+            order.type?.toLowerCase().includes("stop") ||
+            order.info?.triggerCondition !== "N/A";
+
+          const isReduceOnly =
+            order.reduceOnly === true || order.info?.reduceOnly === true;
+
           return symbolMatch && isStopOrder && isReduceOnly;
         });
-        
+
         if (stopOrder) {
           stopLoss = parseFloat(
-            stopOrder.triggerPrice || 
-            stopOrder.info?.triggerPx || 
-            stopOrder.stopPrice || 
-            stopOrder.price || 
-            0
+            stopOrder.triggerPrice ||
+              stopOrder.info?.triggerPx ||
+              stopOrder.stopPrice ||
+              stopOrder.price ||
+              0,
           );
-          console.log(`🎯 Found stop order for ${positionSymbol} (${positionCoin}):`, {
-            triggerPrice: stopOrder.triggerPrice,
-            triggerPx: stopOrder.info?.triggerPx,
-            triggerCondition: stopOrder.info?.triggerCondition,
-            reduceOnly: stopOrder.reduceOnly
-          });
+          console.log(
+            `🎯 Found stop order for ${positionSymbol} (${positionCoin}):`,
+            {
+              triggerPrice: stopOrder.triggerPrice,
+              triggerPx: stopOrder.info?.triggerPx,
+              triggerCondition: stopOrder.info?.triggerCondition,
+              reduceOnly: stopOrder.reduceOnly,
+            },
+          );
         }
       }
-      
+
       // Also check if position object itself has stop loss data
       if (!stopLoss) {
-        stopLoss = parseFloat(
-          position.stopLoss || 
-          position.stopPrice || 
-          position.sl ||
-          0
-        ) || undefined;
+        stopLoss =
+          parseFloat(
+            position.stopLoss || position.stopPrice || position.sl || 0,
+          ) || undefined;
       }
-      
+
       // Calculate risk amount
       let riskAmount: number;
       let riskType: string;
-      
+
       if (stopLoss && entryPrice && size) {
         // Calculate risk based on stop loss: (entry price - stop price) * quantity
         const priceDiff = Math.abs(entryPrice - stopLoss);
         riskAmount = priceDiff * size;
         riskType = "stop-based";
-        console.log(`💰 Risk with stop: ${priceDiff} * ${size} = ${riskAmount}`);
+        console.log(
+          `💰 Risk with stop: ${priceDiff} * ${size} = ${riskAmount}`,
+        );
       } else {
         // No stop loss - use best available risk calculation
-        const liquidationPrice = parseFloat(position.info?.position?.liquidationPx || 0) || undefined;
-        const marginUsed = parseFloat(position.collateral || position.initialMargin || position.info?.position?.marginUsed || 0);
-        
+        const liquidationPrice =
+          parseFloat(position.info?.position?.liquidationPx || 0) || undefined;
+        const marginUsed = parseFloat(
+          position.collateral ||
+            position.initialMargin ||
+            position.info?.position?.marginUsed ||
+            0,
+        );
+
         if (liquidationPrice && liquidationPrice > 0 && entryPrice && size) {
           // Use liquidation-based risk (more realistic)
           const priceDiff = Math.abs(entryPrice - liquidationPrice);
           riskAmount = priceDiff * size;
           riskType = "liquidation-based";
-          console.log(`💰 Risk without stop (liquidation): ${priceDiff} * ${size} = ${riskAmount}`);
+          console.log(
+            `💰 Risk without stop (liquidation): ${priceDiff} * ${size} = ${riskAmount}`,
+          );
         } else if (marginUsed > 0) {
           // Use margin-based risk (actual capital at risk)
           riskAmount = marginUsed;
@@ -473,25 +511,46 @@ export class HyperliquidWebSocketManager {
           // Fallback to full loss scenario
           riskAmount = entryPrice * size;
           riskType = "full-loss";
-          console.log(`💰 Risk without stop (full loss): ${entryPrice} * ${size} = ${riskAmount}`);
+          console.log(
+            `💰 Risk without stop (full loss): ${entryPrice} * ${size} = ${riskAmount}`,
+          );
         }
       }
-      
+
       // Extract additional trading data
-      const leverage = parseFloat(position.leverage || position.info?.position?.leverage?.value || 0);
-      const marginUsed = parseFloat(position.collateral || position.initialMargin || position.info?.position?.marginUsed || 0);
-      const positionValue = parseFloat(position.notional || position.info?.position?.positionValue || 0);
-      const liquidationPrice = parseFloat(position.info?.position?.liquidationPx || 0) || undefined;
-      
+      const leverage = parseFloat(
+        position.leverage || position.info?.position?.leverage?.value || 0,
+      );
+      const marginUsed = parseFloat(
+        position.collateral ||
+          position.initialMargin ||
+          position.info?.position?.marginUsed ||
+          0,
+      );
+      const positionValue = parseFloat(
+        position.notional || position.info?.position?.positionValue || 0,
+      );
+      const liquidationPrice =
+        parseFloat(position.info?.position?.liquidationPx || 0) || undefined;
+
       // Extract funding data
-      const funding = position.info?.position?.cumFunding ? {
-        allTime: parseFloat(position.info.position.cumFunding.allTime || 0),
-        sinceOpen: parseFloat(position.info.position.cumFunding.sinceOpen || 0),
-      } : undefined;
+      const funding = position.info?.position?.cumFunding
+        ? {
+            allTime: parseFloat(position.info.position.cumFunding.allTime || 0),
+            sinceOpen: parseFloat(
+              position.info.position.cumFunding.sinceOpen || 0,
+            ),
+          }
+        : undefined;
 
       const result = {
         pair: positionSymbol || "UNKNOWN",
-        side: position.side === "buy" || position.side === "long" || (position.side === "sell" && size < 0) ? "long" : "short",
+        side:
+          position.side === "buy" ||
+          position.side === "long" ||
+          (position.side === "sell" && size < 0)
+            ? "long"
+            : "short",
         size,
         entryPrice,
         markPrice,
@@ -507,33 +566,41 @@ export class HyperliquidWebSocketManager {
         liquidationPrice,
         funding,
       };
-      
+
       console.log(`✅ Transformed position:`, result);
       return result;
     });
   }
 
   private transformOrders(orders: any[]): LiveOrder[] {
-    return orders.map(order => {
-      const isStopOrder = order.info?.isTrigger === true || 
-                         order.info?.orderType?.toLowerCase().includes('stop') ||
-                         order.type?.toLowerCase().includes('stop') ||
-                         order.info?.triggerCondition !== "N/A";
+    return orders.map((order) => {
+      const isStopOrder =
+        order.info?.isTrigger === true ||
+        order.info?.orderType?.toLowerCase().includes("stop") ||
+        order.type?.toLowerCase().includes("stop") ||
+        order.info?.triggerCondition !== "N/A";
 
       return {
-        id: order.id || order.info?.oid || 'unknown',
-        symbol: order.symbol || 'UNKNOWN',
+        id: order.id || order.info?.oid || "unknown",
+        symbol: order.symbol || "UNKNOWN",
         side: order.side as "buy" | "sell",
-        type: order.type || order.info?.orderType || 'unknown',
+        type: order.type || order.info?.orderType || "unknown",
         amount: parseFloat(order.amount || order.info?.sz || 0),
         price: parseFloat(order.price || order.info?.limitPx || 0),
         filled: parseFloat(order.filled || 0),
         remaining: parseFloat(order.remaining || order.info?.sz || 0),
-        status: order.status || 'unknown',
+        status: order.status || "unknown",
         timestamp: order.timestamp || Date.now(),
-        triggerPrice: order.triggerPrice || parseFloat(order.info?.triggerPx || 0) || undefined,
-        triggerCondition: order.info?.triggerCondition !== "N/A" ? order.info?.triggerCondition : undefined,
-        reduceOnly: order.reduceOnly === true || order.info?.reduceOnly === true,
+        triggerPrice:
+          order.triggerPrice ||
+          parseFloat(order.info?.triggerPx || 0) ||
+          undefined,
+        triggerCondition:
+          order.info?.triggerCondition !== "N/A"
+            ? order.info?.triggerCondition
+            : undefined,
+        reduceOnly:
+          order.reduceOnly === true || order.info?.reduceOnly === true,
         timeInForce: order.timeInForce || order.info?.tif || undefined,
         isStopOrder,
       };
@@ -542,10 +609,11 @@ export class HyperliquidWebSocketManager {
 
   private transformBalances(balances: any): LiveBalance[] {
     const result: LiveBalance[] = [];
-    
+
     for (const [asset, balance] of Object.entries(balances)) {
-      if (asset === "info" || asset === "timestamp" || asset === "datetime") continue;
-      
+      if (asset === "info" || asset === "timestamp" || asset === "datetime")
+        continue;
+
       const bal = balance as any;
       if (bal.total > 0) {
         result.push({
@@ -557,14 +625,15 @@ export class HyperliquidWebSocketManager {
         });
       }
     }
-    
+
     return result;
   }
 
   private calculateTotalUsdValue(balances: any): number {
     let total = 0;
     for (const [asset, balance] of Object.entries(balances)) {
-      if (asset === "info" || asset === "timestamp" || asset === "datetime") continue;
+      if (asset === "info" || asset === "timestamp" || asset === "datetime")
+        continue;
       const bal = balance as any;
       total += bal.usdValue || 0;
     }
@@ -595,7 +664,7 @@ export class HyperliquidWebSocketManager {
       balances: data.balances.length,
       totalUsdValue: data.totalUsdValue,
     });
-    
+
     // Data is stored in connection.lastData and can be accessed via tRPC
     // Client will poll for updates using the getCurrentLiveData endpoint
   }
@@ -615,7 +684,7 @@ export class HyperliquidWebSocketManager {
   // Cleanup method to be called on server shutdown
   public async cleanup(): Promise<void> {
     const cleanupPromises = Array.from(this.userConnections.keys()).map(
-      userId => this.unsubscribeUser(userId)
+      (userId) => this.unsubscribeUser(userId),
     );
     await Promise.all(cleanupPromises);
   }

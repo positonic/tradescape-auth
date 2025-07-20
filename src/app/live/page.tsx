@@ -19,7 +19,13 @@ import {
   Table,
   Skeleton,
 } from "@mantine/core";
-import { IconRefresh, IconKey, IconWifi, IconWifiOff, IconAlertTriangle } from "@tabler/icons-react";
+import {
+  IconRefresh,
+  IconKey,
+  IconWifi,
+  IconWifiOff,
+  IconAlertTriangle,
+} from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useSocket } from "~/lib/useSocket";
 import { notifications } from "@mantine/notifications";
@@ -100,7 +106,7 @@ export default function LivePage() {
         message: "Live data stream connected successfully",
         color: "green",
       });
-      
+
       // Immediately fetch initial data
       setTimeout(async () => {
         try {
@@ -125,12 +131,9 @@ export default function LivePage() {
 
   const unsubscribeMutation = api.live.unsubscribeFromLiveData.useMutation();
 
-  const { refetch } = api.live.getCurrentLiveData.useQuery(
-    undefined,
-    {
-      enabled: false, // Only fetch manually
-    }
-  );
+  const { refetch } = api.live.getCurrentLiveData.useQuery(undefined, {
+    enabled: false, // Only fetch manually
+  });
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -175,7 +178,7 @@ export default function LivePage() {
         return;
       }
 
-      const hyperliquidKey = keys.find(k => k.exchange === 'hyperliquid');
+      const hyperliquidKey = keys.find((k) => k.exchange === "hyperliquid");
       if (!hyperliquidKey) {
         notifications.show({
           title: "Hyperliquid Wallet Address Required",
@@ -231,7 +234,7 @@ export default function LivePage() {
   // Poll for data every 5 seconds when connected
   useEffect(() => {
     if (!isConnected) return;
-    
+
     const interval = setInterval(async () => {
       try {
         const data = await refetch();
@@ -269,13 +272,15 @@ export default function LivePage() {
       <Paper p="md" radius="sm">
         <Flex justify="space-between" align="center" mb="lg">
           <Title order={2}>Live Trading Data</Title>
-          
+
           <Group gap="sm">
             {/* Connection Status */}
             <Badge
               color={isConnected ? "green" : "red"}
               variant="light"
-              leftSection={isConnected ? <IconWifi size={12} /> : <IconWifiOff size={12} />}
+              leftSection={
+                isConnected ? <IconWifi size={12} /> : <IconWifiOff size={12} />
+              }
             >
               {isConnected ? "Connected" : "Disconnected"}
             </Badge>
@@ -333,11 +338,18 @@ export default function LivePage() {
 
         {/* Key Manager Alert */}
         {showKeyManager && (
-          <Alert mb="md" color="blue" onClose={() => setShowKeyManager(false)} withCloseButton>
+          <Alert
+            mb="md"
+            color="blue"
+            onClose={() => setShowKeyManager(false)}
+            withCloseButton
+          >
             <Text size="sm">
-              Please configure your Hyperliquid wallet address in the key manager to enable live data streaming.
+              Please configure your Hyperliquid wallet address in the key
+              manager to enable live data streaming.
               <br />
-              <strong>Note:</strong> Hyperliquid only requires a wallet address, not API keys.
+              <strong>Note:</strong> Hyperliquid only requires a wallet address,
+              not API keys.
             </Text>
           </Alert>
         )}
@@ -346,96 +358,167 @@ export default function LivePage() {
         {!liveData ? (
           <Card p="xl">
             <Text ta="center" c="dimmed" size="lg">
-              {isConnected ? "Waiting for live data..." : "Connect to view live trading data"}
+              {isConnected
+                ? "Waiting for live data..."
+                : "Connect to view live trading data"}
             </Text>
           </Card>
         ) : (
           <>
             {/* Balance Overview */}
             <Card mb="md" p="md">
-              <Title order={3} mb="md">Account Overview</Title>
+              <Title order={3} mb="md">
+                Account Overview
+              </Title>
               <SimpleGrid cols={7} spacing="md">
                 <div>
-                  <Text size="sm" c="dimmed">Total USD Value</Text>
+                  <Text size="sm" c="dimmed">
+                    Total USD Value
+                  </Text>
                   <Text size="xl" fw={700}>
                     ${liveData.totalUsdValue.toLocaleString()}
                   </Text>
                 </div>
                 <div>
-                  <Text size="sm" c="dimmed">Open Positions</Text>
+                  <Text size="sm" c="dimmed">
+                    Open Positions
+                  </Text>
                   <Text size="lg" fw={600}>
                     {liveData.positions.length}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    ${liveData.positions.reduce((sum, p) => sum + (p.positionValue || 0), 0).toLocaleString()} total
+                    $
+                    {liveData.positions
+                      .reduce((sum, p) => sum + (p.positionValue || 0), 0)
+                      .toLocaleString()}{" "}
+                    total
                   </Text>
                 </div>
                 <div>
-                  <Text size="sm" c="dimmed">Open Orders</Text>
+                  <Text size="sm" c="dimmed">
+                    Open Orders
+                  </Text>
                   <Text size="lg" fw={600}>
                     {liveData.orders?.length || 0}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    {liveData.orders?.filter(o => o.isStopOrder).length || 0} stops, {liveData.orders?.filter(o => !o.isStopOrder).length || 0} limit
+                    {liveData.orders?.filter((o) => o.isStopOrder).length || 0}{" "}
+                    stops,{" "}
+                    {liveData.orders?.filter((o) => !o.isStopOrder).length || 0}{" "}
+                    limit
                   </Text>
                 </div>
                 <div>
-                  <Text size="sm" c="dimmed">Total Risk</Text>
-                  <Text size="lg" fw={600} c="red">
-                    ${liveData.positions.reduce((sum, p) => sum + p.riskAmount, 0).toLocaleString()}
+                  <Text size="sm" c="dimmed">
+                    Total Risk
                   </Text>
-                  {liveData.positions.some(p => !p.stopLoss) && (
+                  <Text size="lg" fw={600} c="red">
+                    $
+                    {liveData.positions
+                      .reduce((sum, p) => sum + p.riskAmount, 0)
+                      .toLocaleString()}
+                  </Text>
+                  {liveData.positions.some((p) => !p.stopLoss) && (
                     <Group gap={4} mt={2}>
                       <IconAlertTriangle size={12} color="orange" />
                       <Text size="xs" c="orange">
-                        {liveData.positions.filter(p => !p.stopLoss).length} without stops
+                        {liveData.positions.filter((p) => !p.stopLoss).length}{" "}
+                        without stops
                       </Text>
                     </Group>
                   )}
                 </div>
                 <div>
-                  <Text size="sm" c="dimmed">Total Margin Used</Text>
+                  <Text size="sm" c="dimmed">
+                    Total Margin Used
+                  </Text>
                   <Text size="lg" fw={600}>
-                    ${liveData.positions.reduce((sum, p) => sum + (p.marginUsed || 0), 0).toLocaleString()}
+                    $
+                    {liveData.positions
+                      .reduce((sum, p) => sum + (p.marginUsed || 0), 0)
+                      .toLocaleString()}
                   </Text>
                 </div>
                 <div>
-                  <Text size="sm" c="dimmed">Unrealized PnL</Text>
-                  <Text 
-                    size="lg" 
-                    fw={600} 
-                    c={liveData.positions.reduce((sum, p) => sum + p.unrealizedPnl, 0) >= 0 ? "green" : "red"}
-                  >
-                    ${liveData.positions.reduce((sum, p) => sum + p.unrealizedPnl, 0).toFixed(2)}
+                  <Text size="sm" c="dimmed">
+                    Unrealized PnL
                   </Text>
-                  <Text 
-                    size="xs" 
-                    c={liveData.positions.reduce((sum, p) => sum + p.unrealizedPnl, 0) >= 0 ? "green" : "red"}
-                  >
-                    {liveData.positions.length > 0 ? 
-                      (liveData.positions.reduce((sum, p) => sum + p.percentage, 0) / liveData.positions.length).toFixed(2) 
-                      : '0.00'}% avg
-                  </Text>
-                </div>
-                <div>
-                  <Text size="sm" c="dimmed">Total Funding</Text>
-                  <Text 
-                    size="lg" 
+                  <Text
+                    size="lg"
                     fw={600}
-                    c={liveData.positions.reduce((sum, p) => sum + (p.funding?.allTime || 0), 0) >= 0 ? "green" : "red"}
+                    c={
+                      liveData.positions.reduce(
+                        (sum, p) => sum + p.unrealizedPnl,
+                        0,
+                      ) >= 0
+                        ? "green"
+                        : "red"
+                    }
                   >
-                    ${liveData.positions.reduce((sum, p) => sum + (p.funding?.allTime || 0), 0).toFixed(2)}
+                    $
+                    {liveData.positions
+                      .reduce((sum, p) => sum + p.unrealizedPnl, 0)
+                      .toFixed(2)}
                   </Text>
-                  <Text size="xs" c="dimmed">all time</Text>
+                  <Text
+                    size="xs"
+                    c={
+                      liveData.positions.reduce(
+                        (sum, p) => sum + p.unrealizedPnl,
+                        0,
+                      ) >= 0
+                        ? "green"
+                        : "red"
+                    }
+                  >
+                    {liveData.positions.length > 0
+                      ? (
+                          liveData.positions.reduce(
+                            (sum, p) => sum + p.percentage,
+                            0,
+                          ) / liveData.positions.length
+                        ).toFixed(2)
+                      : "0.00"}
+                    % avg
+                  </Text>
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">
+                    Total Funding
+                  </Text>
+                  <Text
+                    size="lg"
+                    fw={600}
+                    c={
+                      liveData.positions.reduce(
+                        (sum, p) => sum + (p.funding?.allTime || 0),
+                        0,
+                      ) >= 0
+                        ? "green"
+                        : "red"
+                    }
+                  >
+                    $
+                    {liveData.positions
+                      .reduce((sum, p) => sum + (p.funding?.allTime || 0), 0)
+                      .toFixed(2)}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    all time
+                  </Text>
                 </div>
               </SimpleGrid>
             </Card>
 
             {/* Positions Table */}
             <Card mb="md" p="md">
-              <Title order={3} mb="md">Open Positions</Title>
+              <Title order={3} mb="md">
+                Open Positions
+              </Title>
               {liveData.positions.length === 0 ? (
-                <Text ta="center" c="dimmed">No open positions</Text>
+                <Text ta="center" c="dimmed">
+                  No open positions
+                </Text>
               ) : (
                 <Table>
                   <Table.Thead>
@@ -457,15 +540,20 @@ export default function LivePage() {
                         <Table.Td>
                           <div>
                             <Text size="sm" fw={500}>
-                              {position.pair?.split('/')[0] || position.pair}
+                              {position.pair?.split("/")[0] || position.pair}
                             </Text>
                             <Text size="xs" c="dimmed">
-                              {position.positionValue ? `$${position.positionValue.toFixed(2)}` : ''}
+                              {position.positionValue
+                                ? `$${position.positionValue.toFixed(2)}`
+                                : ""}
                             </Text>
                           </div>
                         </Table.Td>
                         <Table.Td>
-                          <Badge color={position.side === "long" ? "green" : "red"} variant="light">
+                          <Badge
+                            color={position.side === "long" ? "green" : "red"}
+                            variant="light"
+                          >
                             {position.side.toUpperCase()}
                           </Badge>
                         </Table.Td>
@@ -473,18 +561,29 @@ export default function LivePage() {
                           <Text size="sm">{position.size.toFixed(4)}</Text>
                         </Table.Td>
                         <Table.Td>
-                          <Text size="sm">${position.entryPrice.toFixed(4)}</Text>
+                          <Text size="sm">
+                            ${position.entryPrice.toFixed(4)}
+                          </Text>
                         </Table.Td>
                         <Table.Td>
                           <Badge variant="outline" size="sm">
-                            {position.leverage ? `${position.leverage}x` : 'N/A'}
+                            {position.leverage
+                              ? `${position.leverage}x`
+                              : "N/A"}
                           </Badge>
                         </Table.Td>
                         <Table.Td>
-                          <Text c={position.unrealizedPnl >= 0 ? "green" : "red"} size="sm" fw={500}>
+                          <Text
+                            c={position.unrealizedPnl >= 0 ? "green" : "red"}
+                            size="sm"
+                            fw={500}
+                          >
                             ${position.unrealizedPnl.toFixed(2)}
                           </Text>
-                          <Text c={position.percentage >= 0 ? "green" : "red"} size="xs">
+                          <Text
+                            c={position.percentage >= 0 ? "green" : "red"}
+                            size="xs"
+                          >
                             {position.percentage.toFixed(2)}%
                           </Text>
                         </Table.Td>
@@ -506,9 +605,12 @@ export default function LivePage() {
                                   </Text>
                                 </Group>
                                 <Text size="xs" c="dimmed">
-                                  {position.riskType === "margin-based" && "margin risk"}
-                                  {position.riskType === "liquidation-based" && "to liquidation"}
-                                  {position.riskType === "full-loss" && "full loss"}
+                                  {position.riskType === "margin-based" &&
+                                    "margin risk"}
+                                  {position.riskType === "liquidation-based" &&
+                                    "to liquidation"}
+                                  {position.riskType === "full-loss" &&
+                                    "full loss"}
                                 </Text>
                               </div>
                             )}
@@ -516,7 +618,7 @@ export default function LivePage() {
                         </Table.Td>
                         <Table.Td>
                           <Text size="sm">
-                            ${position.marginUsed?.toFixed(2) || 'N/A'}
+                            ${position.marginUsed?.toFixed(2) || "N/A"}
                           </Text>
                         </Table.Td>
                         <Table.Td>
@@ -525,12 +627,21 @@ export default function LivePage() {
                               <Text size="xs" c="dimmed">
                                 All: ${position.funding.allTime.toFixed(4)}
                               </Text>
-                              <Text size="xs" c={position.funding.sinceOpen >= 0 ? "green" : "red"}>
+                              <Text
+                                size="xs"
+                                c={
+                                  position.funding.sinceOpen >= 0
+                                    ? "green"
+                                    : "red"
+                                }
+                              >
                                 Open: ${position.funding.sinceOpen.toFixed(4)}
                               </Text>
                             </div>
                           ) : (
-                            <Text size="xs" c="dimmed">N/A</Text>
+                            <Text size="xs" c="dimmed">
+                              N/A
+                            </Text>
                           )}
                         </Table.Td>
                       </Table.Tr>
@@ -542,9 +653,13 @@ export default function LivePage() {
 
             {/* Open Orders Table */}
             <Card mb="md" p="md">
-              <Title order={3} mb="md">Open Orders</Title>
+              <Title order={3} mb="md">
+                Open Orders
+              </Title>
               {!liveData.orders || liveData.orders.length === 0 ? (
-                <Text ta="center" c="dimmed">No open orders</Text>
+                <Text ta="center" c="dimmed">
+                  No open orders
+                </Text>
               ) : (
                 <Table>
                   <Table.Thead>
@@ -564,25 +679,36 @@ export default function LivePage() {
                       <Table.Tr key={index}>
                         <Table.Td>
                           <Text size="sm" fw={500}>
-                            {order.symbol?.split('/')[0] || order.symbol}
+                            {order.symbol?.split("/")[0] || order.symbol}
                           </Text>
                         </Table.Td>
                         <Table.Td>
-                          <Badge color={order.side === "buy" ? "green" : "red"} variant="light" size="sm">
+                          <Badge
+                            color={order.side === "buy" ? "green" : "red"}
+                            variant="light"
+                            size="sm"
+                          >
                             {order.side.toUpperCase()}
                           </Badge>
                         </Table.Td>
                         <Table.Td>
                           <div>
-                            <Badge 
-                              color={order.isStopOrder ? "orange" : "blue"} 
-                              variant={order.isStopOrder ? "filled" : "outline"} 
+                            <Badge
+                              color={order.isStopOrder ? "orange" : "blue"}
+                              variant={order.isStopOrder ? "filled" : "outline"}
                               size="sm"
                             >
-                              {order.isStopOrder ? "STOP" : order.type?.toUpperCase()}
+                              {order.isStopOrder
+                                ? "STOP"
+                                : order.type?.toUpperCase()}
                             </Badge>
                             {order.reduceOnly && (
-                              <Badge color="gray" variant="outline" size="xs" mt={2}>
+                              <Badge
+                                color="gray"
+                                variant="outline"
+                                size="xs"
+                                mt={2}
+                              >
                                 Reduce Only
                               </Badge>
                             )}
@@ -615,18 +741,23 @@ export default function LivePage() {
                           <Text size="sm">{order.filled.toFixed(4)}</Text>
                           {order.amount > 0 && (
                             <Text size="xs" c="dimmed">
-                              {((order.filled / order.amount) * 100).toFixed(1)}%
+                              {((order.filled / order.amount) * 100).toFixed(1)}
+                              %
                             </Text>
                           )}
                         </Table.Td>
                         <Table.Td>
-                          <Badge 
+                          <Badge
                             color={
-                              order.status === "open" ? "green" : 
-                              order.status === "closed" ? "gray" : 
-                              order.status === "canceled" ? "red" : "blue"
-                            } 
-                            variant="light" 
+                              order.status === "open"
+                                ? "green"
+                                : order.status === "closed"
+                                  ? "gray"
+                                  : order.status === "canceled"
+                                    ? "red"
+                                    : "blue"
+                            }
+                            variant="light"
                             size="sm"
                           >
                             {order.status.toUpperCase()}
@@ -651,7 +782,9 @@ export default function LivePage() {
 
             {/* Balances Table */}
             <Card p="md">
-              <Title order={3} mb="md">Asset Balances</Title>
+              <Title order={3} mb="md">
+                Asset Balances
+              </Title>
               <Table>
                 <Table.Thead>
                   <Table.Tr>

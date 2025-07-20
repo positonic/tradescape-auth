@@ -1,19 +1,21 @@
-import { describe, expect, test, beforeEach } from '@jest/globals';
-import { EnhancedPositionAggregator } from '../EnhancedPositionAggregator';
-import type { Order } from '../../interfaces/Order';
+import { describe, expect, test, beforeEach } from "@jest/globals";
+import { EnhancedPositionAggregator } from "../EnhancedPositionAggregator";
+import type { Order } from "../../interfaces/Order";
 /* npx jest src/app/tradeSy
   nc/aggregation/__tests__
   /EnhancedPositionAggrega
   tor.test.ts*/
-describe('EnhancedPositionAggregator', () => {
+describe("EnhancedPositionAggregator", () => {
   let aggregator: EnhancedPositionAggregator;
 
   beforeEach(() => {
-    aggregator = EnhancedPositionAggregator.createForStrategy('positionByDirection');
+    aggregator = EnhancedPositionAggregator.createForStrategy(
+      "positionByDirection",
+    );
   });
 
-  describe('positionByDirection strategy', () => {
-    test('should correctly calculate position size for simple long position', () => {
+  describe("positionByDirection strategy", () => {
+    test("should correctly calculate position size for simple long position", () => {
       const orders: Order[] = [
         {
           id: 1,
@@ -68,7 +70,7 @@ describe('EnhancedPositionAggregator', () => {
           trades: [],
           fee: 0.262797,
           closedPnL: -15.630792,
-        }
+        },
       ];
 
       const positions = aggregator.aggregate(orders);
@@ -87,7 +89,7 @@ describe('EnhancedPositionAggregator', () => {
       expect(positions[0]?.quantity).not.toBeCloseTo(170.4, 1); // Should NOT be sum of all orders
     });
 
-    test('should handle DCA position correctly', () => {
+    test("should handle DCA position correctly", () => {
       const orders: Order[] = [
         {
           id: 1,
@@ -142,7 +144,7 @@ describe('EnhancedPositionAggregator', () => {
           trades: [],
           fee: 1.7842,
           closedPnL: -37.3499,
-        }
+        },
       ];
 
       const positions = aggregator.aggregate(orders);
@@ -159,7 +161,7 @@ describe('EnhancedPositionAggregator', () => {
       expect(positions[0]?.quantity).not.toBe(143.1 + 428.9 + 572); // Should NOT be sum
     });
 
-    test('should create separate positions for distinct trading cycles', () => {
+    test("should create separate positions for distinct trading cycles", () => {
       const orders: Order[] = [
         // Position 1: Simple round trip
         {
@@ -234,13 +236,13 @@ describe('EnhancedPositionAggregator', () => {
           trades: [],
           fee: 2.6,
           closedPnL: 200,
-        }
+        },
       ];
 
       const positions = aggregator.aggregate(orders);
 
       expect(positions).toHaveLength(2);
-      
+
       // First position
       expect(positions[0]).toMatchObject({
         pair: "TEST/USDC",
@@ -256,7 +258,7 @@ describe('EnhancedPositionAggregator', () => {
       });
     });
 
-    test('should handle orphaned close orders correctly', () => {
+    test("should handle orphaned close orders correctly", () => {
       const orders: Order[] = [
         // Orphaned close short order (should be ignored)
         {
@@ -313,7 +315,7 @@ describe('EnhancedPositionAggregator', () => {
           trades: [],
           fee: 0.193436,
           closedPnL: -6.437,
-        }
+        },
       ];
 
       const positions = aggregator.aggregate(orders);
@@ -327,7 +329,7 @@ describe('EnhancedPositionAggregator', () => {
       });
     });
 
-    test('should handle short positions correctly', () => {
+    test("should handle short positions correctly", () => {
       const orders: Order[] = [
         {
           id: 1,
@@ -364,7 +366,7 @@ describe('EnhancedPositionAggregator', () => {
           trades: [],
           fee: 0.99,
           closedPnL: 110.075,
-        }
+        },
       ];
 
       const positions = aggregator.aggregate(orders);
@@ -377,12 +379,12 @@ describe('EnhancedPositionAggregator', () => {
       });
     });
 
-    test('should handle empty orders array', () => {
+    test("should handle empty orders array", () => {
       const positions = aggregator.aggregate([]);
       expect(positions).toHaveLength(0);
     });
 
-    test('should handle single order (open position)', () => {
+    test("should handle single order (open position)", () => {
       const orders: Order[] = [
         {
           id: 1,
@@ -401,7 +403,7 @@ describe('EnhancedPositionAggregator', () => {
           trades: [],
           fee: 1,
           closedPnL: 0,
-        }
+        },
       ];
 
       const positions = aggregator.aggregate(orders);
@@ -415,10 +417,11 @@ describe('EnhancedPositionAggregator', () => {
     });
   });
 
-  describe('other strategies', () => {
-    test('conservative strategy should create fewer positions', () => {
-      const conservativeAggregator = EnhancedPositionAggregator.createForStrategy('conservative');
-      
+  describe("other strategies", () => {
+    test("conservative strategy should create fewer positions", () => {
+      const conservativeAggregator =
+        EnhancedPositionAggregator.createForStrategy("conservative");
+
       const orders: Order[] = [
         {
           id: 1,
@@ -437,18 +440,19 @@ describe('EnhancedPositionAggregator', () => {
           trades: [],
           fee: 1,
           closedPnL: 0,
-        }
+        },
       ];
 
       const positions = conservativeAggregator.aggregate(orders);
-      
+
       // Conservative strategy requires minimum 2 orders
       expect(positions).toHaveLength(0);
     });
 
-    test('aggressive strategy should create more positions', () => {
-      const aggressiveAggregator = EnhancedPositionAggregator.createForStrategy('aggressive');
-      
+    test("aggressive strategy should create more positions", () => {
+      const aggressiveAggregator =
+        EnhancedPositionAggregator.createForStrategy("aggressive");
+
       const orders: Order[] = [
         {
           id: 1,
@@ -467,11 +471,11 @@ describe('EnhancedPositionAggregator', () => {
           trades: [],
           fee: 1,
           closedPnL: 0,
-        }
+        },
       ];
 
       const positions = aggressiveAggregator.aggregate(orders);
-      
+
       // Aggressive strategy allows single orders
       expect(positions).toHaveLength(1);
     });
