@@ -19,7 +19,7 @@ import {
   Table,
   Skeleton,
 } from "@mantine/core";
-import { IconRefresh, IconKey, IconWifi, IconWifiOff } from "@tabler/icons-react";
+import { IconRefresh, IconKey, IconWifi, IconWifiOff, IconAlertTriangle } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useSocket } from "~/lib/useSocket";
 import { notifications } from "@mantine/notifications";
@@ -35,7 +35,7 @@ interface LivePosition {
   percentage: number;
   timestamp: number;
   stopLoss?: number;
-  riskAmount?: number;
+  riskAmount: number;
 }
 
 interface LiveBalance {
@@ -326,7 +326,7 @@ export default function LivePage() {
             {/* Balance Overview */}
             <Card mb="md" p="md">
               <Title order={3} mb="md">Account Balance</Title>
-              <SimpleGrid cols={4} spacing="md">
+              <SimpleGrid cols={5} spacing="md">
                 <div>
                   <Text size="sm" c="dimmed">Total USD Value</Text>
                   <Text size="xl" fw={700}>
@@ -351,6 +351,20 @@ export default function LivePage() {
                     {liveData.positions.length}
                   </Text>
                 </div>
+                <div>
+                  <Text size="sm" c="dimmed">Total Risk</Text>
+                  <Text size="lg" fw={600} c="red">
+                    ${liveData.positions.reduce((sum, p) => sum + p.riskAmount, 0).toLocaleString()}
+                  </Text>
+                  {liveData.positions.some(p => !p.stopLoss) && (
+                    <Group gap={4} mt={2}>
+                      <IconAlertTriangle size={12} color="orange" />
+                      <Text size="xs" c="orange">
+                        {liveData.positions.filter(p => !p.stopLoss).length} without stops
+                      </Text>
+                    </Group>
+                  )}
+                </div>
               </SimpleGrid>
             </Card>
 
@@ -370,6 +384,7 @@ export default function LivePage() {
                       <Table.Th>Mark Price</Table.Th>
                       <Table.Th>Unrealized PnL</Table.Th>
                       <Table.Th>%</Table.Th>
+                      <Table.Th>Risk</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -393,6 +408,21 @@ export default function LivePage() {
                           <Text c={position.percentage >= 0 ? "green" : "red"}>
                             {position.percentage.toFixed(2)}%
                           </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap={4}>
+                            <Text size="sm" c="red">
+                              ${position.riskAmount.toFixed(2)}
+                            </Text>
+                            {!position.stopLoss && (
+                              <Group gap={4}>
+                                <IconAlertTriangle size={12} color="red" />
+                                <Text size="xs" c="red">
+                                  no stop
+                                </Text>
+                              </Group>
+                            )}
+                          </Group>
                         </Table.Td>
                       </Table.Tr>
                     ))}

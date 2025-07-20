@@ -18,7 +18,7 @@ interface LivePosition {
   percentage: number;
   timestamp: number;
   stopLoss?: number;
-  riskAmount?: number;
+  riskAmount: number;
 }
 
 interface LiveBalance {
@@ -301,9 +301,23 @@ export class HyperliquidWebSocketManager {
         exchange.fetchBalance ? exchange.fetchBalance() : {},
       ]);
 
+      // Debug: Log raw position data
+      console.log(`🔍 Raw positions data for user ${userId}:`, JSON.stringify(positions, null, 2));
+      
+      // Also fetch open orders to check for stop orders
+      let openOrders: any[] = [];
+      try {
+        if (exchange.fetchOpenOrders) {
+          openOrders = await exchange.fetchOpenOrders();
+          console.log(`🔍 Raw open orders for user ${userId}:`, JSON.stringify(openOrders, null, 2));
+        }
+      } catch (orderError) {
+        console.warn(`Failed to fetch open orders for user ${userId}:`, orderError);
+      }
+
       // Transform data to our format
       const liveData: LiveData = {
-        positions: this.transformPositions(positions),
+        positions: this.transformPositions(positions, openOrders),
         balances: this.transformBalances(balances),
         totalUsdValue: this.calculateTotalUsdValue(balances),
         timestamp: Date.now(),
@@ -319,31 +333,92 @@ export class HyperliquidWebSocketManager {
     }
   }
 
-  private transformPositions(positions: any[]): LivePosition[] {
+  private transformPositions(positions: any[], openOrders: any[] = []): LivePosition[] {
     return positions.map(position => {
-      const size = Math.abs(position.size || position.amount || 0);
-      const entryPrice = position.entryPrice || position.price || 0;
-      const stopLoss = position.stopLoss || position.stopPrice || undefined;
+      // Debug: Log each position
+      console.log(`🔍 Processing position:`, JSON.stringify(position, null, 2));
       
-      // Calculate risk amount if stop loss is available
-      let riskAmount: number | undefined;
-      if (stopLoss && entryPrice && size) {
-        const priceDiff = Math.abs(entryPrice - stopLoss);
-        riskAmount = priceDiff * size;
+      // Try different fields for size - Hyperliquid might use different field names
+      const size = Math.abs(
+        parseFloat(position.size) || 
+        parseFloat(position.amount) || 
+        parseFloat(position.contracts) ||
+        parseFloat(position.szi) || // Hyperliquid specific field
+        0
+      );
+      
+      const entryPrice = parseFloat(
+        position.entryPrice || 
+        position.price || 
+        position.avgPrice ||
+        position.averagePrice ||
+        0
+      );
+      
+      const markPrice = parseFloat(
+        position.markPrice || 
+        position.price || 
+        position.lastPrice ||
+        0
+      );
+      
+      const pnl = parseFloat(position.unrealizedPnl || position.pnl || 0);
+      const percentage = parseFloat(position.percentage || position.percent || 0);
+      
+      // Look for stop orders related to this position
+      const positionSymbol = position.symbol || position.pair || position.coin;
+      let stopLoss: number | undefined;
+      
+      if (openOrders && openOrders.length > 0) {
+        const stopOrder = openOrders.find(order => 
+          (order.symbol === positionSymbol || order.pair === positionSymbol || order.coin === positionSymbol) &&
+          (order.type?.toLowerCase().includes('stop') || order.orderType?.toLowerCase().includes('stop'))
+        );
+        
+        if (stopOrder) {
+          stopLoss = parseFloat(stopOrder.price || stopOrder.stopPrice || stopOrder.triggerPrice || 0);
+          console.log(`🎯 Found stop order for ${positionSymbol}:`, stopOrder);
+        }
       }
       
-      return {
-        pair: position.symbol || position.pair || "UNKNOWN",
-        side: position.side === "buy" || position.side === "long" ? "long" : "short",
+      // Also check if position object itself has stop loss data
+      if (!stopLoss) {
+        stopLoss = parseFloat(
+          position.stopLoss || 
+          position.stopPrice || 
+          position.sl ||
+          0
+        ) || undefined;
+      }
+      
+      // Calculate risk amount
+      let riskAmount: number;
+      if (stopLoss && entryPrice && size) {
+        // Calculate risk based on stop loss: (entry price - stop price) * quantity
+        const priceDiff = Math.abs(entryPrice - stopLoss);
+        riskAmount = priceDiff * size;
+        console.log(`💰 Risk with stop: ${priceDiff} * ${size} = ${riskAmount}`);
+      } else {
+        // If no stop loss, calculate full loss: entry price * quantity
+        riskAmount = entryPrice * size;
+        console.log(`💰 Risk without stop: ${entryPrice} * ${size} = ${riskAmount}`);
+      }
+      
+      const result = {
+        pair: positionSymbol || "UNKNOWN",
+        side: position.side === "buy" || position.side === "long" || (position.side === "sell" && size < 0) ? "long" : "short",
         size,
         entryPrice,
-        markPrice: position.markPrice || position.price || 0,
-        unrealizedPnl: position.unrealizedPnl || 0,
-        percentage: position.percentage || 0,
+        markPrice,
+        unrealizedPnl: pnl,
+        percentage,
         timestamp: position.timestamp || Date.now(),
         stopLoss,
         riskAmount,
       };
+      
+      console.log(`✅ Transformed position:`, result);
+      return result;
     });
   }
 

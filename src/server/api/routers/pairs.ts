@@ -191,10 +191,31 @@ export const pairsRouter = createTRPCRouter({
           };
         }
 
+        // Convert database orders to Order interface
+        const mappedOrders = orders.map(dbOrder => ({
+          id: dbOrder.id,
+          ordertxid: dbOrder.ordertxid || `order-${dbOrder.id}`,
+          time: Number(dbOrder.time),
+          date: new Date(Number(dbOrder.time)),
+          type: dbOrder.type as 'buy' | 'sell',
+          direction: dbOrder.direction || undefined,
+          pair: dbOrder.pair,
+          amount: Number(dbOrder.amount),
+          highestPrice: Number(dbOrder.highestPrice),
+          lowestPrice: Number(dbOrder.lowestPrice),
+          averagePrice: Number(dbOrder.averagePrice),
+          totalCost: Number(dbOrder.totalCost),
+          exchange: dbOrder.exchange,
+          trades: [], // Empty for now as we don't need trade details for position creation
+          fee: Number(dbOrder.fee),
+          closedPnL: Number(dbOrder.closedPnL) || 0,
+          status: dbOrder.status || undefined,
+        }));
+
         if (dryRun) {
           // Just show what would be created
-          const positionAggregator = EnhancedPositionAggregator.createForStrategy('aggressive');
-          const positions = positionAggregator.aggregate(orders);
+          const positionAggregator = EnhancedPositionAggregator.createForStrategy('positionByDirection');
+          const positions = positionAggregator.aggregate(mappedOrders);
           
           return {
             success: true,
@@ -206,8 +227,8 @@ export const pairsRouter = createTRPCRouter({
         }
 
         // Create positions
-        const positionAggregator = EnhancedPositionAggregator.createForStrategy('aggressive');
-        const positions = positionAggregator.aggregate(orders);
+        const positionAggregator = EnhancedPositionAggregator.createForStrategy('positionByDirection');
+        const positions = positionAggregator.aggregate(mappedOrders);
         
         console.log(`📊 Generated ${positions.length} positions`);
 
@@ -303,7 +324,7 @@ export const pairsRouter = createTRPCRouter({
               // Generate and save positions from orders
               console.log(`🏗️  Creating positions from ${savedOrders.length} orders...`);
               try {
-                const positionAggregator = EnhancedPositionAggregator.createForStrategy('aggressive');
+                const positionAggregator = EnhancedPositionAggregator.createForStrategy('positionByDirection');
                 const positions = positionAggregator.aggregate(savedOrders);
                 
                 console.log(`📊 Generated ${positions.length} positions`);

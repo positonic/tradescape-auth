@@ -24,7 +24,7 @@ export const liveRouter = createTRPCRouter({
         const hyperliquidKeys = decryptedKeys[0]; // Get the first (and should be only) key
 
         // Hyperliquid only requires wallet address, not API key/secret
-        if (!hyperliquidKeys.walletAddress) {
+        if (!hyperliquidKeys?.walletAddress) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Missing required Hyperliquid wallet address",

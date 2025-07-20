@@ -149,6 +149,8 @@ export class EnhancedPositionAggregator {
       const lastOrder = orders[orders.length - 1];
       const secondLastOrder = orders[orders.length - 2];
       
+      if (!lastOrder || !secondLastOrder) return false;
+      
       // If we switch from net long to net short or vice versa, that's a boundary
       const wasNetLong = buyVolume - Number(lastOrder.amount) > sellVolume;
       const isNowNetShort = buyVolume < sellVolume;
@@ -324,22 +326,22 @@ export class EnhancedPositionAggregator {
       
       // Check for OPEN commands
       if (direction.includes('open long')) {
-        // If we have an existing long position, close it first
         if (currentLongPosition && currentLongPosition.length > 0) {
-          const position = this.createPositionFromDirectionOrders(currentLongPosition);
-          if (position) positions.push(position);
+          // If we already have an open long position, add to it instead of starting new one
+          currentLongPosition.push(order);
+        } else {
+          // Start new long position
+          currentLongPosition = [order];
         }
-        // Start new long position
-        currentLongPosition = [order];
         
       } else if (direction.includes('open short')) {
-        // If we have an existing short position, close it first
         if (currentShortPosition && currentShortPosition.length > 0) {
-          const position = this.createPositionFromDirectionOrders(currentShortPosition);
-          if (position) positions.push(position);
+          // If we already have an open short position, add to it instead of starting new one
+          currentShortPosition.push(order);
+        } else {
+          // Start new short position
+          currentShortPosition = [order];
         }
-        // Start new short position
-        currentShortPosition = [order];
         
       } else if (direction.includes('close long')) {
         // Add to current long position if one exists
@@ -402,6 +404,13 @@ export class EnhancedPositionAggregator {
     
     if (!firstOrder || !lastOrder) return null;
 
+    // Only log for UNI/USDC:USDC pair
+    const isTargetPair = firstOrder.pair === 'UNI/USDC:USDC';
+    
+    if (isTargetPair) {
+      console.log(`%c🏗️ CREATING POSITION from ${orders.length} orders for pair ${firstOrder.pair}`, 'background: navy; color: white; font-weight: bold; padding: 2px 8px;');
+    }
+
     // Analyze orders to get totals
     const buyOrders = orders.filter(o => o.type === 'buy');
     const sellOrders = orders.filter(o => o.type === 'sell');
@@ -410,6 +419,10 @@ export class EnhancedPositionAggregator {
     const totalSellVolume = sellOrders.reduce((sum, order) => sum + Number(order.amount), 0);
     const totalBuyCost = buyOrders.reduce((sum, order) => sum + Number(order.totalCost), 0);
     const totalSellCost = sellOrders.reduce((sum, order) => sum + Number(order.totalCost), 0);
+
+    if (isTargetPair) {
+      console.log(`%c📊 Order analysis: ${buyOrders.length} buys (${totalBuyVolume} units), ${sellOrders.length} sells (${totalSellVolume} units)`, 'background: teal; color: white; font-weight: bold; padding: 2px 8px;');
+    }
 
     const duration = Number(lastOrder.time) - Number(firstOrder.time);
     const profitLoss = totalSellCost - totalBuyCost;
@@ -427,6 +440,13 @@ export class EnhancedPositionAggregator {
       positionType = firstOrder.type === 'buy' ? 'long' : 'short';
     }
     
+    if (isTargetPair) {
+      console.log(`%c🎯 Position type determined: ${positionType} (based on first order direction: "${firstOrder.direction}")`, 'background: indigo; color: white; font-weight: bold; padding: 2px 8px;');
+    }
+    
+    // Calculate maximum position size by tracking position changes over time
+    const maxPositionSize = this.calculateMaxPositionSize(orders, positionType, isTargetPair);
+    
     // Calculate weighted average prices
     const avgBuyPrice = totalBuyVolume > 0 ? totalBuyCost / totalBuyVolume : 0;
     const avgSellPrice = totalSellVolume > 0 ? totalSellCost / totalSellVolume : 0;
@@ -434,7 +454,7 @@ export class EnhancedPositionAggregator {
     // Use the appropriate average price for the position
     const positionPrice = positionType === 'long' ? avgBuyPrice : avgSellPrice;
     
-    return {
+    const position = {
       time: firstOrder.time,
       date: new Date(Number(firstOrder.time)),
       price: positionPrice,
@@ -445,10 +465,77 @@ export class EnhancedPositionAggregator {
       exchange: firstOrder.exchange || '',
       orders: [...orders],
       pair: firstOrder.pair,
-      quantity: Math.max(totalBuyVolume, totalSellVolume),
+      quantity: maxPositionSize,
       duration,
       lastTime: lastOrder.time,
     };
+    
+    if (isTargetPair) {
+      console.log(`%c✅ POSITION CREATED: ${position.pair} ${position.type} position with quantity ${position.quantity}`, 'background: darkgreen; color: white; font-weight: bold; padding: 4px 12px; font-size: 16px;');
+    }
+    
+    return position;
+  }
+
+  private calculateMaxPositionSize(orders: Order[], positionType: 'long' | 'short', shouldLog: boolean = false): number {
+    let currentSize = 0;
+    let maxSize = 0;
+    
+    if (shouldLog) {
+      console.log(`%c🔥 POSITION SIZE DEBUG: Starting calculation for ${positionType} position with ${orders.length} orders`, 'background: red; color: white; font-weight: bold; padding: 2px 8px;');
+    }
+    
+    // Sort orders by time to track position changes chronologically
+    const sortedOrders = [...orders].sort((a, b) => Number(a.time) - Number(b.time));
+    
+    for (const order of sortedOrders) {
+      const direction = order.direction?.toLowerCase() || '';
+      const amount = Number(order.amount);
+      
+      if (shouldLog) {
+        console.log(`%c📋 Processing order: ${order.type} ${amount} units (${order.direction}) at ${new Date(Number(order.time)).toLocaleString()}`, 'background: orange; color: black; font-weight: bold; padding: 2px 8px;');
+      }
+      
+      if (positionType === 'long') {
+        // For long positions: buys increase size, sells decrease size
+        if (order.type === 'buy' || direction.includes('open long') || direction.includes('add long')) {
+          currentSize += amount;
+          if (shouldLog) {
+            console.log(`%c➕ ADDED ${amount} units → currentSize: ${currentSize}`, 'background: green; color: white; font-weight: bold; padding: 2px 8px;');
+          }
+        } else if (order.type === 'sell' || direction.includes('close long')) {
+          currentSize -= amount;
+          if (shouldLog) {
+            console.log(`%c➖ SUBTRACTED ${amount} units → currentSize: ${currentSize}`, 'background: red; color: white; font-weight: bold; padding: 2px 8px;');
+          }
+        }
+      } else {
+        // For short positions: sells increase size, buys decrease size
+        if (order.type === 'sell' || direction.includes('open short') || direction.includes('add short')) {
+          currentSize += amount;
+          if (shouldLog) {
+            console.log(`%c➕ ADDED ${amount} units → currentSize: ${currentSize}`, 'background: green; color: white; font-weight: bold; padding: 2px 8px;');
+          }
+        } else if (order.type === 'buy' || direction.includes('close short')) {
+          currentSize -= amount;
+          if (shouldLog) {
+            console.log(`%c➖ SUBTRACTED ${amount} units → currentSize: ${currentSize}`, 'background: red; color: white; font-weight: bold; padding: 2px 8px;');
+          }
+        }
+      }
+      
+      // Track the maximum size reached - only positive sizes
+      const positiveSize = Math.max(0, currentSize);
+      maxSize = Math.max(maxSize, positiveSize);
+      if (shouldLog) {
+        console.log(`%c📊 Tracking: currentSize=${currentSize} → positiveSize=${positiveSize} → maxSize=${maxSize}`, 'background: blue; color: white; font-weight: bold; padding: 2px 8px;');
+      }
+    }
+    
+    if (shouldLog) {
+      console.log(`%c🎯 FINAL RESULT: Position max size = ${maxSize}`, 'background: purple; color: white; font-weight: bold; padding: 4px 12px; font-size: 16px;');
+    }
+    return maxSize;
   }
 
   // Factory method for different aggregation strategies

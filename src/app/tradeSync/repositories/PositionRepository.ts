@@ -32,7 +32,8 @@ export class PositionRepository {
         const buyCostSafe = this.safeNumber(position.buyCost);
         const sellCostSafe = this.safeNumber(position.sellCost);
         const profitLossSafe = this.safeNumber(position.profitLoss);
-        const totalVolumeSafe = this.safeNumber(totalVolume);
+        // USE position.quantity (calculated max position size) instead of totalVolume (sum of all orders)
+        const positionSizeSafe = this.safeNumber(position.quantity);
         const durationSafe = this.safeNumber(position.duration);
         const timeSafe = this.safeBigInt(position.time);
 
@@ -45,10 +46,19 @@ export class PositionRepository {
             profitLoss: position.profitLoss,
             duration: position.duration,
             time: position.time,
+            amount: position.quantity,
             totalVolume,
             buyVolume,
             sellVolume
           });
+        }
+
+        // Special debug logging for UNI/USDC:USDC to track the fix
+        if (position.pair === 'UNI/USDC:USDC') {
+          console.log(`%c🔧 POSITION REPOSITORY FIX: ${position.pair}`, 'background: red; color: white; font-weight: bold; padding: 2px 8px;');
+          console.log(`%c❌ OLD (wrong) totalVolume: ${totalVolume} (sum of all orders)`, 'background: red; color: white; font-weight: bold; padding: 2px 8px;');
+          console.log(`%c✅ NEW (correct) position.quantity: ${position.quantity} (max position size)`, 'background: green; color: white; font-weight: bold; padding: 2px 8px;');
+          console.log(`%c💾 Saving amount as: ${positionSizeSafe}`, 'background: blue; color: white; font-weight: bold; padding: 2px 8px;');
         }
 
         // Determine position status
@@ -65,13 +75,13 @@ export class PositionRepository {
           averageExitPrice: new Prisma.Decimal(avgExitPrice || 0),
           totalCostBuy: new Prisma.Decimal(buyCostSafe),
           totalCostSell: new Prisma.Decimal(sellCostSafe),
-          amount: new Prisma.Decimal(totalVolumeSafe),
+          amount: new Prisma.Decimal(positionSizeSafe),
           profitLoss: new Prisma.Decimal(profitLossSafe),
           duration: this.formatDuration(durationSafe),
           time: timeSafe,
           userId,
         };
-
+        console.log("!!!!!!!!positionData is ", positionData);
         // Create the position
         const createdPosition = await this.prisma.position.create({
           data: positionData,

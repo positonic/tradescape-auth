@@ -4,7 +4,7 @@ export interface Order {
   id?: number; //Optional as the database will generate this
   ordertxid?: string;
   time: number; // The time the trade position was opened
-  date: Date;
+  date?: Date;
   type: 'buy' | 'sell';
   direction?: string | null; // From Hyperliquid: "Close Long", "Open Long", etc.
   pair: string;
