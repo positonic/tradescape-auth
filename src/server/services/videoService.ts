@@ -525,8 +525,17 @@ export async function summarizeTranscription(
 
 export async function getSetups(
   transcription: string, 
-  summaryType: string
+  summaryType: string,
+  availablePairs?: Array<{ id: number; symbol: string }>
 ): Promise<TranscriptionSetups> {
+    // Build the pairs context if provided
+    let pairsContext = '';
+    if (availablePairs && availablePairs.length > 0) {
+        pairsContext = `\n\nIMPORTANT: Use ONLY the following trading pairs that exist in our system. Match the exact symbol format:\n`;
+        pairsContext += availablePairs.map(p => `- ${p.symbol} (ID: ${p.id})`).join('\n');
+        pairsContext += `\n\nFor the coinSymbol field in your response, use the FULL pair symbol (e.g., "BTC/USDC:USDC" not just "BTC").`;
+    }
+
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -542,7 +551,7 @@ export async function getSetups(
                 },
                 {
                     role: "user",
-                    content: `${getPrompt(summaryType)}${transcription}`
+                    content: `${getPrompt(summaryType)}${transcription}${pairsContext}`
                 }
             ],
             temperature: 0.7,

@@ -18,10 +18,23 @@ export default async function SetupPage({ params }: {
   if (session?.user) {
     try {
       setup = await api.setups.getById.call({}, { id: slug });
+      // Log setup data for debugging
+      if (setup) {
+        console.log("🔍 [Setup Page] Setup data:", {
+          id: setup.id,
+          pairId: setup.pairId,
+          pairSymbol: setup.pair?.symbol,
+          createdAt: setup.createdAt,
+          tradesCount: setup.trades?.length || 0,
+          ordersCount: setup.orders?.length || 0,
+          positionsCount: setup.positions?.length || 0
+        });
+      }
     } catch (error) {
       console.error("Failed to fetch setup:", error);
     }
   }
+
 
   const getDirectionColor = (direction: string) => {
     switch (direction.toLowerCase()) {
@@ -331,10 +344,206 @@ export default async function SetupPage({ params }: {
                                 {trade.type.toUpperCase()}
                               </Badge>
                             </td>
-                            <td style={{ padding: '8px' }}>{parseFloat(trade.price).toFixed(8)}</td>
+                            <td style={{ padding: '8px' }}>{trade.price ? parseFloat(trade.price.toString()).toFixed(8) : 'N/A'}</td>
                             <td style={{ padding: '8px' }}>{trade.vol}</td>
-                            <td style={{ padding: '8px' }}>${parseFloat(trade.cost).toFixed(2)}</td>
-                            <td style={{ padding: '8px' }}>${parseFloat(trade.fee).toFixed(2)}</td>
+                            <td style={{ padding: '8px' }}>${trade.cost ? parseFloat(trade.cost.toString()).toFixed(2) : '0.00'}</td>
+                            <td style={{ padding: '8px' }}>${trade.fee ? parseFloat(trade.fee.toString()).toFixed(2) : '0.00'}</td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge size="sm" variant="outline">
+                                {trade.exchange}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </Card>
+              )}
+
+              {/* All Positions Since Session Section */}
+              {setup.allPositionsSinceSession && setup.allPositionsSinceSession.length > 0 && (
+                <Card shadow="sm" p="lg" radius="md" withBorder>
+                  <Title order={3} mb="md">All Positions Since Session ({setup.pair.symbol})</Title>
+                  <Text size="sm" c="dimmed" mb="md">
+                    All positions for this pair since the transcription session was created
+                  </Text>
+                  <ScrollArea>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Date</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Status</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Type</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Amount</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Entry</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Exit</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>P&L</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Duration</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Orders</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {setup.allPositionsSinceSession.map((position) => (
+                          <tr key={position.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                            <td style={{ padding: '8px' }}>
+                              {new Date(Number(position.time)).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge 
+                                size="sm" 
+                                variant="light" 
+                                color={position.status === 'open' ? 'blue' : position.status === 'closed' ? 'green' : 'gray'}
+                              >
+                                {position.status.toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge 
+                                size="sm" 
+                                variant="light" 
+                                color={position.direction === 'long' ? 'green' : 'red'}
+                                leftSection={position.direction === 'long' ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
+                              >
+                                {position.direction.toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>{position.amount}</td>
+                            <td style={{ padding: '8px' }}>{position.averageEntryPrice.toFixed(8)}</td>
+                            <td style={{ padding: '8px' }}>{position.averageExitPrice.toFixed(8)}</td>
+                            <td style={{ padding: '8px' }}>
+                              <span style={{ color: position.profitLoss >= 0 ? 'green' : 'red' }}>
+                                ${position.profitLoss.toFixed(2)}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px' }}>{position.duration}</td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge size="sm" variant="outline">
+                                {position.orderCount}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </Card>
+              )}
+
+              {/* All Orders Since Session Section */}
+              {setup.allOrdersSinceSession && setup.allOrdersSinceSession.length > 0 && (
+                <Card shadow="sm" p="lg" radius="md" withBorder>
+                  <Title order={3} mb="md">All Orders Since Session ({setup.pair.symbol})</Title>
+                  <Text size="sm" c="dimmed" mb="md">
+                    All orders for this pair since the transcription session was created
+                  </Text>
+                  <ScrollArea>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Date</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Type</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Amount</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Avg Price</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Total Cost</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Fees</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Trades</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Exchange</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {setup.allOrdersSinceSession.map((order) => (
+                          <tr key={order.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                            <td style={{ padding: '8px' }}>
+                              {new Date(Number(order.time)).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge 
+                                size="sm" 
+                                variant="light" 
+                                color={order.type === 'buy' ? 'green' : 'red'}
+                                leftSection={order.type === 'buy' ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
+                              >
+                                {order.type.toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>{order.amount}</td>
+                            <td style={{ padding: '8px' }}>{order.averagePrice.toFixed(8)}</td>
+                            <td style={{ padding: '8px' }}>${order.totalCost.toFixed(2)}</td>
+                            <td style={{ padding: '8px' }}>${order.fee.toFixed(2)}</td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge size="sm" variant="outline">
+                                {order.tradeCount}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge size="sm" variant="outline">
+                                {order.exchange}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </Card>
+              )}
+
+              {/* All Trades Since Session Section */}
+              {setup.allTradesSinceSession && setup.allTradesSinceSession.length > 0 && (
+                <Card shadow="sm" p="lg" radius="md" withBorder>
+                  <Title order={3} mb="md">All Trades Since Session ({setup.pair.symbol})</Title>
+                  <Text size="sm" c="dimmed" mb="md">
+                    All trades for this pair since the transcription session was created
+                  </Text>
+                  <ScrollArea>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Date</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Type</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Price</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Volume</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Cost</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Fee</th>
+                          <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #e9ecef' }}>Exchange</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {setup.allTradesSinceSession.map((trade) => (
+                          <tr key={trade.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                            <td style={{ padding: '8px' }}>
+                              {new Date(Number(trade.time)).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td style={{ padding: '8px' }}>
+                              <Badge 
+                                size="sm" 
+                                variant="light" 
+                                color={trade.type === 'buy' ? 'green' : 'red'}
+                                leftSection={trade.type === 'buy' ? <IconTrendingUp size={12} /> : <IconTrendingDown size={12} />}
+                              >
+                                {trade.type.toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td style={{ padding: '8px' }}>{trade.price ? parseFloat(trade.price.toString()).toFixed(8) : 'N/A'}</td>
+                            <td style={{ padding: '8px' }}>{trade.vol}</td>
+                            <td style={{ padding: '8px' }}>${trade.cost ? parseFloat(trade.cost.toString()).toFixed(2) : '0.00'}</td>
+                            <td style={{ padding: '8px' }}>${trade.fee ? parseFloat(trade.fee.toString()).toFixed(2) : '0.00'}</td>
                             <td style={{ padding: '8px' }}>
                               <Badge size="sm" variant="outline">
                                 {trade.exchange}

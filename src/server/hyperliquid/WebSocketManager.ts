@@ -281,7 +281,7 @@ export class HyperliquidWebSocketManager {
   }
 
   private handleUserFills(userId: string, data: any): void {
-    console.log(`User fills for ${userId}:`, data);
+    //console.log(`User fills for ${userId}:`, data);
     // Handle trade fills
   }
 
