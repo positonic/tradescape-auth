@@ -354,4 +354,102 @@ export const pairsRouter = createTRPCRouter({
         });
       }
     }),
+
+  deleteAllPositions: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      try {
+        const userId = ctx.session.user.id;
+        console.log('🗑️ Starting deletion of all positions for user:', userId);
+
+        // First, get count of positions to delete
+        const count = await ctx.db.position.count({
+          where: {
+            userId: userId
+          }
+        });
+        
+        console.log(`📊 Found ${count} positions to delete`);
+        
+        if (count === 0) {
+          return {
+            success: true,
+            message: 'No positions to delete',
+            deletedCount: 0
+          };
+        }
+
+        // Get all positions with their order IDs to unlink them
+        const positions = await ctx.db.position.findMany({
+          where: {
+            userId: userId
+          },
+          include: {
+            orders: {
+              select: {
+                id: true
+              }
+            }
+          }
+        });
+        
+        console.log(`🔗 Found ${positions.length} positions with ${positions.reduce((sum, p) => sum + p.orders.length, 0)} linked orders`);
+        
+        // First, unlink all orders from positions
+        if (positions.some(p => p.orders.length > 0)) {
+          console.log('🔗 Unlinking orders from positions...');
+          const unlinkResult = await ctx.db.order.updateMany({
+            where: {
+              positionId: {
+                in: positions.map(p => p.id)
+              }
+            },
+            data: {
+              positionId: null
+            }
+          });
+          
+          console.log(`✅ Unlinked ${unlinkResult.count} orders from positions`);
+        }
+        
+        // Then delete all positions
+        console.log('🗑️ Deleting all positions...');
+        const deleteResult = await ctx.db.position.deleteMany({
+          where: {
+            userId: userId
+          }
+        });
+        
+        console.log(`✅ Deleted ${deleteResult.count} positions`);
+        
+        // Verify cleanup
+        const remainingCount = await ctx.db.position.count({
+          where: {
+            userId: userId
+          }
+        });
+        
+        if (remainingCount === 0) {
+          console.log('✅ Position deletion completed successfully');
+          return {
+            success: true,
+            message: `Successfully deleted ${deleteResult.count} positions`,
+            deletedCount: deleteResult.count
+          };
+        } else {
+          console.warn(`⚠️ Warning: ${remainingCount} positions still remain`);
+          return {
+            success: false,
+            message: `Deletion incomplete: ${remainingCount} positions still remain`,
+            deletedCount: deleteResult.count
+          };
+        }
+        
+      } catch (error) {
+        console.error('❌ Error deleting positions:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to delete positions: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        });
+      }
+    }),
 });

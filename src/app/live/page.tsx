@@ -34,6 +34,8 @@ interface LivePosition {
   unrealizedPnl: number;
   percentage: number;
   timestamp: number;
+  stopLoss?: number;
+  riskAmount?: number;
 }
 
 interface LiveBalance {

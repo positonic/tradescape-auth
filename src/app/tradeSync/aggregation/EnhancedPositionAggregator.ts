@@ -5,6 +5,7 @@ interface AggregationConfig {
   volumeThresholdPercent: number;
   minOrdersForPosition: number;
   allowPartialPositions: boolean;
+  strategy?: string;
 }
 
 interface PositionState {
@@ -32,6 +33,11 @@ export class EnhancedPositionAggregator {
   }
 
   aggregate(orders: Order[]): Position[] {
+    // Use direction-based strategy if specified
+    if (this.config.strategy === 'positionByDirection') {
+      return this.aggregateByDirection(orders);
+    }
+    
     const positions: Position[] = [];
     
     // Group orders by pair first
@@ -289,8 +295,164 @@ export class EnhancedPositionAggregator {
     };
   }
 
+  // Direction-based position aggregation strategy
+  aggregateByDirection(orders: Order[]): Position[] {
+    const positions: Position[] = [];
+    
+    // Group orders by pair first
+    const ordersByPair = this.groupOrdersByPair(orders);
+    
+    for (const [pair, pairOrders] of Object.entries(ordersByPair)) {
+      const pairPositions = this.aggregatePositionsByDirection(pairOrders);
+      positions.push(...pairPositions);
+    }
+
+    return positions;
+  }
+
+  private aggregatePositionsByDirection(orders: Order[]): Position[] {
+    const positions: Position[] = [];
+    
+    // Sort orders by time (oldest first)
+    const sortedOrders = [...orders].sort((a, b) => Number(a.time) - Number(b.time));
+    
+    let currentLongPosition: Order[] | null = null;
+    let currentShortPosition: Order[] | null = null;
+    
+    for (const order of sortedOrders) {
+      const direction = order.direction?.toLowerCase() || '';
+      
+      // Check for OPEN commands
+      if (direction.includes('open long')) {
+        // If we have an existing long position, close it first
+        if (currentLongPosition && currentLongPosition.length > 0) {
+          const position = this.createPositionFromDirectionOrders(currentLongPosition);
+          if (position) positions.push(position);
+        }
+        // Start new long position
+        currentLongPosition = [order];
+        
+      } else if (direction.includes('open short')) {
+        // If we have an existing short position, close it first
+        if (currentShortPosition && currentShortPosition.length > 0) {
+          const position = this.createPositionFromDirectionOrders(currentShortPosition);
+          if (position) positions.push(position);
+        }
+        // Start new short position
+        currentShortPosition = [order];
+        
+      } else if (direction.includes('close long')) {
+        // Add to current long position if one exists
+        if (currentLongPosition) {
+          currentLongPosition.push(order);
+          // Check if position should be completed (could add logic here for partial closes)
+          const position = this.createPositionFromDirectionOrders(currentLongPosition);
+          if (position) positions.push(position);
+          currentLongPosition = null; // Position closed
+        }
+        // If no open long position, skip this close order
+        
+      } else if (direction.includes('close short')) {
+        // Add to current short position if one exists
+        if (currentShortPosition) {
+          currentShortPosition.push(order);
+          // Check if position should be completed
+          const position = this.createPositionFromDirectionOrders(currentShortPosition);
+          if (position) positions.push(position);
+          currentShortPosition = null; // Position closed
+        }
+        // If no open short position, skip this close order
+        
+      } else if (direction.includes('add long') && currentLongPosition) {
+        // Add to existing long position
+        currentLongPosition.push(order);
+        
+      } else if (direction.includes('add short') && currentShortPosition) {
+        // Add to existing short position
+        currentShortPosition.push(order);
+        
+      } else {
+        // Unknown direction or no current position - treat as standalone if allowed
+        if (this.config.allowPartialPositions) {
+          const position = this.createPositionFromDirectionOrders([order]);
+          if (position) positions.push(position);
+        }
+      }
+    }
+    
+    // Handle any remaining open positions
+    if (currentLongPosition && currentLongPosition.length > 0) {
+      const position = this.createPositionFromDirectionOrders(currentLongPosition);
+      if (position) positions.push(position);
+    }
+    
+    if (currentShortPosition && currentShortPosition.length > 0) {
+      const position = this.createPositionFromDirectionOrders(currentShortPosition);
+      if (position) positions.push(position);
+    }
+    
+    return positions;
+  }
+
+  private createPositionFromDirectionOrders(orders: Order[]): Position | null {
+    if (orders.length === 0) return null;
+    
+    const firstOrder = orders[0];
+    const lastOrder = orders[orders.length - 1];
+    
+    if (!firstOrder || !lastOrder) return null;
+
+    // Analyze orders to get totals
+    const buyOrders = orders.filter(o => o.type === 'buy');
+    const sellOrders = orders.filter(o => o.type === 'sell');
+    
+    const totalBuyVolume = buyOrders.reduce((sum, order) => sum + Number(order.amount), 0);
+    const totalSellVolume = sellOrders.reduce((sum, order) => sum + Number(order.amount), 0);
+    const totalBuyCost = buyOrders.reduce((sum, order) => sum + Number(order.totalCost), 0);
+    const totalSellCost = sellOrders.reduce((sum, order) => sum + Number(order.totalCost), 0);
+
+    const duration = Number(lastOrder.time) - Number(firstOrder.time);
+    const profitLoss = totalSellCost - totalBuyCost;
+    
+    // Determine position type from the first order's direction
+    const firstDirection = firstOrder.direction?.toLowerCase() || '';
+    let positionType: 'long' | 'short' = 'long';
+    
+    if (firstDirection.includes('open short') || firstDirection.includes('add short') || firstDirection.includes('close long')) {
+      positionType = 'short';
+    } else if (firstDirection.includes('open long') || firstDirection.includes('add long') || firstDirection.includes('close short')) {
+      positionType = 'long';
+    } else {
+      // Fallback to type-based detection
+      positionType = firstOrder.type === 'buy' ? 'long' : 'short';
+    }
+    
+    // Calculate weighted average prices
+    const avgBuyPrice = totalBuyVolume > 0 ? totalBuyCost / totalBuyVolume : 0;
+    const avgSellPrice = totalSellVolume > 0 ? totalSellCost / totalSellVolume : 0;
+    
+    // Use the appropriate average price for the position
+    const positionPrice = positionType === 'long' ? avgBuyPrice : avgSellPrice;
+    
+    return {
+      time: firstOrder.time,
+      date: new Date(Number(firstOrder.time)),
+      price: positionPrice,
+      type: positionType,
+      buyCost: totalBuyCost,
+      sellCost: totalSellCost,
+      profitLoss,
+      exchange: firstOrder.exchange || '',
+      orders: [...orders],
+      pair: firstOrder.pair,
+      quantity: Math.max(totalBuyVolume, totalSellVolume),
+      duration,
+      lastTime: lastOrder.time,
+    };
+  }
+
   // Factory method for different aggregation strategies
-  static createForStrategy(strategy: 'conservative' | 'aggressive' | 'dca'): EnhancedPositionAggregator {
+  static createForStrategy(strategy: 'conservative' | 'aggressive' | 'dca' | 'positionByDirection'): EnhancedPositionAggregator {
     switch (strategy) {
       case 'conservative':
         return new EnhancedPositionAggregator({
@@ -311,6 +473,14 @@ export class EnhancedPositionAggregator {
           volumeThresholdPercent: 15,
           minOrdersForPosition: 3,
           allowPartialPositions: true
+        });
+      
+      case 'positionByDirection':
+        return new EnhancedPositionAggregator({
+          volumeThresholdPercent: 0, // Not used for direction-based
+          minOrdersForPosition: 1,
+          allowPartialPositions: true,
+          strategy: 'positionByDirection'
         });
       
       default:

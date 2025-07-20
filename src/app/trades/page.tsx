@@ -30,6 +30,7 @@ import { useSyncTrades } from '~/hooks/useSyncTrades';
 import { KeyStorage, encryptForTransmission } from '~/lib/keyEncryption';
 import { CreatePositionsButton } from '~/app/setup/[slug]/_components/CreatePositionsButton';
 import { PositionValidationButton } from './_components/PositionValidationButton';
+import { DeletePositionsButton } from './_components/DeletePositionsButton';
 
 interface Trade {
   tradeId: string;
@@ -253,6 +254,7 @@ export default function TradesPage() {
                 🔄 Full Sync
               </Button>
               <CreatePositionsButton />
+              <DeletePositionsButton />
               <PositionValidationButton />
             </Group>
           )}
@@ -380,6 +382,7 @@ export default function TradesPage() {
                   <Table.Th>Time</Table.Th>
                   <Table.Th>Pair</Table.Th>
                   <Table.Th>Type</Table.Th>
+                  <Table.Th>Direction</Table.Th>
                   <Table.Th>Amount</Table.Th>
                   <Table.Th>Avg Price</Table.Th>
                   <Table.Th>Total Cost</Table.Th>
@@ -396,6 +399,15 @@ export default function TradesPage() {
                       <Badge color={order.type === 'buy' ? 'green' : 'red'}>
                         {order.type}
                       </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      {order.direction ? (
+                        <Badge color={order.direction === 'long' ? 'blue' : 'orange'} variant="light">
+                          {order.direction}
+                        </Badge>
+                      ) : (
+                        <Text c="dimmed" size="sm">-</Text>
+                      )}
                     </Table.Td>
                     <Table.Td>{order.amount.toString()}</Table.Td>
                     <Table.Td>{formatCurrency(order.averagePrice.toString())}</Table.Td>
@@ -417,7 +429,7 @@ export default function TradesPage() {
                 ))}
                 {!ordersData?.orders.length && (
                   <Table.Tr>
-                    <Table.Td colSpan={9}>
+                    <Table.Td colSpan={10}>
                       <Text ta="center" c="dimmed">
                         No orders found
                       </Text>
@@ -566,6 +578,7 @@ export default function TradesPage() {
                     <Table.Th>Time</Table.Th>
                     <Table.Th>Pair</Table.Th>
                     <Table.Th>Type</Table.Th>
+                    <Table.Th>Direction</Table.Th>
                     <Table.Th>Amount</Table.Th>
                     <Table.Th>Avg Price</Table.Th>
                     <Table.Th>Total Cost</Table.Th>
@@ -582,6 +595,15 @@ export default function TradesPage() {
                           {order.type}
                         </Badge>
                       </Table.Td>
+                      <Table.Td>
+                        {order.direction ? (
+                          <Badge color={order.direction === 'long' ? 'blue' : 'orange'} variant="light">
+                            {order.direction}
+                          </Badge>
+                        ) : (
+                          <Text c="dimmed" size="sm">-</Text>
+                        )}
+                      </Table.Td>
                       <Table.Td>{order.amount.toString()}</Table.Td>
                       <Table.Td>{formatCurrency(order.averagePrice.toString())}</Table.Td>
                       <Table.Td>{formatCurrency(order.totalCost.toString())}</Table.Td>
@@ -590,7 +612,7 @@ export default function TradesPage() {
                   ))}
                   {!positionOrdersData?.orders.length && (
                     <Table.Tr>
-                      <Table.Td colSpan={7}>
+                      <Table.Td colSpan={8}>
                         <Text ta="center" c="dimmed">
                           No orders found for this position
                         </Text>

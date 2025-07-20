@@ -17,6 +17,8 @@ interface LivePosition {
   unrealizedPnl: number;
   percentage: number;
   timestamp: number;
+  stopLoss?: number;
+  riskAmount?: number;
 }
 
 interface LiveBalance {
@@ -318,16 +320,31 @@ export class HyperliquidWebSocketManager {
   }
 
   private transformPositions(positions: any[]): LivePosition[] {
-    return positions.map(position => ({
-      pair: position.symbol || position.pair || "UNKNOWN",
-      side: position.side === "buy" || position.side === "long" ? "long" : "short",
-      size: Math.abs(position.size || position.amount || 0),
-      entryPrice: position.entryPrice || position.price || 0,
-      markPrice: position.markPrice || position.price || 0,
-      unrealizedPnl: position.unrealizedPnl || 0,
-      percentage: position.percentage || 0,
-      timestamp: position.timestamp || Date.now(),
-    }));
+    return positions.map(position => {
+      const size = Math.abs(position.size || position.amount || 0);
+      const entryPrice = position.entryPrice || position.price || 0;
+      const stopLoss = position.stopLoss || position.stopPrice || undefined;
+      
+      // Calculate risk amount if stop loss is available
+      let riskAmount: number | undefined;
+      if (stopLoss && entryPrice && size) {
+        const priceDiff = Math.abs(entryPrice - stopLoss);
+        riskAmount = priceDiff * size;
+      }
+      
+      return {
+        pair: position.symbol || position.pair || "UNKNOWN",
+        side: position.side === "buy" || position.side === "long" ? "long" : "short",
+        size,
+        entryPrice,
+        markPrice: position.markPrice || position.price || 0,
+        unrealizedPnl: position.unrealizedPnl || 0,
+        percentage: position.percentage || 0,
+        timestamp: position.timestamp || Date.now(),
+        stopLoss,
+        riskAmount,
+      };
+    });
   }
 
   private transformBalances(balances: any): LiveBalance[] {
