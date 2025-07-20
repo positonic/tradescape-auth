@@ -54,6 +54,7 @@ interface LiveOrder {
   reduceOnly: boolean;
   timeInForce?: string;
   isStopOrder: boolean;
+  isTakeProfitOrder: boolean;
 }
 
 interface LiveData {
@@ -353,9 +354,17 @@ export class HyperliquidWebSocketManager {
       try {
         if (exchange.fetchOpenOrders) {
           openOrders = await exchange.fetchOpenOrders();
+          // console.log(
+          //   `🔍 Raw open orders for user ${userId}:`,
+          //   JSON.stringify(openOrders, null, 2),
+          // );
           console.log(
-            `🔍 Raw open orders for user ${userId}:`,
-            JSON.stringify(openOrders, null, 2),
+            `🔍 Raw open orders for user for HYPE ${userId}:`,
+            JSON.stringify(
+              openOrders.filter((order) => order.symbol === "HYPE/USDC:USDC"),
+              null,
+              2,
+            ),
           );
         }
       } catch (orderError) {
@@ -432,10 +441,8 @@ export class HyperliquidWebSocketManager {
 
           // Check if it's a stop order and reduce-only (closing position)
           const isStopOrder =
-            order.info?.isTrigger === true ||
             order.info?.orderType?.toLowerCase().includes("stop") ||
-            order.type?.toLowerCase().includes("stop") ||
-            order.info?.triggerCondition !== "N/A";
+            order.type?.toLowerCase().includes("stop");
 
           const isReduceOnly =
             order.reduceOnly === true || order.info?.reduceOnly === true;
@@ -543,7 +550,7 @@ export class HyperliquidWebSocketManager {
           }
         : undefined;
 
-      const result = {
+      const result: LivePosition = {
         pair: positionSymbol || "UNKNOWN",
         side:
           position.side === "buy" ||
@@ -575,10 +582,14 @@ export class HyperliquidWebSocketManager {
   private transformOrders(orders: any[]): LiveOrder[] {
     return orders.map((order) => {
       const isStopOrder =
-        order.info?.isTrigger === true ||
         order.info?.orderType?.toLowerCase().includes("stop") ||
-        order.type?.toLowerCase().includes("stop") ||
-        order.info?.triggerCondition !== "N/A";
+        order.type?.toLowerCase().includes("stop");
+
+      const isTakeProfitOrder =
+        order.info?.orderType === "Take Profit Market" ||
+        order.info?.orderType?.toLowerCase().includes("take profit") ||
+        order.type?.toLowerCase().includes("take profit") ||
+        order.info?.orderType?.toLowerCase().includes("tp");
 
       return {
         id: order.id || order.info?.oid || "unknown",
@@ -603,6 +614,7 @@ export class HyperliquidWebSocketManager {
           order.reduceOnly === true || order.info?.reduceOnly === true,
         timeInForce: order.timeInForce || order.info?.tif || undefined,
         isStopOrder,
+        isTakeProfitOrder,
       };
     });
   }

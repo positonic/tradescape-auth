@@ -18,6 +18,8 @@ import {
   SimpleGrid,
   Table,
   Skeleton,
+  Collapse,
+  Stack,
 } from "@mantine/core";
 import {
   IconRefresh,
@@ -25,6 +27,7 @@ import {
   IconWifi,
   IconWifiOff,
   IconAlertTriangle,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useSocket } from "~/lib/useSocket";
@@ -77,6 +80,7 @@ interface LiveOrder {
   reduceOnly: boolean;
   timeInForce?: string;
   isStopOrder: boolean;
+  isTakeProfitOrder: boolean;
 }
 
 interface LiveData {
@@ -96,6 +100,7 @@ export default function LivePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [showKeyManager, setShowKeyManager] = useState(false);
+  const [expandedPosition, setExpandedPosition] = useState<string | null>(null);
 
   // tRPC mutations
   const subscribeMutation = api.live.subscribeToLiveData.useMutation({
@@ -222,6 +227,24 @@ export default function LivePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Helper function to get orders for a specific position
+  const getOrdersForPosition = (positionPair: string): LiveOrder[] => {
+    if (!liveData?.orders) return [];
+
+    const positionCoin = positionPair?.split("/")[0] || positionPair;
+    return liveData.orders.filter((order) => {
+      const orderCoin = order.symbol?.split("/")[0] || order.symbol;
+      return orderCoin === positionCoin;
+    });
+  };
+
+  // Handle position row click to toggle expansion
+  const togglePositionExpansion = (positionPair: string) => {
+    setExpandedPosition((prev) =>
+      prev === positionPair ? null : positionPair,
+    );
   };
 
   // Auto-connect on mount and start polling
@@ -404,7 +427,12 @@ export default function LivePage() {
                   <Text size="xs" c="dimmed">
                     {liveData.orders?.filter((o) => o.isStopOrder).length || 0}{" "}
                     stops,{" "}
-                    {liveData.orders?.filter((o) => !o.isStopOrder).length || 0}{" "}
+                    {liveData.orders?.filter((o) => o.isTakeProfitOrder)
+                      .length || 0}{" "}
+                    take profits,{" "}
+                    {liveData.orders?.filter(
+                      (o) => !o.isStopOrder && !o.isTakeProfitOrder,
+                    ).length || 0}{" "}
                     limit
                   </Text>
                 </div>
@@ -532,120 +560,340 @@ export default function LivePage() {
                       <Table.Th>Risk</Table.Th>
                       <Table.Th>Margin Used</Table.Th>
                       <Table.Th>Funding</Table.Th>
+                      <Table.Th>Orders</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {liveData.positions.map((position, index) => (
-                      <Table.Tr key={index}>
-                        <Table.Td>
-                          <div>
-                            <Text size="sm" fw={500}>
-                              {position.pair?.split("/")[0] || position.pair}
-                            </Text>
-                            <Text size="xs" c="dimmed">
-                              {position.positionValue
-                                ? `$${position.positionValue.toFixed(2)}`
-                                : ""}
-                            </Text>
-                          </div>
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge
-                            color={position.side === "long" ? "green" : "red"}
-                            variant="light"
+                    {liveData.positions.map((position, index) => {
+                      const positionOrders = getOrdersForPosition(
+                        position.pair,
+                      );
+                      const isExpanded = expandedPosition === position.pair;
+
+                      return (
+                        <>
+                          <Table.Tr
+                            key={index}
+                            style={{
+                              cursor: "pointer",
+                              backgroundColor: isExpanded
+                                ? "var(--mantine-color-gray-0)"
+                                : undefined,
+                            }}
+                            onClick={() =>
+                              togglePositionExpansion(position.pair)
+                            }
                           >
-                            {position.side.toUpperCase()}
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td>
-                          <Text size="sm">{position.size.toFixed(4)}</Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Text size="sm">
-                            ${position.entryPrice.toFixed(4)}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge variant="outline" size="sm">
-                            {position.leverage
-                              ? `${position.leverage}x`
-                              : "N/A"}
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td>
-                          <Text
-                            c={position.unrealizedPnl >= 0 ? "green" : "red"}
-                            size="sm"
-                            fw={500}
-                          >
-                            ${position.unrealizedPnl.toFixed(2)}
-                          </Text>
-                          <Text
-                            c={position.percentage >= 0 ? "green" : "red"}
-                            size="xs"
-                          >
-                            {position.percentage.toFixed(2)}%
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <div>
-                            <Text size="sm" c="red" fw={500}>
-                              ${position.riskAmount.toFixed(2)}
-                            </Text>
-                            {position.stopLoss ? (
-                              <Text size="xs" c="green">
-                                Stop: ${position.stopLoss.toFixed(4)}
-                              </Text>
-                            ) : (
+                            <Table.Td>
                               <div>
-                                <Group gap={4} mt={2}>
-                                  <IconAlertTriangle size={12} color="red" />
-                                  <Text size="xs" c="red">
-                                    no stop
-                                  </Text>
-                                </Group>
+                                <Text size="sm" fw={500}>
+                                  {position.pair?.split("/")[0] ||
+                                    position.pair}
+                                </Text>
                                 <Text size="xs" c="dimmed">
-                                  {position.riskType === "margin-based" &&
-                                    "margin risk"}
-                                  {position.riskType === "liquidation-based" &&
-                                    "to liquidation"}
-                                  {position.riskType === "full-loss" &&
-                                    "full loss"}
+                                  {position.positionValue
+                                    ? `$${position.positionValue.toFixed(2)}`
+                                    : ""}
                                 </Text>
                               </div>
-                            )}
-                          </div>
-                        </Table.Td>
-                        <Table.Td>
-                          <Text size="sm">
-                            ${position.marginUsed?.toFixed(2) || "N/A"}
-                          </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          {position.funding ? (
-                            <div>
-                              <Text size="xs" c="dimmed">
-                                All: ${position.funding.allTime.toFixed(4)}
+                            </Table.Td>
+                            <Table.Td>
+                              <Badge
+                                color={
+                                  position.side === "long" ? "green" : "red"
+                                }
+                                variant="light"
+                              >
+                                {position.side.toUpperCase()}
+                              </Badge>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{position.size.toFixed(4)}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">
+                                ${position.entryPrice.toFixed(4)}
+                              </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Badge variant="outline" size="sm">
+                                {position.leverage
+                                  ? `${position.leverage}x`
+                                  : "N/A"}
+                              </Badge>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text
+                                c={
+                                  position.unrealizedPnl >= 0 ? "green" : "red"
+                                }
+                                size="sm"
+                                fw={500}
+                              >
+                                ${position.unrealizedPnl.toFixed(2)}
                               </Text>
                               <Text
+                                c={position.percentage >= 0 ? "green" : "red"}
                                 size="xs"
-                                c={
-                                  position.funding.sinceOpen >= 0
-                                    ? "green"
-                                    : "red"
-                                }
                               >
-                                Open: ${position.funding.sinceOpen.toFixed(4)}
+                                {position.percentage.toFixed(2)}%
                               </Text>
-                            </div>
-                          ) : (
-                            <Text size="xs" c="dimmed">
-                              N/A
-                            </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <div>
+                                <Text size="sm" c="red" fw={500}>
+                                  ${position.riskAmount.toFixed(2)}
+                                </Text>
+                                {position.stopLoss ? (
+                                  <Text size="xs" c="green">
+                                    Stop: ${position.stopLoss.toFixed(4)}
+                                  </Text>
+                                ) : (
+                                  <div>
+                                    <Group gap={4} mt={2}>
+                                      <IconAlertTriangle
+                                        size={12}
+                                        color="red"
+                                      />
+                                      <Text size="xs" c="red">
+                                        no stop
+                                      </Text>
+                                    </Group>
+                                    <Text size="xs" c="dimmed">
+                                      {position.riskType === "margin-based" &&
+                                        "margin risk"}
+                                      {position.riskType ===
+                                        "liquidation-based" && "to liquidation"}
+                                      {position.riskType === "full-loss" &&
+                                        "full loss"}
+                                    </Text>
+                                  </div>
+                                )}
+                              </div>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">
+                                ${position.marginUsed?.toFixed(2) || "N/A"}
+                              </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              {position.funding ? (
+                                <div>
+                                  <Text size="xs" c="dimmed">
+                                    All: ${position.funding.allTime.toFixed(4)}
+                                  </Text>
+                                  <Text
+                                    size="xs"
+                                    c={
+                                      position.funding.sinceOpen >= 0
+                                        ? "green"
+                                        : "red"
+                                    }
+                                  >
+                                    Open: $
+                                    {position.funding.sinceOpen.toFixed(4)}
+                                  </Text>
+                                </div>
+                              ) : (
+                                <Text size="xs" c="dimmed">
+                                  N/A
+                                </Text>
+                              )}
+                            </Table.Td>
+                            <Table.Td>
+                              <Group gap={8} justify="center">
+                                <Text size="sm" fw={500}>
+                                  {positionOrders.length}
+                                </Text>
+                                <IconChevronDown
+                                  size={16}
+                                  style={{
+                                    transform: isExpanded
+                                      ? "rotate(180deg)"
+                                      : "rotate(0deg)",
+                                    transition: "transform 0.2s ease",
+                                  }}
+                                />
+                              </Group>
+                              <Text size="xs" c="dimmed" ta="center">
+                                {
+                                  positionOrders.filter((o) => o.isStopOrder)
+                                    .length
+                                }{" "}
+                                stops,{" "}
+                                {
+                                  positionOrders.filter(
+                                    (o) => o.isTakeProfitOrder,
+                                  ).length
+                                }{" "}
+                                take profits,{" "}
+                                {
+                                  positionOrders.filter(
+                                    (o) =>
+                                      !o.isStopOrder && !o.isTakeProfitOrder,
+                                  ).length
+                                }{" "}
+                                limit
+                              </Text>
+                            </Table.Td>
+                          </Table.Tr>
+
+                          {/* Expandable Orders Section */}
+                          {isExpanded && (
+                            <Table.Tr>
+                              <Table.Td colSpan={10} p={0}>
+                                <Collapse in={isExpanded}>
+                                  <div
+                                    style={{
+                                      padding: "16px",
+                                      backgroundColor:
+                                        "var(--mantine-color-gray-0)",
+                                    }}
+                                  >
+                                    <Text size="sm" fw={600} mb="md" c="blue">
+                                      Orders for {position.pair?.split("/")[0]}{" "}
+                                      ({positionOrders.length} total)
+                                    </Text>
+
+                                    {positionOrders.length === 0 ? (
+                                      <Text size="sm" c="dimmed" ta="center">
+                                        No orders found for this position
+                                      </Text>
+                                    ) : (
+                                      <Table>
+                                        <Table.Thead>
+                                          <Table.Tr>
+                                            <Table.Th>Type</Table.Th>
+                                            <Table.Th>Side</Table.Th>
+                                            <Table.Th>Amount</Table.Th>
+                                            <Table.Th>Price</Table.Th>
+                                            <Table.Th>Status</Table.Th>
+                                            <Table.Th>Time</Table.Th>
+                                          </Table.Tr>
+                                        </Table.Thead>
+                                        <Table.Tbody>
+                                          {positionOrders.map(
+                                            (order, orderIndex) => (
+                                              <Table.Tr key={orderIndex}>
+                                                <Table.Td>
+                                                  <Stack gap={4}>
+                                                    <Badge
+                                                      color={
+                                                        order.isStopOrder
+                                                          ? "orange"
+                                                          : order.isTakeProfitOrder
+                                                            ? "green"
+                                                            : "blue"
+                                                      }
+                                                      variant={
+                                                        order.isStopOrder ||
+                                                        order.isTakeProfitOrder
+                                                          ? "filled"
+                                                          : "outline"
+                                                      }
+                                                      size="sm"
+                                                    >
+                                                      {order.isStopOrder
+                                                        ? "STOP"
+                                                        : order.isTakeProfitOrder
+                                                          ? "TAKE PROFIT"
+                                                          : order.type?.toUpperCase()}
+                                                    </Badge>
+                                                    {order.reduceOnly && (
+                                                      <Badge
+                                                        color="gray"
+                                                        variant="outline"
+                                                        size="xs"
+                                                      >
+                                                        Reduce Only
+                                                      </Badge>
+                                                    )}
+                                                  </Stack>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                  <Badge
+                                                    color={
+                                                      order.side === "buy"
+                                                        ? "green"
+                                                        : "red"
+                                                    }
+                                                    variant="light"
+                                                    size="sm"
+                                                  >
+                                                    {order.side.toUpperCase()}
+                                                  </Badge>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                  <Text size="sm">
+                                                    {order.amount.toFixed(4)}
+                                                  </Text>
+                                                  {order.filled > 0 && (
+                                                    <Text size="xs" c="dimmed">
+                                                      {order.remaining.toFixed(
+                                                        4,
+                                                      )}{" "}
+                                                      left
+                                                    </Text>
+                                                  )}
+                                                </Table.Td>
+                                                <Table.Td>
+                                                  <Text size="sm">
+                                                    ${order.price.toFixed(4)}
+                                                  </Text>
+                                                  {order.triggerPrice && (
+                                                    <Text size="xs" c="orange">
+                                                      Trigger: $
+                                                      {order.triggerPrice.toFixed(
+                                                        4,
+                                                      )}
+                                                    </Text>
+                                                  )}
+                                                  {order.triggerCondition && (
+                                                    <Text size="xs" c="dimmed">
+                                                      {order.triggerCondition}
+                                                    </Text>
+                                                  )}
+                                                </Table.Td>
+                                                <Table.Td>
+                                                  <Badge
+                                                    color={
+                                                      order.status === "open"
+                                                        ? "green"
+                                                        : order.status ===
+                                                            "closed"
+                                                          ? "gray"
+                                                          : order.status ===
+                                                              "canceled"
+                                                            ? "red"
+                                                            : "blue"
+                                                    }
+                                                    variant="light"
+                                                    size="sm"
+                                                  >
+                                                    {order.status.toUpperCase()}
+                                                  </Badge>
+                                                </Table.Td>
+                                                <Table.Td>
+                                                  <Text size="xs" c="dimmed">
+                                                    {new Date(
+                                                      order.timestamp,
+                                                    ).toLocaleTimeString()}
+                                                  </Text>
+                                                </Table.Td>
+                                              </Table.Tr>
+                                            ),
+                                          )}
+                                        </Table.Tbody>
+                                      </Table>
+                                    )}
+                                  </div>
+                                </Collapse>
+                              </Table.Td>
+                            </Table.Tr>
                           )}
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
+                        </>
+                      );
+                    })}
                   </Table.Tbody>
                 </Table>
               )}
@@ -692,27 +940,34 @@ export default function LivePage() {
                           </Badge>
                         </Table.Td>
                         <Table.Td>
-                          <div>
+                          <Stack gap={4}>
                             <Badge
-                              color={order.isStopOrder ? "orange" : "blue"}
-                              variant={order.isStopOrder ? "filled" : "outline"}
+                              color={
+                                order.isStopOrder
+                                  ? "orange"
+                                  : order.isTakeProfitOrder
+                                    ? "green"
+                                    : "blue"
+                              }
+                              variant={
+                                order.isStopOrder || order.isTakeProfitOrder
+                                  ? "filled"
+                                  : "outline"
+                              }
                               size="sm"
                             >
                               {order.isStopOrder
                                 ? "STOP"
-                                : order.type?.toUpperCase()}
+                                : order.isTakeProfitOrder
+                                  ? "TAKE PROFIT"
+                                  : order.type?.toUpperCase()}
                             </Badge>
                             {order.reduceOnly && (
-                              <Badge
-                                color="gray"
-                                variant="outline"
-                                size="xs"
-                                mt={2}
-                              >
+                              <Badge color="gray" variant="outline" size="xs">
                                 Reduce Only
                               </Badge>
                             )}
-                          </div>
+                          </Stack>
                         </Table.Td>
                         <Table.Td>
                           <Text size="sm">{order.amount.toFixed(4)}</Text>
