@@ -186,6 +186,36 @@ export const portfolioSnapshotRouter = createTRPCRouter({
     }),
 
   /**
+   * Get the most recent portfolio snapshot with total USD value
+   */
+  getLatest: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const latestSnapshot = await ctx.db.portfolioSnapshot.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+        },
+        orderBy: {
+          timestamp: "desc",
+        },
+        select: {
+          id: true,
+          exchange: true,
+          totalUsdValue: true,
+          timestamp: true,
+        },
+      });
+
+      return latestSnapshot;
+    } catch (error) {
+      console.error("Failed to get latest snapshot:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to retrieve latest snapshot",
+      });
+    }
+  }),
+
+  /**
    * Get recent snapshots for quick comparison
    */
   getRecent: protectedProcedure

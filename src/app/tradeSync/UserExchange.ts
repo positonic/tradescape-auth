@@ -1,17 +1,17 @@
-import ccxt from 'ccxt';
-import tradeAggregator from './aggregation/TradeAggregator';
-import { PositionAggregator } from './aggregation/PositionAggregator';
-import { Trade } from './interfaces/Trade';
-import Exchange from './exchange/Exchange';
-import { FetchTradesReturnType, Position } from './exchange/types';
+import ccxt from "ccxt";
+import tradeAggregator from "./aggregation/TradeAggregator";
+import { PositionAggregator } from "./aggregation/PositionAggregator";
+import { Trade } from "./interfaces/Trade";
+import Exchange from "./exchange/Exchange";
+import { FetchTradesReturnType, Position } from "./exchange/types";
 import {
   LastSyncTimes,
   UserExchangeRepository,
-} from './repositories/UserExchangeRepository';
-import { ApiKey } from './interfaces/ApiKeys';
-import { ExchangeData } from './interfaces/ExchangeData';
-import { Order } from './interfaces/Order';
-import { UserPair } from './types';
+} from "./repositories/UserExchangeRepository";
+import { ApiKey } from "./interfaces/ApiKeys";
+import { ExchangeData } from "./interfaces/ExchangeData";
+import { Order } from "./interfaces/Order";
+import { UserPair } from "./types";
 interface ExchangeConfig {
   exchange: string;
   pairs: string[];
@@ -31,7 +31,7 @@ class UserExchange {
     userId: string,
     apiKeys: ApiKey[],
     userPairs: Record<string, UserPair[]>,
-    userExchangeRepository: UserExchangeRepository
+    userExchangeRepository: UserExchangeRepository,
   ) {
     this.positionAggregator = new PositionAggregator();
     this.userId = userId;
@@ -47,12 +47,12 @@ class UserExchange {
           apiKey,
           apiSecret,
           exchange,
-          walletAddress || '',
-          password || ''
+          walletAddress || "",
+          password || "",
         );
         return acc;
       },
-      {} as Record<string, Exchange>
+      {} as Record<string, Exchange>,
     );
   }
   async getBalancesForExchange(exchangeId: string): Promise<ExchangeData> {
@@ -85,12 +85,12 @@ class UserExchange {
   async updateLastSyncTimes(exchanges: string[]) {
     return this.userExchangeRepository.updateLastSyncTimes(
       this.userId,
-      exchanges
+      exchanges,
     );
   }
 
   getOrders(trades: Trade[]) {
-    if (!trades) throw new Error('trades is required');
+    if (!trades) throw new Error("trades is required");
     if (trades.length === 0) return [];
     return tradeAggregator(trades);
   }
@@ -108,83 +108,93 @@ class UserExchange {
   }> {
     let allTrades: Trade[] = [];
 
-    console.log('🚀 [UserExchange] getTrades() started');
-    console.log('🔍 [UserExchange] Available exchanges:', Object.keys(this.exchanges));
-    console.log('🔍 [UserExchange] Available pairs:', Object.keys(this.pairs));
-    console.log('🔍 [UserExchange] Pairs data:', this.pairs);
+    console.log("🚀 [UserExchange] getTrades() started");
+    console.log(
+      "🔍 [UserExchange] Available exchanges:",
+      Object.keys(this.exchanges),
+    );
+    console.log("🔍 [UserExchange] Available pairs:", Object.keys(this.pairs));
+    console.log("🔍 [UserExchange] Pairs data:", this.pairs);
 
     // Iterate through each exchange the user has configured
     for (const exchangeName in this.exchanges) {
       console.log(`📊 [${exchangeName}] Processing exchange...`);
       const exchange = this.exchanges[exchangeName];
       const pairs = this.pairs[exchangeName];
-      
+
       console.log(`🔍 [${exchangeName}] Exchange exists:`, !!exchange);
       console.log(`🔍 [${exchangeName}] Pairs exists:`, !!pairs);
       console.log(`🔍 [${exchangeName}] Pairs length:`, pairs?.length || 0);
-      
+
       if (!exchange) {
         console.log(`❌ [${exchangeName}] No exchange found, skipping`);
         continue;
       }
-      
+
       if (!pairs) {
         console.log(`❌ [${exchangeName}] No pairs found, skipping`);
         continue;
       }
 
-      console.log('tradeSynch > UserExchange - exchangeName is ', exchangeName);
-      console.log('tradeSynch > UserExchange - pairs is ', pairs);
-      console.log(`🔍 [${exchangeName}] Will fetch trades for ${pairs.length} symbols:`, pairs.map(p => p.symbol).join(', '));
+      console.log("tradeSynch > UserExchange - exchangeName is ", exchangeName);
+      console.log("tradeSynch > UserExchange - pairs is ", pairs);
+      console.log(
+        `🔍 [${exchangeName}] Will fetch trades for ${pairs.length} symbols:`,
+        pairs.map((p) => p.symbol).join(", "),
+      );
       // For each trading pair on the current exchange
       for (const { symbol } of pairs) {
         try {
           const mostRecentTrade =
             await this.userExchangeRepository.getMostRecentTrade(
               this.userId,
-              symbol
+              symbol,
             );
           const lastTradesSyncTime = mostRecentTrade?.time;
 
           const since = lastTradesSyncTime ? Number(lastTradesSyncTime) : 0;
           console.log(
-            'tradeSynch > UserExchange - fetchSince for symbol ',
+            "tradeSynch > UserExchange - fetchSince for symbol ",
             symbol,
-            ' is ',
-            since
+            " is ",
+            since,
           );
           console.log(
             lastTradesSyncTime
               ? `We have trades for ${symbol}, and the last one was ${lastTradesSyncTime}`
-              : `We have not trades for ${symbol}, setting since to ${0}`
+              : `We have not trades for ${symbol}, setting since to ${0}`,
           );
           // Fetch trades for the current pair from the exchange
-          console.log(`🔍 [${exchangeName}] About to fetch trades for symbol: '${symbol}', since: ${since}`);
+          console.log(
+            `🔍 [${exchangeName}] About to fetch trades for symbol: '${symbol}', since: ${since}`,
+          );
           const exchangeTrades = await exchange.fetchTrades(symbol, since);
           const trades = Object.values(exchangeTrades);
           console.log(
             `tradeSynch > UserExchange - trades.length for ${symbol} since ${since} is `,
-            trades.length
+            trades.length,
           );
           if (trades.length === 0) {
-            console.log(`⚠️  [${exchangeName}] No trades found for symbol: '${symbol}'`);
+            console.log(
+              `⚠️  [${exchangeName}] No trades found for symbol: '${symbol}'`,
+            );
           }
-          if (exchangeName === 'hyperliquid') {
-            console.log('Hyperliquid trades: ', trades.length);
+          if (exchangeName === "hyperliquid") {
+            console.log("Hyperliquid trades: ", trades.length);
           }
-          console.log('_________________________\n');
+          console.log("_________________________\n");
           allTrades = allTrades.concat(trades);
         } catch (error) {
           console.error(
             `Error fetching trades from ${exchangeName} for ${symbol}:`,
-            error
+            error,
           );
         }
       }
     }
     console.log(
-      'tradeSynch > UserExchange - allTrades.length is ',
-      allTrades.length
+      "tradeSynch > UserExchange - allTrades.length is ",
+      allTrades.length,
     );
     // Aggregate individual trades into orders (combines related trades)
     const aggregatedOrders = tradeAggregator(allTrades);
@@ -208,13 +218,13 @@ class UserExchange {
         try {
           const positions = await exchange.fetchPositions(pair, exchangeName);
           console.log(
-            `${exchangeName} - ${pair}: Built ${positions.length} positions`
+            `${exchangeName} - ${pair}: Built ${positions.length} positions`,
           );
           allPositions = allPositions.concat(positions);
         } catch (error) {
           console.error(
             `Error fetching trades from ${exchangeName} for ${pair}:`,
-            error
+            error,
           );
         }
       }
@@ -235,32 +245,36 @@ class UserExchange {
 
   async updateUserPairsForExchange(
     exchangeName: string,
-    since?: number
+    since?: number,
   ): Promise<Set<string>> {
-    console.log('updateUserPairsForExchange called with exchangeName:', exchangeName);
-    console.log('updateUserPairsForExchange called with this.exchanges:', this.exchanges);
     const exchange = this.exchanges[exchangeName];
-    if (!exchange) throw new Error(`Exchange '${exchangeName}' not found in UserExchange`);
+    if (!exchange)
+      throw new Error(`Exchange '${exchangeName}' not found in UserExchange`);
 
     const activePairs = await exchange.fetchTradePairs(exchangeName, since);
     await this.userExchangeRepository.updateUserPairs(
       this.userId,
       exchangeName,
-      Array.from(activePairs)
+      Array.from(activePairs),
     );
 
     return activePairs;
   }
 
   async loadUserPairs(): Promise<Record<string, string[]>> {
-    console.log('loadUserPairs called with this.userId:', this.userId, 'type:', typeof this.userId);
+    console.log(
+      "loadUserPairs called with this.userId:",
+      this.userId,
+      "type:",
+      typeof this.userId,
+    );
     this.pairs = await this.userExchangeRepository.findUserPairs(this.userId);
     // Convert UserPair[] to string[] by mapping to the symbol property
     return Object.fromEntries(
       Object.entries(this.pairs).map(([exchange, pairs]) => [
         exchange,
         pairs.map((pair) => pair.symbol),
-      ])
+      ]),
     );
   }
 
@@ -275,7 +289,7 @@ class UserExchange {
       ...order,
       trades: order.trades.map((trade) => ({
         ...trade,
-        type: trade.type || 'unknown',
+        type: trade.type || "unknown",
         exchange: trade.exchange || exchangeId,
       })),
     }));

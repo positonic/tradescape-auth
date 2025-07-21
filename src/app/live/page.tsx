@@ -35,6 +35,7 @@ import { api } from "~/trpc/react";
 import { useSocket } from "~/lib/useSocket";
 import { notifications } from "@mantine/notifications";
 import { getEncryptedKeysForTransmission, hasStoredKeys } from "~/lib/keyUtils";
+import { KeyStorage, encryptForTransmission } from "~/lib/keyEncryption";
 
 interface LivePosition {
   pair: string;
@@ -142,6 +143,11 @@ export default function LivePage() {
     enabled: false, // Only fetch manually
   });
 
+  // Query for latest portfolio snapshot
+  const { data: latestSnapshot, refetch: refetchLatestSnapshot } = api.portfolioSnapshot.getLatest.useQuery(undefined, {
+    enabled: !!session?.user,
+  });
+
   // Portfolio snapshot mutations
   const createSnapshotMutation = api.portfolioSnapshot.create.useMutation({
     onSuccess: () => {
@@ -150,7 +156,8 @@ export default function LivePage() {
         message: "Portfolio value snapshot captured successfully",
         color: "green",
       });
-      // Refresh recent snapshots
+      // Refresh latest and recent snapshots
+      refetchLatestSnapshot();
       recentSnapshots.refetch();
     },
     onError: (error) => {
@@ -165,7 +172,7 @@ export default function LivePage() {
   // Get recent snapshots for display
   const recentSnapshots = api.portfolioSnapshot.getRecent.useQuery(
     { limit: 5 },
-    { enabled: true }
+    { enabled: true },
   );
 
   // Redirect if not authenticated
@@ -260,7 +267,7 @@ export default function LivePage() {
   const handleCreateSnapshot = () => {
     // Try to use stored keys first (same logic as trades page)
     const encryptedKeys = getEncryptedKeysForTransmission();
-    
+
     if (encryptedKeys) {
       console.log("📸 Creating snapshot with stored keys");
       createSnapshotMutation.mutate({ encryptedKeys });
@@ -459,8 +466,13 @@ export default function LivePage() {
                     Total USD Value
                   </Text>
                   <Text size="xl" fw={700}>
-                    ${liveData.totalUsdValue.toLocaleString()}
+                    ${latestSnapshot ? Number(latestSnapshot.totalUsdValue).toLocaleString() : liveData.totalUsdValue.toLocaleString()}
                   </Text>
+                  {latestSnapshot && (
+                    <Text size="xs" c="dimmed">
+                      as of {latestSnapshot.timestamp.toLocaleString()}
+                    </Text>
+                  )}
                 </div>
                 <div>
                   <Text size="sm" c="dimmed">
@@ -500,21 +512,37 @@ export default function LivePage() {
                   <Text size="sm" c="dimmed">
                     Total Risk
                   </Text>
-                  <Text size="lg" fw={600} c="red">
-                    $
-                    {liveData.positions
-                      .reduce((sum, p) => sum + p.riskAmount, 0)
-                      .toLocaleString()}
-                  </Text>
-                  {liveData.positions.some((p) => !p.stopLoss) && (
-                    <Group gap={4} mt={2}>
-                      <IconAlertTriangle size={12} color="orange" />
-                      <Text size="xs" c="orange">
-                        {liveData.positions.filter((p) => !p.stopLoss).length}{" "}
-                        without stops
-                      </Text>
-                    </Group>
-                  )}
+                  {(() => {
+                    const totalRisk = liveData.positions.reduce((sum, p) => sum + p.riskAmount, 0);
+                    const accountSize = latestSnapshot ? Number(latestSnapshot.totalUsdValue) : liveData.totalUsdValue;
+                    const riskPercentage = accountSize > 0 ? (totalRisk / accountSize) * 100 : 0;
+                    const maxRiskPercent = 1; // 1% max risk
+                    const isOverRisk = riskPercentage > maxRiskPercent;
+                    const riskColor = isOverRisk ? "red" : "green";
+                    
+                    return (
+                      <>
+                        <Text size="lg" fw={600} c={riskColor}>
+                          ${totalRisk.toLocaleString()}
+                        </Text>
+                        <Text size="sm" fw={500} c={riskColor}>
+                          {riskPercentage.toFixed(2)}% of account
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          Max allowed: {maxRiskPercent}%
+                        </Text>
+                        {liveData.positions.some((p) => !p.stopLoss) && (
+                          <Group gap={4} mt={2}>
+                            <IconAlertTriangle size={12} color="orange" />
+                            <Text size="xs" c="orange">
+                              {liveData.positions.filter((p) => !p.stopLoss).length}{" "}
+                              without stops
+                            </Text>
+                          </Group>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 <div>
                   <Text size="sm" c="dimmed">
@@ -1127,7 +1155,11 @@ export default function LivePage() {
             {/* Recent Portfolio Snapshots Section */}
             {recentSnapshots.data && recentSnapshots.data.length > 0 && (
               <Card mt="md" p="md">
-                <Title order={3} mb="md" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Title
+                  order={3}
+                  mb="md"
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
                   <IconHistory size={20} />
                   Portfolio Value History
                 </Title>
@@ -1142,13 +1174,16 @@ export default function LivePage() {
                   </Table.Thead>
                   <Table.Tbody>
                     {recentSnapshots.data.map((snapshot, index) => {
-                      const previousSnapshot = recentSnapshots.data?.[index + 1];
-                      const change = previousSnapshot 
-                        ? snapshot.totalUsdValue - previousSnapshot.totalUsdValue 
+                      const previousSnapshot =
+                        recentSnapshots.data?.[index + 1];
+                      const change = previousSnapshot
+                        ? snapshot.totalUsdValue -
+                          previousSnapshot.totalUsdValue
                         : 0;
-                      const changePercent = previousSnapshot && previousSnapshot.totalUsdValue > 0
-                        ? (change / previousSnapshot.totalUsdValue) * 100 
-                        : 0;
+                      const changePercent =
+                        previousSnapshot && previousSnapshot.totalUsdValue > 0
+                          ? (change / previousSnapshot.totalUsdValue) * 100
+                          : 0;
 
                       return (
                         <Table.Tr key={snapshot.id}>
@@ -1164,31 +1199,38 @@ export default function LivePage() {
                           </Table.Td>
                           <Table.Td>
                             <Text size="sm" fw={500}>
-                              ${snapshot.totalUsdValue.toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
+                              $
+                              {snapshot.totalUsdValue.toLocaleString(
+                                undefined,
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                },
+                              )}
                             </Text>
                           </Table.Td>
                           <Table.Td>
                             {previousSnapshot ? (
                               <div>
-                                <Text 
-                                  size="sm" 
+                                <Text
+                                  size="sm"
                                   fw={500}
                                   c={change >= 0 ? "green" : "red"}
                                 >
                                   {change >= 0 ? "+" : ""}${change.toFixed(2)}
                                 </Text>
-                                <Text 
-                                  size="xs" 
+                                <Text
+                                  size="xs"
                                   c={change >= 0 ? "green" : "red"}
                                 >
-                                  {changePercent >= 0 ? "+" : ""}{changePercent.toFixed(2)}%
+                                  {changePercent >= 0 ? "+" : ""}
+                                  {changePercent.toFixed(2)}%
                                 </Text>
                               </div>
                             ) : (
-                              <Text size="sm" c="dimmed">-</Text>
+                              <Text size="sm" c="dimmed">
+                                -
+                              </Text>
                             )}
                           </Table.Td>
                         </Table.Tr>

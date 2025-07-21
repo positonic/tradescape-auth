@@ -8,27 +8,31 @@ import { notifications } from "@mantine/notifications";
 export function getEncryptedKeysForTransmission(): string | null {
   try {
     const keys = KeyStorage.load();
-    console.log('🔑 Keys loaded:', keys ? `${keys.length} keys found` : 'No keys found');
-    
+    console.log(
+      "🔑 Keys loaded:",
+      keys ? `${keys.length} keys found` : "No keys found",
+    );
+
     if (keys && keys.length > 0) {
-      console.log('🔐 Encrypting keys for transmission...');
+      console.log("🔐 Encrypting keys for transmission...");
       const encrypted = encryptForTransmission(keys);
       return encrypted;
     } else {
-      console.warn('⚠️ No API keys found');
+      console.warn("⚠️ No API keys found");
       notifications.show({
-        title: 'No API Keys Found',
-        message: 'Please add your exchange API keys using the Key Manager before performing this action.',
-        color: 'orange',
+        title: "No API Keys Found",
+        message:
+          "Please add your exchange API keys using the Key Manager before performing this action.",
+        color: "orange",
       });
       return null;
     }
   } catch (error) {
-    console.error('❌ Error loading or encrypting keys:', error);
+    console.error("❌ Error loading or encrypting keys:", error);
     notifications.show({
-      title: 'Key Error',
-      message: 'Failed to access stored keys. Please try adding them again.',
-      color: 'red',
+      title: "Key Error",
+      message: "Failed to access stored keys. Please try adding them again.",
+      color: "red",
     });
     return null;
   }
@@ -41,7 +45,7 @@ export function hasStoredKeys(): boolean {
   try {
     return KeyStorage.hasKeys();
   } catch (error) {
-    console.error('❌ Error checking for stored keys:', error);
+    console.error("❌ Error checking for stored keys:", error);
     return false;
   }
 }
