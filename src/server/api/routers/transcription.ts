@@ -137,7 +137,6 @@ export const transcriptionRouter = createTRPCRouter({
     return ctx.db.transcriptionSession.findMany({
       where: {
         userId: ctx.session.user.id,
-        projectId: "cmd2xuzq200021tykblvurm90",
       },
       orderBy: {
         createdAt: "desc",
@@ -166,13 +165,13 @@ export const transcriptionRouter = createTRPCRouter({
           setups: {
             include: {
               pair: true,
-            }
+            },
           },
           screenshots: {
             orderBy: {
-              createdAt: 'desc'
-            }
-          }
+              createdAt: "desc",
+            },
+          },
         },
       });
 
@@ -248,34 +247,36 @@ export const transcriptionRouter = createTRPCRouter({
 
   // Add to your transcriptionRouter
   saveScreenshot: protectedProcedure
-    .input(z.object({
-      sessionId: z.string(),
-      screenshot: z.string(),
-      timestamp: z.string()
-    }))
+    .input(
+      z.object({
+        sessionId: z.string(),
+        screenshot: z.string(),
+        timestamp: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       try {
         // Generate unique filename
-        const filename = `screenshots/${input.sessionId}/${input.timestamp.replace(/[/:]/g, '-')}.png`;
-        
+        const filename = `screenshots/${input.sessionId}/${input.timestamp.replace(/[/:]/g, "-")}.png`;
+
         // Upload to Vercel Blob
         const blob = await uploadToBlob(input.screenshot, filename);
-        
+
         // Save metadata in database
         const screenshot = await ctx.db.screenshot.create({
           data: {
             url: blob.url,
             timestamp: input.timestamp,
             transcriptionSessionId: input.sessionId,
-          }
+          },
         });
 
         return { success: true, url: blob.url };
       } catch (error) {
-        console.error('Error saving screenshot:', error);
+        console.error("Error saving screenshot:", error);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to save screenshot'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to save screenshot",
         });
       }
     }),

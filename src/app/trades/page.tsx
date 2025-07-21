@@ -27,7 +27,7 @@ import SignInButton from "~/app/_components/SignInButton";
 import KeyManager from "~/app/_components/KeyManager";
 import { formatCurrency, formatDateTime } from '~/lib/tradeUtils';
 import { useSyncTrades } from '~/hooks/useSyncTrades';
-import { KeyStorage, encryptForTransmission } from '~/lib/keyEncryption';
+import { getEncryptedKeysForTransmission, hasStoredKeys as checkHasStoredKeys } from '~/lib/keyUtils';
 import { CreatePositionsButton } from '~/app/setup/[slug]/_components/CreatePositionsButton';
 import { PositionValidationButton } from './_components/PositionValidationButton';
 import { DeletePositionsButton } from './_components/DeletePositionsButton';
@@ -138,44 +138,21 @@ export default function TradesPage() {
 
   const handleQuickSync = () => {
     console.log('⚡ Quick Sync button clicked');
-    const keys = KeyStorage.load();
-    console.log('🔑 Keys loaded:', keys ? `${keys.length} keys found` : 'No keys found');
+    const encryptedKeys = getEncryptedKeysForTransmission();
     
-    if (keys && keys.length > 0) {
-      console.log('🔐 Encrypting keys for transmission...');
-      const encrypted = encryptForTransmission(keys);
+    if (encryptedKeys) {
       console.log('📤 Sending quick sync request...');
-      syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'incremental' });
-    } else {
-      console.warn('⚠️ No API keys found - cannot perform Quick Sync');
-      notifications.show({
-        title: 'No API Keys Found',
-        message: 'Please add your exchange API keys using the Key Manager below before syncing.',
-        color: 'orange',
-      });
+      syncTradesMutation.mutate({ encryptedKeys, mode: 'incremental' });
     }
   };
 
   const handleFullSync = () => {
     console.log('🔄 Full Sync button clicked');
-    const keys = KeyStorage.load();
-    console.log('🔑 Keys loaded:', keys ? `${keys.length} keys found` : 'No keys found');
+    const encryptedKeys = getEncryptedKeysForTransmission();
     
-    if (keys && keys.length > 0) {
-      console.log('🔐 Encrypting keys for transmission...');
-      const encrypted = encryptForTransmission(keys);
+    if (encryptedKeys) {
       console.log('📤 Sending full sync request...');
-      syncTradesMutation.mutate({ encryptedKeys: encrypted, mode: 'full' });
-    } else {
-      console.warn('⚠️ No API keys found - cannot perform Full Sync');
-      console.log('💡 Please add API keys using the Key Manager first');
-      
-      // Show user notification about missing keys
-      notifications.show({
-        title: 'No API Keys Found',
-        message: 'Please add your exchange API keys using the Key Manager below before syncing.',
-        color: 'orange',
-      });
+      syncTradesMutation.mutate({ encryptedKeys, mode: 'full' });
     }
   };
 
@@ -194,7 +171,7 @@ export default function TradesPage() {
 
   useEffect(() => {
     // Check for stored keys on client-side only
-    const keys = KeyStorage.hasKeys();
+    const keys = checkHasStoredKeys();
     setHasStoredKeys(keys);
     setShowKeyManager(!keys);
   }, []);

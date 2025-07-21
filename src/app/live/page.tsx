@@ -28,11 +28,13 @@ import {
   IconWifiOff,
   IconAlertTriangle,
   IconChevronDown,
+  IconCamera,
+  IconHistory,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
 import { useSocket } from "~/lib/useSocket";
 import { notifications } from "@mantine/notifications";
-import { KeyStorage, encryptForTransmission } from "~/lib/keyEncryption";
+import { getEncryptedKeysForTransmission, hasStoredKeys } from "~/lib/keyUtils";
 
 interface LivePosition {
   pair: string;
@@ -140,6 +142,32 @@ export default function LivePage() {
     enabled: false, // Only fetch manually
   });
 
+  // Portfolio snapshot mutations
+  const createSnapshotMutation = api.portfolioSnapshot.create.useMutation({
+    onSuccess: () => {
+      notifications.show({
+        title: "Snapshot Created",
+        message: "Portfolio value snapshot captured successfully",
+        color: "green",
+      });
+      // Refresh recent snapshots
+      recentSnapshots.refetch();
+    },
+    onError: (error) => {
+      notifications.show({
+        title: "Snapshot Error",
+        message: error.message,
+        color: "red",
+      });
+    },
+  });
+
+  // Get recent snapshots for display
+  const recentSnapshots = api.portfolioSnapshot.getRecent.useQuery(
+    { limit: 5 },
+    { enabled: true }
+  );
+
   // Redirect if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -227,6 +255,27 @@ export default function LivePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCreateSnapshot = () => {
+    // Try to use stored keys first (same logic as trades page)
+    const encryptedKeys = getEncryptedKeysForTransmission();
+    
+    if (encryptedKeys) {
+      console.log("📸 Creating snapshot with stored keys");
+      createSnapshotMutation.mutate({ encryptedKeys });
+      return;
+    }
+
+    // If connected to live data and no keys, use live data
+    if (isConnected && liveData) {
+      console.log("📸 Creating snapshot with live data");
+      createSnapshotMutation.mutate({});
+      return;
+    }
+
+    // No keys and no live data - error already shown by getEncryptedKeysForTransmission
+    console.warn("⚠️ Cannot create snapshot: no keys and no live data");
   };
 
   // Helper function to get orders for a specific position
@@ -323,6 +372,17 @@ export default function LivePage() {
               loading={isLoading}
             >
               <IconRefresh size={18} />
+            </ActionIcon>
+
+            {/* Snapshot Button */}
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={handleCreateSnapshot}
+              loading={createSnapshotMutation.isPending}
+              title="Take Portfolio Snapshot"
+            >
+              <IconCamera size={18} />
             </ActionIcon>
 
             {/* Key Manager Button */}
@@ -1063,6 +1123,81 @@ export default function LivePage() {
                 </Table.Tbody>
               </Table>
             </Card>
+
+            {/* Recent Portfolio Snapshots Section */}
+            {recentSnapshots.data && recentSnapshots.data.length > 0 && (
+              <Card mt="md" p="md">
+                <Title order={3} mb="md" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <IconHistory size={20} />
+                  Portfolio Value History
+                </Title>
+                <Table>
+                  <Table.Thead>
+                    <Table.Tr>
+                      <Table.Th>Time</Table.Th>
+                      <Table.Th>Exchange</Table.Th>
+                      <Table.Th>Total USD Value</Table.Th>
+                      <Table.Th>Change from Previous</Table.Th>
+                    </Table.Tr>
+                  </Table.Thead>
+                  <Table.Tbody>
+                    {recentSnapshots.data.map((snapshot, index) => {
+                      const previousSnapshot = recentSnapshots.data?.[index + 1];
+                      const change = previousSnapshot 
+                        ? snapshot.totalUsdValue - previousSnapshot.totalUsdValue 
+                        : 0;
+                      const changePercent = previousSnapshot && previousSnapshot.totalUsdValue > 0
+                        ? (change / previousSnapshot.totalUsdValue) * 100 
+                        : 0;
+
+                      return (
+                        <Table.Tr key={snapshot.id}>
+                          <Table.Td>
+                            <Text size="sm">
+                              {new Date(snapshot.timestamp).toLocaleString()}
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Badge variant="light" size="sm">
+                              {snapshot.exchange.toUpperCase()}
+                            </Badge>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="sm" fw={500}>
+                              ${snapshot.totalUsdValue.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </Text>
+                          </Table.Td>
+                          <Table.Td>
+                            {previousSnapshot ? (
+                              <div>
+                                <Text 
+                                  size="sm" 
+                                  fw={500}
+                                  c={change >= 0 ? "green" : "red"}
+                                >
+                                  {change >= 0 ? "+" : ""}${change.toFixed(2)}
+                                </Text>
+                                <Text 
+                                  size="xs" 
+                                  c={change >= 0 ? "green" : "red"}
+                                >
+                                  {changePercent >= 0 ? "+" : ""}{changePercent.toFixed(2)}%
+                                </Text>
+                              </div>
+                            ) : (
+                              <Text size="sm" c="dimmed">-</Text>
+                            )}
+                          </Table.Td>
+                        </Table.Tr>
+                      );
+                    })}
+                  </Table.Tbody>
+                </Table>
+              </Card>
+            )}
           </>
         )}
       </Paper>

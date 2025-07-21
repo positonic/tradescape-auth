@@ -1,13 +1,15 @@
-'use client';
+"use client";
 
-import { Button } from '@mantine/core';
+import { Button } from "@mantine/core";
 import { signIn } from "next-auth/react";
-import { IconBrandDiscord } from '@tabler/icons-react';
+import { IconBrandDiscord } from "@tabler/icons-react";
 
 export default function SignInButton() {
   return (
     <Button
-      onClick={() => signIn("discord", { callbackUrl: "/agent" }, 'scope=identify guilds')}
+      onClick={() =>
+        signIn("discord", { callbackUrl: "/" }, "scope=identify guilds")
+      }
       leftSection={<IconBrandDiscord size={20} />}
       variant="filled"
       color="indigo"
@@ -16,4 +18,4 @@ export default function SignInButton() {
       Sign in with Discord
     </Button>
   );
-} 
+}

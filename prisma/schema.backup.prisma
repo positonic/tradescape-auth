@@ -9,6 +9,16 @@ datasource db {
   extensions = [vector]
 }
 
+model Post {
+  id          Int      @id @default(autoincrement())
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([name])
+}
 
 model Account {
   id                       String  @id @default(cuid())
@@ -47,15 +57,24 @@ model User {
   actions               Action[]
   alerts                Alert[]
   exchangeUsers         ExchangeUser[]
+  goals                 Goal[]
+  Note                  Note[]
   orders                Order[]
+  Outcome               Outcome[]
   positions             Position[]
+  posts                 Post[]
+  projects              Project[]
   sessions              Session[]
   setups                Setup[]
+  TeamMember            TeamMember[]
   transcriptionSessions TranscriptionSession[]
+  UserDay               UserDay[]
+  exercises             UserExercise[]
   userPairs             UserPair[]
   userTrades            UserTrade[]
   userVideos            UserVideo[]
   verificationTokens    VerificationToken[]
+  Workflow              Workflow[]
   portfolioSnapshots    PortfolioSnapshot[]
 }
 
@@ -71,16 +90,59 @@ model VerificationToken {
 }
 
 model Action {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  dueDate     DateTime?
-  status      String   @default("ACTIVE")
-  priority    String   @default("Quick")
-  createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
+  id           String         @id @default(cuid())
+  name         String
+  description  String?
+  dueDate      DateTime?
+  status       String         @default("ACTIVE")
+  priority     String         @default("Quick")
+  projectId    String?
+  createdById  String
+  createdBy    User           @relation(fields: [createdById], references: [id])
+  project      Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  WorkflowStep WorkflowStep[]
 
+  @@index([projectId])
   @@index([createdById])
+}
+
+model Outcome {
+  id          String    @id @default(cuid())
+  description String
+  dueDate     DateTime?
+  type        String?   @default("daily")
+  projectId   String?
+  userId      String?
+  User        User?     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  goals       Goal[]    @relation("GoalOutcomes")
+  projects    Project[] @relation("ProjectOutcomes")
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+model Project {
+  id                    String                 @id @default(cuid())
+  name                  String
+  status                String                 @default("ACTIVE")
+  priority              String                 @default("NONE")
+  progress              Float                  @default(0)
+  createdAt             DateTime               @default(now())
+  reviewDate            DateTime?
+  nextActionDate        DateTime?
+  createdById           String
+  slug                  String                 @unique
+  description           String?
+  actions               Action[]
+  createdBy             User                   @relation(fields: [createdById], references: [id])
+  TeamMember            TeamMember[]
+  transcriptionSessions TranscriptionSession[]
+  Goal                  Goal[]                 @relation("GoalProjects")
+  outcomes              Outcome[]              @relation("ProjectOutcomes")
+
+  @@index([name])
+  @@index([status])
+  @@index([priority])
 }
 
 model Video {
@@ -126,6 +188,80 @@ model VideoChunk {
   Video            Video?    @relation(fields: [video_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+model Week {
+  id        Int      @id @default(autoincrement())
+  startDate DateTime
+  endDate   DateTime
+  days      Day[]
+}
+
+model Day {
+  id        Int            @id @default(autoincrement())
+  date      DateTime
+  weekId    Int
+  week      Week           @relation(fields: [weekId], references: [id])
+  journals  Journal[]
+  Note      Note[]
+  UserDay   UserDay[]
+  exercises UserExercise[]
+
+  @@index([weekId])
+}
+
+model Exercise {
+  id            Int            @id @default(autoincrement())
+  title         String
+  description   String?
+  userExercises UserExercise[]
+}
+
+model UserExercise {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  exerciseId Int
+  dayId      Int
+  day        Day      @relation(fields: [dayId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([exerciseId])
+  @@index([dayId])
+}
+
+model Goal {
+  id           Int        @id @default(autoincrement())
+  title        String
+  description  String?
+  dueDate      DateTime?
+  lifeDomainId Int
+  userId       String
+  lifeDomain   LifeDomain @relation(fields: [lifeDomainId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+  outcomes     Outcome[]  @relation("GoalOutcomes")
+  Project      Project[]  @relation("GoalProjects")
+
+  @@index([lifeDomainId])
+  @@index([userId])
+}
+
+model LifeDomain {
+  id          Int     @id @default(autoincrement())
+  title       String
+  description String?
+  goals       Goal[]
+}
+
+model Journal {
+  id        Int      @id @default(autoincrement())
+  content   String
+  dayId     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  day       Day      @relation(fields: [dayId], references: [id])
+
+  @@index([dayId])
+}
 
 model Setup {
   id                     String                @id @default(uuid())
@@ -225,12 +361,15 @@ model TranscriptionSession {
   updatedAt     DateTime     @updatedAt
   userId        String?
   setupId       String?
+  projectId     String?
   title         String?
   description   String?
   screenshots   Screenshot[]
   setups        Setup[]      @relation("TranscriptionSetups")
+  project       Project?     @relation(fields: [projectId], references: [id])
   user          User?        @relation(fields: [userId], references: [id])
 
+  @@index([projectId])
   @@index([sessionId])
   @@index([userId])
 }
@@ -352,6 +491,100 @@ model Position {
   @@index([status])
 }
 
+model Audience {
+  id          String   @id
+  value       String   @unique
+  label       String
+  description String   @default("")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model Differentiator {
+  id          String   @id
+  value       String   @unique
+  label       String
+  description String   @default("")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model Note {
+  id        Int      @id @default(autoincrement())
+  content   String
+  type      String
+  title     String?
+  dayId     Int
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Day       Day      @relation(fields: [dayId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@index([dayId])
+  @@index([type])
+  @@index([userId])
+}
+
+model TeamMember {
+  id               String   @id
+  name             String
+  role             String
+  responsibilities String[]
+  avatarUrl        String?
+  projectId        String
+  userId           String
+  Project          Project  @relation(fields: [projectId], references: [id])
+  User             User     @relation(fields: [userId], references: [id])
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+model UserDay {
+  id        String   @id
+  userId    String
+  dayId     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Day       Day      @relation(fields: [dayId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, dayId])
+  @@index([dayId])
+  @@index([userId])
+}
+
+model Workflow {
+  id           String         @id
+  title        String
+  description  String?
+  type         String
+  createdById  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  User         User           @relation(fields: [createdById], references: [id])
+  WorkflowStep WorkflowStep[]
+
+  @@index([createdById])
+  @@index([type])
+}
+
+model WorkflowStep {
+  id         String   @id
+  workflowId String
+  order      Int
+  title      String
+  actionId   String?
+  status     String   @default("PENDING")
+  Action     Action?  @relation(fields: [actionId], references: [id])
+  Workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([actionId])
+  @@index([workflowId])
+}
 
 enum AlertType {
   PRICE
