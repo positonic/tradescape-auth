@@ -133,8 +133,20 @@ const payload = JSON.parse(text);
 
 #### Database Development
 - PostgreSQL with pgvector extension for semantic search
+- **ALWAYS use Prisma migrations for schema changes** - never modify schema.prisma without creating migrations
 - Prisma migrations in `prisma/migrations/`
 - Seeding functionality available for development data
+
+**IMPORTANT**: Always create proper migration files when changing the schema:
+1. First, modify the schema.prisma file
+2. Run `bun prisma migrate dev --name descriptive_migration_name` to create a migration file
+3. This will automatically apply the migration and regenerate the Prisma client
+
+Do NOT use `db:push` as it bypasses the migration system. Migrations are essential for:
+- Team collaboration and version control
+- Production deployments
+- Database schema history tracking
+- Rollback capabilities
 
 ### Current Feature Set
 - **Video Processing**: YouTube URL ingestion, transcription, chunk-based indexing

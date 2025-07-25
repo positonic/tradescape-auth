@@ -274,7 +274,7 @@ export const mastraRouter = createTRPCRouter({
         });
 
         return { 
-          token,
+          token: tokenPayload.jti, // Return the UUID instead of the JWT
           tokenId: tokenPayload.jti,
           expiresAt: expiresAt.toISOString(),
           expiresIn: input.expiresIn,

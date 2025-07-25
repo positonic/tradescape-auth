@@ -144,9 +144,16 @@ export default function LivePage() {
   });
 
   // Query for latest portfolio snapshot
-  const { data: latestSnapshot, refetch: refetchLatestSnapshot } = api.portfolioSnapshot.getLatest.useQuery(undefined, {
-    enabled: !!session?.user,
-  });
+  const { data: latestSnapshot, refetch: refetchLatestSnapshot } =
+    api.portfolioSnapshot.getLatest.useQuery(undefined, {
+      enabled: !!session?.user,
+    });
+
+  // Query for recent snapshots (for chart data)
+  const { data: chartSnapshots, refetch: refetchChartSnapshots } = api.portfolioSnapshot.getRecent.useQuery(
+    { limit: 30 }, // Get last 30 snapshots
+    { enabled: !!session?.user }
+  );
 
   // Portfolio snapshot mutations
   const createSnapshotMutation = api.portfolioSnapshot.create.useMutation({
@@ -156,9 +163,9 @@ export default function LivePage() {
         message: "Portfolio value snapshot captured successfully",
         color: "green",
       });
-      // Refresh latest and recent snapshots
+      // Refresh latest snapshot and chart data
       refetchLatestSnapshot();
-      recentSnapshots.refetch();
+      refetchChartSnapshots();
     },
     onError: (error) => {
       notifications.show({
@@ -169,11 +176,6 @@ export default function LivePage() {
     },
   });
 
-  // Get recent snapshots for display
-  const recentSnapshots = api.portfolioSnapshot.getRecent.useQuery(
-    { limit: 5 },
-    { enabled: true },
-  );
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -466,7 +468,10 @@ export default function LivePage() {
                     Total USD Value
                   </Text>
                   <Text size="xl" fw={700}>
-                    ${latestSnapshot ? Number(latestSnapshot.totalUsdValue).toLocaleString() : liveData.totalUsdValue.toLocaleString()}
+                    $
+                    {latestSnapshot
+                      ? Number(latestSnapshot.totalUsdValue).toLocaleString()
+                      : liveData.totalUsdValue.toLocaleString()}
                   </Text>
                   {latestSnapshot && (
                     <Text size="xs" c="dimmed">
@@ -513,13 +518,19 @@ export default function LivePage() {
                     Total Risk
                   </Text>
                   {(() => {
-                    const totalRisk = liveData.positions.reduce((sum, p) => sum + p.riskAmount, 0);
-                    const accountSize = latestSnapshot ? Number(latestSnapshot.totalUsdValue) : liveData.totalUsdValue;
-                    const riskPercentage = accountSize > 0 ? (totalRisk / accountSize) * 100 : 0;
+                    const totalRisk = liveData.positions.reduce(
+                      (sum, p) => sum + p.riskAmount,
+                      0,
+                    );
+                    const accountSize = latestSnapshot
+                      ? Number(latestSnapshot.totalUsdValue)
+                      : liveData.totalUsdValue;
+                    const riskPercentage =
+                      accountSize > 0 ? (totalRisk / accountSize) * 100 : 0;
                     const maxRiskPercent = 1; // 1% max risk
                     const isOverRisk = riskPercentage > maxRiskPercent;
                     const riskColor = isOverRisk ? "red" : "green";
-                    
+
                     return (
                       <>
                         <Text size="lg" fw={600} c={riskColor}>
@@ -535,7 +546,10 @@ export default function LivePage() {
                           <Group gap={4} mt={2}>
                             <IconAlertTriangle size={12} color="orange" />
                             <Text size="xs" c="orange">
-                              {liveData.positions.filter((p) => !p.stopLoss).length}{" "}
+                              {
+                                liveData.positions.filter((p) => !p.stopLoss)
+                                  .length
+                              }{" "}
                               without stops
                             </Text>
                           </Group>
@@ -1152,8 +1166,8 @@ export default function LivePage() {
               </Table>
             </Card>
 
-            {/* Recent Portfolio Snapshots Section */}
-            {recentSnapshots.data && recentSnapshots.data.length > 0 && (
+            {/* Portfolio PnL Chart Section */}
+            {chartSnapshots && chartSnapshots.length > 1 && (
               <Card mt="md" p="md">
                 <Title
                   order={3}
@@ -1161,83 +1175,123 @@ export default function LivePage() {
                   style={{ display: "flex", alignItems: "center", gap: "8px" }}
                 >
                   <IconHistory size={20} />
-                  Portfolio Value History
+                  Lifetime PnL Chart
                 </Title>
-                <Table>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Time</Table.Th>
-                      <Table.Th>Exchange</Table.Th>
-                      <Table.Th>Total USD Value</Table.Th>
-                      <Table.Th>Change from Previous</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {recentSnapshots.data.map((snapshot, index) => {
-                      const previousSnapshot =
-                        recentSnapshots.data?.[index + 1];
-                      const change = previousSnapshot
-                        ? snapshot.totalUsdValue -
-                          previousSnapshot.totalUsdValue
-                        : 0;
-                      const changePercent =
-                        previousSnapshot && previousSnapshot.totalUsdValue > 0
-                          ? (change / previousSnapshot.totalUsdValue) * 100
-                          : 0;
-
-                      return (
-                        <Table.Tr key={snapshot.id}>
-                          <Table.Td>
-                            <Text size="sm">
-                              {new Date(snapshot.timestamp).toLocaleString()}
-                            </Text>
-                          </Table.Td>
-                          <Table.Td>
-                            <Badge variant="light" size="sm">
-                              {snapshot.exchange.toUpperCase()}
-                            </Badge>
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm" fw={500}>
-                              $
-                              {snapshot.totalUsdValue.toLocaleString(
-                                undefined,
-                                {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                },
-                              )}
-                            </Text>
-                          </Table.Td>
-                          <Table.Td>
-                            {previousSnapshot ? (
-                              <div>
-                                <Text
-                                  size="sm"
-                                  fw={500}
-                                  c={change >= 0 ? "green" : "red"}
-                                >
-                                  {change >= 0 ? "+" : ""}${change.toFixed(2)}
-                                </Text>
-                                <Text
-                                  size="xs"
-                                  c={change >= 0 ? "green" : "red"}
-                                >
-                                  {changePercent >= 0 ? "+" : ""}
-                                  {changePercent.toFixed(2)}%
-                                </Text>
-                              </div>
-                            ) : (
-                              <Text size="sm" c="dimmed">
-                                -
-                              </Text>
-                            )}
-                          </Table.Td>
-                        </Table.Tr>
-                      );
-                    })}
-                  </Table.Tbody>
-                </Table>
+                
+                {(() => {
+                  // Prepare chart data (reverse to show oldest first)
+                  const chartData = [...chartSnapshots].reverse();
+                  const values = chartData.map(s => Number(s.totalUsdValue));
+                  const minValue = Math.min(...values);
+                  const maxValue = Math.max(...values);
+                  const valueRange = maxValue - minValue || 1;
+                  
+                  // Chart dimensions
+                  const chartWidth = 800;
+                  const chartHeight = 300;
+                  const padding = 40;
+                  const plotWidth = chartWidth - (padding * 2);
+                  const plotHeight = chartHeight - (padding * 2);
+                  
+                  // Calculate starting value for PnL
+                  const startingValue = values[0];
+                  
+                  // Generate SVG path
+                  const pathData = chartData.map((snapshot, index) => {
+                    const x = padding + (index / (chartData.length - 1)) * plotWidth;
+                    const value = Number(snapshot.totalUsdValue);
+                    const y = padding + plotHeight - ((value - minValue) / valueRange) * plotHeight;
+                    return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+                  }).join(' ');
+                  
+                  // Current vs starting PnL
+                  const currentValue = values[values.length - 1];
+                  const totalPnL = currentValue - startingValue;
+                  const totalPnLPercent = startingValue > 0 ? (totalPnL / startingValue) * 100 : 0;
+                  
+                  return (
+                    <div>
+                      {/* PnL Summary */}
+                      <div style={{ display: 'flex', gap: '32px', marginBottom: '24px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                        <div>
+                          <Text size="sm" c="dimmed">Starting Value</Text>
+                          <Text size="lg" fw={600}>${startingValue.toLocaleString()}</Text>
+                        </div>
+                        <div>
+                          <Text size="sm" c="dimmed">Current Value</Text>
+                          <Text size="lg" fw={600}>${currentValue.toLocaleString()}</Text>
+                        </div>
+                        <div>
+                          <Text size="sm" c="dimmed">Total PnL</Text>
+                          <Text size="lg" fw={600} c={totalPnL >= 0 ? "green" : "red"}>
+                            {totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(2)}
+                          </Text>
+                          <Text size="sm" c={totalPnL >= 0 ? "green" : "red"}>
+                            {totalPnL >= 0 ? "+" : ""}{totalPnLPercent.toFixed(2)}%
+                          </Text>
+                        </div>
+                      </div>
+                      
+                      {/* Chart */}
+                      <div style={{ width: '100%', overflowX: 'auto' }}>
+                        <svg width={chartWidth} height={chartHeight} style={{ border: '1px solid #e9ecef', borderRadius: '4px' }}>
+                          {/* Grid lines */}
+                          {[0, 0.25, 0.5, 0.75, 1].map(ratio => (
+                            <g key={ratio}>
+                              <line 
+                                x1={padding} 
+                                y1={padding + ratio * plotHeight} 
+                                x2={chartWidth - padding} 
+                                y2={padding + ratio * plotHeight}
+                                stroke="#e9ecef" 
+                                strokeWidth={1}
+                              />
+                              <text 
+                                x={padding - 10} 
+                                y={padding + ratio * plotHeight + 5}
+                                fontSize="12" 
+                                fill="#868e96" 
+                                textAnchor="end"
+                              >
+                                ${(maxValue - ratio * valueRange).toLocaleString()}
+                              </text>
+                            </g>
+                          ))}
+                          
+                          {/* Chart line */}
+                          <path
+                            d={pathData}
+                            fill="none"
+                            stroke={totalPnL >= 0 ? "#51cf66" : "#ff6b6b"}
+                            strokeWidth={2}
+                          />
+                          
+                          {/* Data points */}
+                          {chartData.map((snapshot, index) => {
+                            const x = padding + (index / (chartData.length - 1)) * plotWidth;
+                            const value = Number(snapshot.totalUsdValue);
+                            const y = padding + plotHeight - ((value - minValue) / valueRange) * plotHeight;
+                            return (
+                              <circle
+                                key={snapshot.id}
+                                cx={x}
+                                cy={y}
+                                r={3}
+                                fill={totalPnL >= 0 ? "#51cf66" : "#ff6b6b"}
+                              />
+                            );
+                          })}
+                        </svg>
+                      </div>
+                      
+                      {/* Time labels */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', color: '#868e96' }}>
+                        <span>{new Date(chartData[0].timestamp).toLocaleDateString()}</span>
+                        <span>{new Date(chartData[chartData.length - 1].timestamp).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </Card>
             )}
           </>

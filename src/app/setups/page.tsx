@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { api } from "~/trpc/react";
 import { 
   Paper, 
@@ -14,8 +15,11 @@ import {
 } from '@mantine/core';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
+import { IconPlus } from '@tabler/icons-react';
+import { SetupDrawer } from '~/components/SetupDrawer';
 
 export default function SetupsPage() {
+  const [drawerOpened, setDrawerOpened] = useState(false);
   const { data: publicSetups, isLoading: publicLoading } = api.setups.getPublic.useQuery();
   const { data: privateSetups, isLoading: privateLoading } = api.setups.getPrivate.useQuery();
   const { data: transcriptionSessions, isLoading: transcriptionsLoading } = api.transcription.getSessions.useQuery();
@@ -153,25 +157,40 @@ export default function SetupsPage() {
   // );
 
   return (
-    <Paper p="md" radius="sm">
-      <Title order={2} mb="lg">Trade Setups</Title>
-      <Tabs defaultValue="private">
-        <Tabs.List>
-          <Tabs.Tab value="private">My Setups</Tabs.Tab>
-          <Tabs.Tab value="public">Public Setups</Tabs.Tab>
-          {/* <Tabs.Tab value="transcriptions">Transcriptions</Tabs.Tab> */}
-        </Tabs.List>
+    <>
+      <Paper p="md" radius="sm">
+        <Group justify="space-between" mb="lg">
+          <Title order={2}>Trade Setups</Title>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setDrawerOpened(true)}
+          >
+            Create Setup
+          </Button>
+        </Group>
+        <Tabs defaultValue="private">
+          <Tabs.List>
+            <Tabs.Tab value="private">My Setups</Tabs.Tab>
+            <Tabs.Tab value="public">Public Setups</Tabs.Tab>
+            {/* <Tabs.Tab value="transcriptions">Transcriptions</Tabs.Tab> */}
+          </Tabs.List>
 
-        <Tabs.Panel value="private" pt="md">
-          {renderSetupsTable(privateSetups)}
-        </Tabs.Panel>
-        <Tabs.Panel value="public" pt="md">
-          {renderSetupsTable(publicSetups)}
-        </Tabs.Panel>
-        {/* <Tabs.Panel value="transcriptions" pt="md">
-          {renderTranscriptionsTable()}
-        </Tabs.Panel> */}
-      </Tabs>
-    </Paper>
+          <Tabs.Panel value="private" pt="md">
+            {renderSetupsTable(privateSetups)}
+          </Tabs.Panel>
+          <Tabs.Panel value="public" pt="md">
+            {renderSetupsTable(publicSetups)}
+          </Tabs.Panel>
+          {/* <Tabs.Panel value="transcriptions" pt="md">
+            {renderTranscriptionsTable()}
+          </Tabs.Panel> */}
+        </Tabs>
+      </Paper>
+      
+      <SetupDrawer
+        opened={drawerOpened}
+        onClose={() => setDrawerOpened(false)}
+      />
+    </>
   );
 } 

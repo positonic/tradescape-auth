@@ -65,7 +65,7 @@ const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
 
 export const transcriptionRouter = createTRPCRouter({
   startSession: apiKeyMiddleware
-    .input(z.object({ projectId: z.string() }))
+    .input(z.object({ projectId: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       // Type-safe userId access
       const userId = ctx.userId;
@@ -77,7 +77,6 @@ export const transcriptionRouter = createTRPCRouter({
           sessionId: `session_${Date.now()}`,
           transcription: "",
           userId,
-          projectId, // Save projectId
         },
       });
 
@@ -89,7 +88,6 @@ export const transcriptionRouter = createTRPCRouter({
       return {
         id: session.id,
         startTime: new Date().toISOString(),
-        projectId: session.projectId,
       };
     }),
 
