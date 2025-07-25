@@ -42,7 +42,7 @@ interface SetupFormValues {
 export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
   const [pastedImage, setPastedImage] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  
+
   const utils = api.useUtils();
   const { data: pairs, isLoading: pairsLoading } = api.pairs.getAll.useQuery();
   const createSetupMutation = api.setups.create.useMutation({
@@ -88,10 +88,10 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       if (!opened) return;
-      
+
       const items = Array.from(e.clipboardData?.items || []);
       const imageItem = items.find((item) => item.type.startsWith("image/"));
-      
+
       if (imageItem) {
         e.preventDefault();
         const blob = imageItem.getAsFile();
@@ -103,12 +103,12 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
             reader.onloadend = () => {
               const base64 = reader.result as string;
               setPastedImage(base64);
-              
+
               // Add image reference to content
               const currentContent = form.values.content;
-              const imageMarkdown = "\n\n[Pasted Screenshot]";
+              const imageMarkdown = "\n\n[Screenshot]";
               form.setFieldValue("content", currentContent + imageMarkdown);
-              
+
               notifications.show({
                 title: "Image pasted",
                 message: "Screenshot added to setup",
@@ -137,7 +137,9 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
     try {
       // Create the setup
       await createSetupMutation.mutateAsync({
-        content: values.content + (pastedImage ? `\n\n![Screenshot](${pastedImage})` : ""),
+        content:
+          values.content +
+          (pastedImage ? `\n\n![Screenshot](${pastedImage})` : ""),
         direction: values.direction,
         pairId: Number(values.pairId),
         entryPrice: values.entryPrice,
@@ -167,10 +169,12 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
             placeholder="Select a trading pair"
             required
             searchable
-            data={pairs?.map((pair) => ({
-              value: pair.id.toString(),
-              label: pair.symbol,
-            })) ?? []}
+            data={
+              pairs?.map((pair) => ({
+                value: pair.id.toString(),
+                label: pair.symbol,
+              })) ?? []
+            }
             disabled={pairsLoading}
             {...form.getInputProps("pairId")}
           />
@@ -204,7 +208,9 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
           {pastedImage && (
             <Box>
               <Group justify="space-between" mb="xs">
-                <Text size="sm" fw={500}>Pasted Screenshot</Text>
+                <Text size="sm" fw={500}>
+                  Pasted Screenshot
+                </Text>
                 <CloseButton
                   onClick={() => {
                     setPastedImage(null);
@@ -212,7 +218,7 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
                     const content = form.values.content;
                     form.setFieldValue(
                       "content",
-                      content.replace(/\n\n\[Pasted Screenshot\]/, "")
+                      content.replace(/\n\n\[Screenshot\]/, ""),
                     );
                   }}
                 />
@@ -263,10 +269,7 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
             {...form.getInputProps("timeframe")}
           />
 
-          <Radio.Group
-            label="Privacy"
-            {...form.getInputProps("privacy")}
-          >
+          <Radio.Group label="Privacy" {...form.getInputProps("privacy")}>
             <Group mt="xs">
               <Radio value="private" label="Private" />
               <Radio value="public" label="Public" />
@@ -277,10 +280,7 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
             <Button variant="default" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              loading={createSetupMutation.isPending}
-            >
+            <Button type="submit" loading={createSetupMutation.isPending}>
               Create Setup
             </Button>
           </Group>

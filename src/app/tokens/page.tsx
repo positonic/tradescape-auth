@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { 
-  Container, 
-  Title, 
-  Text, 
-  Button, 
-  Table, 
-  Badge, 
+import { useState } from "react";
+import {
+  Container,
+  Title,
+  Text,
+  Button,
+  Table,
+  Badge,
   Group,
   Stack,
   Paper,
@@ -19,12 +19,19 @@ import {
   Textarea,
   Alert,
   Code,
-  CopyButton
-} from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconKey, IconTrash, IconCopy, IconCheck, IconAlertCircle } from '@tabler/icons-react';
-import { useForm } from '@mantine/form';
-import { notifications } from '@mantine/notifications';
+  CopyButton,
+} from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import {
+  IconPlus,
+  IconKey,
+  IconTrash,
+  IconCopy,
+  IconCheck,
+  IconAlertCircle,
+} from "@tabler/icons-react";
+import { useForm } from "@mantine/form";
+import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 
 interface CreateTokenForm {
@@ -39,15 +46,20 @@ export default function TokensPage() {
   const [showToken, setShowToken] = useState(false);
 
   // API calls
-  const { data: tokens = [], isLoading, refetch } = api.mastra.listApiTokens.useQuery();
+  const {
+    data: tokens = [],
+    isLoading,
+    refetch,
+  } = api.mastra.listApiTokens.useQuery();
   const generateToken = api.mastra.generateApiToken.useMutation({
     onSuccess: (data) => {
       setGeneratedToken(data.token);
       setShowToken(true);
       notifications.show({
-        title: 'Token Generated',
-        message: 'Your API token has been generated successfully. Make sure to copy it now!',
-        color: 'green',
+        title: "Token Generated",
+        message:
+          "Your API token has been generated successfully. Make sure to copy it now!",
+        color: "green",
         icon: <IconCheck size={16} />,
       });
       void refetch();
@@ -55,9 +67,9 @@ export default function TokensPage() {
     },
     onError: (error) => {
       notifications.show({
-        title: 'Error',
-        message: error.message || 'Failed to generate token',
-        color: 'red',
+        title: "Error",
+        message: error.message || "Failed to generate token",
+        color: "red",
         icon: <IconAlertCircle size={16} />,
       });
     },
@@ -66,18 +78,18 @@ export default function TokensPage() {
   const revokeToken = api.mastra.revokeApiToken.useMutation({
     onSuccess: () => {
       notifications.show({
-        title: 'Token Revoked',
-        message: 'The API token has been revoked successfully.',
-        color: 'green',
+        title: "Token Revoked",
+        message: "The API token has been revoked successfully.",
+        color: "green",
         icon: <IconCheck size={16} />,
       });
       void refetch();
     },
     onError: (error) => {
       notifications.show({
-        title: 'Error',
-        message: error.message || 'Failed to revoke token',
-        color: 'red',
+        title: "Error",
+        message: error.message || "Failed to revoke token",
+        color: "red",
         icon: <IconAlertCircle size={16} />,
       });
     },
@@ -85,12 +97,13 @@ export default function TokensPage() {
 
   const form = useForm<CreateTokenForm>({
     initialValues: {
-      name: '',
-      expiresIn: '24h',
-      description: '',
+      name: "",
+      expiresIn: "24h",
+      description: "",
     },
     validate: {
-      name: (value) => value.trim().length === 0 ? 'Token name is required' : null,
+      name: (value) =>
+        value.trim().length === 0 ? "Token name is required" : null,
     },
   });
 
@@ -102,12 +115,12 @@ export default function TokensPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -126,15 +139,14 @@ export default function TokensPage() {
       <Stack gap="lg">
         <Group justify="space-between" align="center">
           <div>
-            <Title order={1} size="h2">API Tokens</Title>
+            <Title order={1} size="h2">
+              API Tokens
+            </Title>
             <Text c="dimmed" size="sm">
               Manage your API tokens for crypto analysis and trading tools
             </Text>
           </div>
-          <Button 
-            leftSection={<IconPlus size={16} />}
-            onClick={open}
-          >
+          <Button leftSection={<IconPlus size={16} />} onClick={open}>
             Create Token
           </Button>
         </Group>
@@ -166,22 +178,24 @@ export default function TokensPage() {
                       <Text size="sm">{formatDate(token.expiresAt)}</Text>
                     </Table.Td>
                     <Table.Td>
-                      <Badge 
-                        color={isExpired(token.expiresAt) ? 'red' : 'green'}
+                      <Badge
+                        color={isExpired(token.expiresAt) ? "red" : "green"}
                         variant="light"
                       >
-                        {isExpired(token.expiresAt) ? 'Expired' : 'Active'}
+                        {isExpired(token.expiresAt) ? "Expired" : "Active"}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
                       <Group gap="xs">
                         <Tooltip label="Revoke token">
-                          <ActionIcon 
-                            color="red" 
+                          <ActionIcon
+                            color="red"
                             variant="light"
                             size="sm"
                             loading={revokeToken.isPending}
-                            onClick={() => revokeToken.mutate({ tokenId: token.tokenId })}
+                            onClick={() =>
+                              revokeToken.mutate({ tokenId: token.tokenId })
+                            }
                           >
                             <IconTrash size={14} />
                           </ActionIcon>
@@ -195,7 +209,9 @@ export default function TokensPage() {
           ) : (
             <Stack align="center" py="xl">
               <IconKey size={48} color="gray" />
-              <Text size="lg" fw={500}>No API tokens found</Text>
+              <Text size="lg" fw={500}>
+                No API tokens found
+              </Text>
               <Text c="dimmed" ta="center">
                 Create your first API token to start using the API
               </Text>
@@ -204,8 +220,8 @@ export default function TokensPage() {
         </Paper>
 
         {/* Create Token Modal */}
-        <Modal 
-          opened={opened} 
+        <Modal
+          opened={opened}
           onClose={handleCloseModal}
           title="Create API Token"
           size="md"
@@ -218,79 +234,84 @@ export default function TokensPage() {
                     label="Token Name"
                     placeholder="e.g., Trading Bot API"
                     required
-                    {...form.getInputProps('name')}
+                    {...form.getInputProps("name")}
                   />
 
                   <Select
                     label="Expires In"
                     data={[
-                      { value: '1h', label: '1 hour' },
-                      { value: '24h', label: '24 hours' },
-                      { value: '7d', label: '7 days' },
-                      { value: '30d', label: '30 days' },
-                      { value: '90d', label: '90 days' },
+                      { value: "1h", label: "1 hour" },
+                      { value: "24h", label: "24 hours" },
+                      { value: "7d", label: "7 days" },
+                      { value: "30d", label: "30 days" },
+                      { value: "90d", label: "90 days" },
                     ]}
-                    {...form.getInputProps('expiresIn')}
+                    {...form.getInputProps("expiresIn")}
                   />
 
                   <Textarea
                     label="Description (Optional)"
                     placeholder="What will this token be used for?"
-                    {...form.getInputProps('description')}
+                    {...form.getInputProps("description")}
                     minRows={2}
                   />
 
-                  <Alert 
+                  <Alert
                     icon={<IconAlertCircle size={16} />}
                     title="Important"
                     color="yellow"
                   >
-                    Make sure to copy your token after creation. You won&apos;t be able to see it again.
+                    Make sure to copy your token after creation. You won&apos;t
+                    be able to see it again.
                   </Alert>
 
                   <Group justify="flex-end">
                     <Button variant="light" onClick={handleCloseModal}>
                       Cancel
                     </Button>
-                    <Button 
-                      type="submit" 
-                      loading={generateToken.isPending}
-                    >
+                    <Button type="submit" loading={generateToken.isPending}>
                       Generate Token
                     </Button>
                   </Group>
                 </>
               ) : (
                 <>
-                  <Alert 
+                  <Alert
                     icon={<IconCheck size={16} />}
                     title="Token Generated Successfully"
                     color="green"
                   >
-                    Your API token has been generated. Copy it now and store it securely.
+                    Your API token has been generated. Copy it now and store it
+                    securely.
                   </Alert>
 
                   <div>
-                    <Text size="sm" fw={500} mb="xs">Your API Token:</Text>
+                    <Text size="sm" fw={500} mb="xs">
+                      Your API Token:
+                    </Text>
                     <Paper withBorder p="sm" bg="gray.0">
                       <Group justify="space-between" wrap="nowrap">
-                        <Code 
-                          style={{ 
-                            wordBreak: 'break-all',
-                            fontSize: '12px',
-                            flex: 1
+                        <Code
+                          style={{
+                            wordBreak: "break-all",
+                            fontSize: "12px",
+                            flex: 1,
                           }}
                         >
                           {generatedToken}
                         </Code>
-                        <CopyButton value={generatedToken || ''}>
+                        <CopyButton value={generatedToken || ""}>
                           {({ copied, copy }) => (
-                            <ActionIcon 
-                              color={copied ? 'teal' : 'gray'} 
+                            <ActionIcon
+                              color={copied ? "teal" : "gray"}
                               onClick={copy}
                               variant="light"
                             >
-                              {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                              {copied ? (
+                                <IconCheck size={16} />
+                              ) : (
+                                <IconCopy size={16} />
+                              )}
                             </ActionIcon>
                           )}
                         </CopyButton>
@@ -298,18 +319,17 @@ export default function TokensPage() {
                     </Paper>
                   </div>
 
-                  <Alert 
+                  <Alert
                     icon={<IconAlertCircle size={16} />}
                     title="Security Notice"
                     color="red"
                   >
-                    This token will not be shown again. Make sure to save it in a secure location.
+                    This token will not be shown again. Make sure to save it in
+                    a secure location.
                   </Alert>
 
                   <Group justify="flex-end">
-                    <Button onClick={handleCloseModal}>
-                      Done
-                    </Button>
+                    <Button onClick={handleCloseModal}>Done</Button>
                   </Group>
                 </>
               )}

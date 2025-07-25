@@ -1,6 +1,6 @@
 'use client';
 
-import { Textarea, Button, Group } from '@mantine/core';
+import { Textarea, Button, Group, Image } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
 
@@ -37,6 +37,39 @@ export function ContentEditor({ id, initialContent, onSave, label = 'Content' }:
     }
   };
 
+  const renderContent = (text: string) => {
+    // Split content by markdown images
+    const parts = text.split(/!\[([^\]]*)\]\(([^)]+)\)/g);
+    const elements = [];
+    
+    for (let i = 0; i < parts.length; i += 3) {
+      // Regular text
+      if (parts[i]?.trim()) {
+        elements.push(
+          <pre key={`text-${i}`} className="whitespace-pre-wrap">
+            {parts[i]}
+          </pre>
+        );
+      }
+      
+      // Image (alt text is parts[i+1], src is parts[i+2])
+      if (parts[i + 1] !== undefined && parts[i + 2]) {
+        elements.push(
+          <Image
+            key={`img-${i}`}
+            src={parts[i + 2]}
+            alt={parts[i + 1]}
+            radius="sm"
+            style={{ maxHeight: 400, objectFit: "contain" }}
+            my="md"
+          />
+        );
+      }
+    }
+    
+    return elements.length > 0 ? elements : <pre className="whitespace-pre-wrap">{text}</pre>;
+  };
+
   if (!isEditing) {
     return (
       <div>
@@ -49,7 +82,7 @@ export function ContentEditor({ id, initialContent, onSave, label = 'Content' }:
             Edit {label}
           </Button>
         </Group>
-        <pre className="whitespace-pre-wrap">{content}</pre>
+        {renderContent(content)}
       </div>
     );
   }

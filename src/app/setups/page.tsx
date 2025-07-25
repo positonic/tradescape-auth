@@ -1,45 +1,48 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import { api } from "~/trpc/react";
-import { 
-  Paper, 
-  Title, 
-  Table, 
+import {
+  Paper,
+  Title,
+  Table,
   Badge,
   Text,
   Skeleton,
   Tabs,
   Group,
   Button,
-} from '@mantine/core';
-import { useRouter } from 'next/navigation';
-import { notifications } from '@mantine/notifications';
-import { IconPlus } from '@tabler/icons-react';
-import { SetupDrawer } from '~/components/SetupDrawer';
+} from "@mantine/core";
+import { useRouter } from "next/navigation";
+import { notifications } from "@mantine/notifications";
+import { IconPlus } from "@tabler/icons-react";
+import { SetupDrawer } from "~/components/SetupDrawer";
 
 export default function SetupsPage() {
   const [drawerOpened, setDrawerOpened] = useState(false);
-  const { data: publicSetups, isLoading: publicLoading } = api.setups.getPublic.useQuery();
-  const { data: privateSetups, isLoading: privateLoading } = api.setups.getPrivate.useQuery();
-  const { data: transcriptionSessions, isLoading: transcriptionsLoading } = api.transcription.getSessions.useQuery();
+  const { data: publicSetups, isLoading: publicLoading } =
+    api.setups.getPublic.useQuery();
+  const { data: privateSetups, isLoading: privateLoading } =
+    api.setups.getPrivate.useQuery();
+  const { data: transcriptionSessions, isLoading: transcriptionsLoading } =
+    api.transcription.getSessions.useQuery();
   const router = useRouter();
 
   const createSetupsMutation = api.setups.createFromTranscription.useMutation({
     onSuccess: () => {
       notifications.show({
-        title: 'Success',
-        message: 'Setups created successfully',
-        color: 'green',
+        title: "Success",
+        message: "Setups created successfully",
+        color: "green",
       });
     },
     onError: (error) => {
       notifications.show({
-        title: 'Error',
+        title: "Error",
         message: error.message,
-        color: 'red',
+        color: "red",
       });
-    }
+    },
   });
 
   if (publicLoading || privateLoading || transcriptionsLoading) {
@@ -62,27 +65,37 @@ export default function SetupsPage() {
       </Table.Thead>
       <Table.Tbody>
         {setups?.map((setup) => (
-          <Table.Tr 
+          <Table.Tr
             key={setup.id}
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: "pointer" }}
             onClick={() => router.push(`/setup/${setup.id}`)}
           >
             <Table.Td>{setup.pair.symbol}</Table.Td>
             <Table.Td>
-              <span className={setup.direction.toLowerCase() === 'long' ? 'text-green-500' : 'text-red-500'}>
+              <span
+                className={
+                  setup.direction.toLowerCase() === "long"
+                    ? "text-green-500"
+                    : "text-red-500"
+                }
+              >
                 {setup.direction}
               </span>
             </Table.Td>
-            <Table.Td>{setup.entryPrice?.toString() ?? 'Not specified'}</Table.Td>
-            <Table.Td>{setup.takeProfitPrice?.toString() ?? 'Not specified'}</Table.Td>
-            <Table.Td>{setup.stopPrice?.toString() ?? '-'}</Table.Td>
-            <Table.Td>{setup.timeframe ?? 'Not specified'}</Table.Td>
+            <Table.Td>
+              {setup.entryPrice?.toString() ?? "Not specified"}
+            </Table.Td>
+            <Table.Td>
+              {setup.takeProfitPrice?.toString() ?? "Not specified"}
+            </Table.Td>
+            <Table.Td>{setup.stopPrice?.toString() ?? "-"}</Table.Td>
+            <Table.Td>{setup.timeframe ?? "Not specified"}</Table.Td>
             <Table.Td>
               <Group gap="xs">
-                <Badge color={setup.status === 'active' ? 'blue' : 'gray'}>
+                <Badge color={setup.status === "active" ? "blue" : "gray"}>
                   {setup.status}
                 </Badge>
-                <Badge color={setup.privacy === 'public' ? 'green' : 'yellow'}>
+                <Badge color={setup.privacy === "public" ? "green" : "yellow"}>
                   {setup.privacy}
                 </Badge>
               </Group>
@@ -117,7 +130,7 @@ export default function SetupsPage() {
   //     </Table.Thead>
   //     <Table.Tbody>
   //       {transcriptionSessions?.map((session) => (
-  //         <Table.Tr 
+  //         <Table.Tr
   //           key={session.id}
   //           style={{ cursor: 'pointer' }}
   //           onClick={() => router.push(`/transcription/${session.id}`)}
@@ -186,11 +199,11 @@ export default function SetupsPage() {
           </Tabs.Panel> */}
         </Tabs>
       </Paper>
-      
+
       <SetupDrawer
         opened={drawerOpened}
         onClose={() => setDrawerOpened(false)}
       />
     </>
   );
-} 
+}

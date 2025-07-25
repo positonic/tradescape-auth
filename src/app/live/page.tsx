@@ -150,10 +150,11 @@ export default function LivePage() {
     });
 
   // Query for recent snapshots (for chart data)
-  const { data: chartSnapshots, refetch: refetchChartSnapshots } = api.portfolioSnapshot.getRecent.useQuery(
-    { limit: 30 }, // Get last 30 snapshots
-    { enabled: !!session?.user }
-  );
+  const { data: chartSnapshots, refetch: refetchChartSnapshots } =
+    api.portfolioSnapshot.getRecent.useQuery(
+      { limit: 30 }, // Get last 30 snapshots
+      { enabled: !!session?.user },
+    );
 
   // Portfolio snapshot mutations
   const createSnapshotMutation = api.portfolioSnapshot.create.useMutation({
@@ -175,7 +176,6 @@ export default function LivePage() {
       });
     },
   });
-
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -1177,87 +1177,129 @@ export default function LivePage() {
                   <IconHistory size={20} />
                   Lifetime PnL Chart
                 </Title>
-                
+
                 {(() => {
                   // Prepare chart data (reverse to show oldest first)
                   const chartData = [...chartSnapshots].reverse();
-                  const values = chartData.map(s => Number(s.totalUsdValue));
+                  const values = chartData.map((s) => Number(s.totalUsdValue));
                   const minValue = Math.min(...values);
                   const maxValue = Math.max(...values);
                   const valueRange = maxValue - minValue || 1;
-                  
+
                   // Chart dimensions
                   const chartWidth = 800;
                   const chartHeight = 300;
                   const padding = 40;
-                  const plotWidth = chartWidth - (padding * 2);
-                  const plotHeight = chartHeight - (padding * 2);
-                  
+                  const plotWidth = chartWidth - padding * 2;
+                  const plotHeight = chartHeight - padding * 2;
+
                   // Calculate starting value for PnL
                   const startingValue = values[0];
-                  
+
                   // Generate SVG path
-                  const pathData = chartData.map((snapshot, index) => {
-                    const x = padding + (index / (chartData.length - 1)) * plotWidth;
-                    const value = Number(snapshot.totalUsdValue);
-                    const y = padding + plotHeight - ((value - minValue) / valueRange) * plotHeight;
-                    return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-                  }).join(' ');
-                  
+                  const pathData = chartData
+                    .map((snapshot, index) => {
+                      const x =
+                        padding + (index / (chartData.length - 1)) * plotWidth;
+                      const value = Number(snapshot.totalUsdValue);
+                      const y =
+                        padding +
+                        plotHeight -
+                        ((value - minValue) / valueRange) * plotHeight;
+                      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
+                    })
+                    .join(" ");
+
                   // Current vs starting PnL
                   const currentValue = values[values.length - 1];
                   const totalPnL = currentValue - startingValue;
-                  const totalPnLPercent = startingValue > 0 ? (totalPnL / startingValue) * 100 : 0;
-                  
+                  const totalPnLPercent =
+                    startingValue > 0 ? (totalPnL / startingValue) * 100 : 0;
+
                   return (
                     <div>
                       {/* PnL Summary */}
-                      <div style={{ display: 'flex', gap: '32px', marginBottom: '24px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "32px",
+                          marginBottom: "24px",
+                          padding: "16px",
+                          backgroundColor: "#f8f9fa",
+                          borderRadius: "8px",
+                        }}
+                      >
                         <div>
-                          <Text size="sm" c="dimmed">Starting Value</Text>
-                          <Text size="lg" fw={600}>${startingValue.toLocaleString()}</Text>
+                          <Text size="sm" c="dimmed">
+                            Starting Value
+                          </Text>
+                          <Text size="lg" fw={600}>
+                            ${startingValue.toLocaleString()}
+                          </Text>
                         </div>
                         <div>
-                          <Text size="sm" c="dimmed">Current Value</Text>
-                          <Text size="lg" fw={600}>${currentValue.toLocaleString()}</Text>
+                          <Text size="sm" c="dimmed">
+                            Current Value
+                          </Text>
+                          <Text size="lg" fw={600}>
+                            ${currentValue.toLocaleString()}
+                          </Text>
                         </div>
                         <div>
-                          <Text size="sm" c="dimmed">Total PnL</Text>
-                          <Text size="lg" fw={600} c={totalPnL >= 0 ? "green" : "red"}>
+                          <Text size="sm" c="dimmed">
+                            Total PnL
+                          </Text>
+                          <Text
+                            size="lg"
+                            fw={600}
+                            c={totalPnL >= 0 ? "green" : "red"}
+                          >
                             {totalPnL >= 0 ? "+" : ""}${totalPnL.toFixed(2)}
                           </Text>
                           <Text size="sm" c={totalPnL >= 0 ? "green" : "red"}>
-                            {totalPnL >= 0 ? "+" : ""}{totalPnLPercent.toFixed(2)}%
+                            {totalPnL >= 0 ? "+" : ""}
+                            {totalPnLPercent.toFixed(2)}%
                           </Text>
                         </div>
                       </div>
-                      
+
                       {/* Chart */}
-                      <div style={{ width: '100%', overflowX: 'auto' }}>
-                        <svg width={chartWidth} height={chartHeight} style={{ border: '1px solid #e9ecef', borderRadius: '4px' }}>
+                      <div style={{ width: "100%", overflowX: "auto" }}>
+                        <svg
+                          width={chartWidth}
+                          height={chartHeight}
+                          style={{
+                            border: "1px solid #e9ecef",
+                            borderRadius: "4px",
+                          }}
+                        >
                           {/* Grid lines */}
-                          {[0, 0.25, 0.5, 0.75, 1].map(ratio => (
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
                             <g key={ratio}>
-                              <line 
-                                x1={padding} 
-                                y1={padding + ratio * plotHeight} 
-                                x2={chartWidth - padding} 
+                              <line
+                                x1={padding}
+                                y1={padding + ratio * plotHeight}
+                                x2={chartWidth - padding}
                                 y2={padding + ratio * plotHeight}
-                                stroke="#e9ecef" 
+                                stroke="#e9ecef"
                                 strokeWidth={1}
                               />
-                              <text 
-                                x={padding - 10} 
+                              <text
+                                x={padding - 10}
                                 y={padding + ratio * plotHeight + 5}
-                                fontSize="12" 
-                                fill="#868e96" 
+                                fontSize="12"
+                                fill="#868e96"
                                 textAnchor="end"
                               >
-                                ${(maxValue - ratio * valueRange).toLocaleString()}
+                                $
+                                {(
+                                  maxValue -
+                                  ratio * valueRange
+                                ).toLocaleString()}
                               </text>
                             </g>
                           ))}
-                          
+
                           {/* Chart line */}
                           <path
                             d={pathData}
@@ -1265,12 +1307,17 @@ export default function LivePage() {
                             stroke={totalPnL >= 0 ? "#51cf66" : "#ff6b6b"}
                             strokeWidth={2}
                           />
-                          
+
                           {/* Data points */}
                           {chartData.map((snapshot, index) => {
-                            const x = padding + (index / (chartData.length - 1)) * plotWidth;
+                            const x =
+                              padding +
+                              (index / (chartData.length - 1)) * plotWidth;
                             const value = Number(snapshot.totalUsdValue);
-                            const y = padding + plotHeight - ((value - minValue) / valueRange) * plotHeight;
+                            const y =
+                              padding +
+                              plotHeight -
+                              ((value - minValue) / valueRange) * plotHeight;
                             return (
                               <circle
                                 key={snapshot.id}
@@ -1283,11 +1330,27 @@ export default function LivePage() {
                           })}
                         </svg>
                       </div>
-                      
+
                       {/* Time labels */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', color: '#868e96' }}>
-                        <span>{new Date(chartData[0].timestamp).toLocaleDateString()}</span>
-                        <span>{new Date(chartData[chartData.length - 1].timestamp).toLocaleDateString()}</span>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginTop: "8px",
+                          fontSize: "12px",
+                          color: "#868e96",
+                        }}
+                      >
+                        <span>
+                          {new Date(
+                            chartData[0].timestamp,
+                          ).toLocaleDateString()}
+                        </span>
+                        <span>
+                          {new Date(
+                            chartData[chartData.length - 1].timestamp,
+                          ).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   );
