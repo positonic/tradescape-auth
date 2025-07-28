@@ -1,10 +1,21 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import Link from "next/link";
-import { IconHome, IconRobot, IconMicrophone, IconSettings, IconLogout, IconLogin, IconTargetArrow, IconChartLine, IconCalculator, IconActivity} from "@tabler/icons-react";
-import { Drawer } from '@mantine/core';
-import ManyChat from './ManyChat';
+import {
+  IconHome,
+  IconRobot,
+  IconMicrophone,
+  IconSettings,
+  IconLogout,
+  IconLogin,
+  IconTargetArrow,
+  IconChartLine,
+  IconCalculator,
+  IconActivity,
+} from "@tabler/icons-react";
+import { Drawer } from "@mantine/core";
+import ManyChat from "./ManyChat";
 
 interface NavbarWithDrawerProps {
   session: {
@@ -22,22 +33,22 @@ export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {
 
   return (
     <>
-      <nav className="w-20 bg-white border-r flex flex-col items-center py-4 space-y-4">
+      <nav className="flex w-20 flex-col items-center space-y-4 border-r bg-white py-4">
         <div className="p-2">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center">
-            <img 
-              src="/tradescape-logo-trans.png" 
-              alt="TradeScape Logo" 
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg">
+            <img
+              src="/tradescape-logo-trans.png"
+              alt="TradeScape Logo"
               className="h-8 w-auto"
             />
           </div>
         </div>
-        
-        <div className="flex-1 flex flex-col space-y-2">
+
+        <div className="flex flex-1 flex-col space-y-2">
           <NavItem href="/" icon={<IconHome size={24} />} />
           <button
             onClick={() => setChatDrawerOpened(!chatDrawerOpened)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="rounded-lg p-2 transition-colors hover:bg-gray-100"
           >
             <IconRobot size={24} />
           </button>
@@ -47,12 +58,14 @@ export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {
           <NavItem href="/live" icon={<IconActivity size={24} />} />
           <NavItem href="/calculator" icon={<IconCalculator size={24} />} />
         </div>
-        
+
         {session ? (
           <>
             <NavItem href="/api/auth/signout" icon={<IconLogout size={24} />} />
           </>
-        ) : <NavItem href="/api/auth/signin" icon={<IconLogin size={24} />} />}
+        ) : (
+          <NavItem href="/api/auth/signin" icon={<IconLogin size={24} />} />
+        )}
         <NavItem href="/settings" icon={<IconSettings size={24} />} />
       </nav>
 
@@ -82,9 +95,9 @@ export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {
 
 function NavItem({ href, icon }: { href: string; icon: React.ReactNode }) {
   return (
-    <Link 
-      href={href} 
-      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+    <Link
+      href={href}
+      className="rounded-lg p-2 transition-colors hover:bg-gray-100"
     >
       {icon}
     </Link>

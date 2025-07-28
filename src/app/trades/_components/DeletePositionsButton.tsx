@@ -19,14 +19,14 @@ export function DeletePositionsButton() {
       const result = await deletePositionsMutation.mutateAsync();
 
       console.log("Position deletion result:", result);
-      
+
       if (result.success) {
         notifications.show({
           title: "Success",
           message: result.message,
           color: "green",
         });
-        
+
         // Invalidate positions query to refresh the UI
         void utils.trades.getPositions.invalidate();
       } else {
@@ -40,7 +40,8 @@ export function DeletePositionsButton() {
       console.error("Position deletion error:", error);
       notifications.show({
         title: "Error",
-        message: error instanceof Error ? error.message : "Failed to delete positions",
+        message:
+          error instanceof Error ? error.message : "Failed to delete positions",
         color: "red",
       });
     } finally {
@@ -67,18 +68,17 @@ export function DeletePositionsButton() {
         centered
       >
         <Text mb="md">
-          Are you sure you want to delete <strong>all positions</strong>? This action cannot be undone.
+          Are you sure you want to delete <strong>all positions</strong>? This
+          action cannot be undone.
         </Text>
         <Text size="sm" c="dimmed" mb="lg">
-          This will unlink orders from positions and permanently delete all position records. 
-          You can recreate positions afterwards using the &quot;Create Positions&quot; button.
+          This will unlink orders from positions and permanently delete all
+          position records. You can recreate positions afterwards using the
+          &quot;Create Positions&quot; button.
         </Text>
-        
+
         <Group justify="flex-end">
-          <Button
-            variant="subtle"
-            onClick={() => setConfirmModalOpen(false)}
-          >
+          <Button variant="subtle" onClick={() => setConfirmModalOpen(false)}>
             Cancel
           </Button>
           <Button

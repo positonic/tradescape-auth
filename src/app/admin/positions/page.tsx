@@ -1,7 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Container, Title, Text, Group, Paper, Stack, Code, Alert } from "@mantine/core";
+import {
+  Button,
+  Container,
+  Title,
+  Text,
+  Group,
+  Paper,
+  Stack,
+  Code,
+  Alert,
+} from "@mantine/core";
 import { api } from "~/trpc/react";
 import { notifications } from "@mantine/notifications";
 
@@ -14,7 +24,8 @@ export default function PositionsAdminPage() {
     totalOrders?: number;
   } | null>(null);
 
-  const createPositionsMutation = api.pairs.createPositionsFromExistingOrders.useMutation();
+  const createPositionsMutation =
+    api.pairs.createPositionsFromExistingOrders.useMutation();
 
   const runPositionCreation = async (dryRun = false) => {
     setIsRunning(true);
@@ -27,7 +38,7 @@ export default function PositionsAdminPage() {
       });
 
       setResult(result);
-      
+
       if (result.success) {
         notifications.show({
           title: "Success",
@@ -52,9 +63,10 @@ export default function PositionsAdminPage() {
       <Title order={1} mb="lg">
         Position Creation Admin
       </Title>
-      
+
       <Text mb="xl">
-        This tool creates positions from existing orders that don&apos;t have positions assigned yet.
+        This tool creates positions from existing orders that don&apos;t have
+        positions assigned yet.
       </Text>
 
       <Paper p="md" mb="xl">
@@ -84,9 +96,7 @@ export default function PositionsAdminPage() {
           <Title order={3} mb="md">
             Result
           </Title>
-          <Code block>
-            {JSON.stringify(result, null, 2)}
-          </Code>
+          <Code block>{JSON.stringify(result, null, 2)}</Code>
         </Paper>
       )}
     </Container>
