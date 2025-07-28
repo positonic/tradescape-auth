@@ -910,6 +910,48 @@ export const setupsRouter = createTRPCRouter({
       return setup;
     }),
 
+  updatePair: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      pairId: z.number(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // First find the pair to get its information
+      const pair = await ctx.db.pair.findUnique({
+        where: { id: input.pairId },
+        select: { symbol: true }
+      });
+
+      if (!pair) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Pair not found'
+        });
+      }
+
+      // Extract base symbol for coin lookup
+      const baseSymbol = pair.symbol.split('/')[0];
+      const coin = await ctx.db.coin.findFirst({
+        where: { symbol: baseSymbol }
+      });
+
+      const setup = await ctx.db.setup.update({
+        where: { 
+          id: input.id,
+          userId: ctx.session.user.id 
+        },
+        data: {
+          pairId: input.pairId,
+          coinId: coin?.id,
+        },
+        include: {
+          pair: true,
+          coin: true,
+        },
+      });
+      return setup;
+    }),
+
   deleteSetup: protectedProcedure
     .input(z.object({
       id: z.string(),
