@@ -89,7 +89,7 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
     const handlePaste = async (e: ClipboardEvent) => {
       if (!opened) return;
 
-      const items = Array.from(e.clipboardData?.items || []);
+      const items = Array.from(e.clipboardData?.items ?? []);
       const imageItem = items.find((item) => item.type.startsWith("image/"));
 
       if (imageItem) {
@@ -129,8 +129,9 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
       }
     };
 
-    document.addEventListener("paste", handlePaste);
-    return () => document.removeEventListener("paste", handlePaste);
+    const pasteHandler = (e: ClipboardEvent) => void handlePaste(e);
+    document.addEventListener("paste", pasteHandler);
+    return () => document.removeEventListener("paste", pasteHandler);
   }, [opened, form]);
 
   const handleSubmit = async (values: SetupFormValues) => {
@@ -162,7 +163,7 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
       size="md"
       padding="lg"
     >
-      <form onSubmit={form.onSubmit(handleSubmit)}>
+      <form onSubmit={form.onSubmit((values) => void handleSubmit(values))}>
         <Stack gap="md">
           <Select
             label="Pair"

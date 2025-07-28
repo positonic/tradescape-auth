@@ -71,7 +71,7 @@ export function DeletePositionsButton() {
         </Text>
         <Text size="sm" c="dimmed" mb="lg">
           This will unlink orders from positions and permanently delete all position records. 
-          You can recreate positions afterwards using the "Create Positions" button.
+          You can recreate positions afterwards using the &quot;Create Positions&quot; button.
         </Text>
         
         <Group justify="flex-end">

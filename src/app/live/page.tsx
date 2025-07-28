@@ -116,16 +116,18 @@ export default function LivePage() {
       });
 
       // Immediately fetch initial data
-      setTimeout(async () => {
-        try {
-          const data = await refetch();
-          if (data.data) {
-            setLiveData(data.data);
-            setLastUpdate(new Date());
+      setTimeout(() => {
+        void (async () => {
+          try {
+            const data = await refetch();
+            if (data.data) {
+              setLiveData(data.data);
+              setLastUpdate(new Date());
+            }
+          } catch (error) {
+            console.error("Failed to fetch initial data:", error);
           }
-        } catch (error) {
-          console.error("Failed to fetch initial data:", error);
-        }
+        })();
       }, 1000);
     },
     onError: (error) => {
@@ -165,8 +167,8 @@ export default function LivePage() {
         color: "green",
       });
       // Refresh latest snapshot and chart data
-      refetchLatestSnapshot();
-      refetchChartSnapshots();
+      void refetchLatestSnapshot();
+      void refetchChartSnapshots();
     },
     onError: (error) => {
       notifications.show({
@@ -291,9 +293,9 @@ export default function LivePage() {
   const getOrdersForPosition = (positionPair: string): LiveOrder[] => {
     if (!liveData?.orders) return [];
 
-    const positionCoin = positionPair?.split("/")[0] || positionPair;
+    const positionCoin = positionPair?.split("/")[0] ?? positionPair;
     return liveData.orders.filter((order) => {
-      const orderCoin = order.symbol?.split("/")[0] || order.symbol;
+      const orderCoin = order.symbol?.split("/")[0] ?? order.symbol;
       return orderCoin === positionCoin;
     });
   };
@@ -308,7 +310,7 @@ export default function LivePage() {
   // Auto-connect on mount and start polling
   useEffect(() => {
     if (status === "authenticated" && !isConnected) {
-      connectToLiveData();
+      void connectToLiveData();
     }
   }, [status]);
 
@@ -316,16 +318,18 @@ export default function LivePage() {
   useEffect(() => {
     if (!isConnected) return;
 
-    const interval = setInterval(async () => {
-      try {
-        const data = await refetch();
-        if (data.data) {
-          setLiveData(data.data);
-          setLastUpdate(new Date());
+    const interval = setInterval(() => {
+      void (async () => {
+        try {
+          const data = await refetch();
+          if (data.data) {
+            setLiveData(data.data);
+            setLastUpdate(new Date());
+          }
+        } catch (error) {
+          console.error("Failed to poll live data:", error);
         }
-      } catch (error) {
-        console.error("Failed to poll live data:", error);
-      }
+      })();
     }, 5000);
 
     return () => clearInterval(interval);
@@ -335,7 +339,7 @@ export default function LivePage() {
   useEffect(() => {
     return () => {
       if (isConnected) {
-        disconnectFromLiveData();
+        void disconnectFromLiveData();
       }
     };
   }, []);
@@ -489,7 +493,7 @@ export default function LivePage() {
                   <Text size="xs" c="dimmed">
                     $
                     {liveData.positions
-                      .reduce((sum, p) => sum + (p.positionValue || 0), 0)
+                      .reduce((sum, p) => sum + (p.positionValue ?? 0), 0)
                       .toLocaleString()}{" "}
                     total
                   </Text>
@@ -499,17 +503,17 @@ export default function LivePage() {
                     Open Orders
                   </Text>
                   <Text size="lg" fw={600}>
-                    {liveData.orders?.length || 0}
+                    {liveData.orders?.length ?? 0}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    {liveData.orders?.filter((o) => o.isStopOrder).length || 0}{" "}
+                    {liveData.orders?.filter((o) => o.isStopOrder).length ?? 0}{" "}
                     stops,{" "}
                     {liveData.orders?.filter((o) => o.isTakeProfitOrder)
-                      .length || 0}{" "}
+                      .length ?? 0}{" "}
                     take profits,{" "}
                     {liveData.orders?.filter(
                       (o) => !o.isStopOrder && !o.isTakeProfitOrder,
-                    ).length || 0}{" "}
+                    ).length ?? 0}{" "}
                     limit
                   </Text>
                 </div>
@@ -565,7 +569,7 @@ export default function LivePage() {
                   <Text size="lg" fw={600}>
                     $
                     {liveData.positions
-                      .reduce((sum, p) => sum + (p.marginUsed || 0), 0)
+                      .reduce((sum, p) => sum + (p.marginUsed ?? 0), 0)
                       .toLocaleString()}
                   </Text>
                 </div>
@@ -621,7 +625,7 @@ export default function LivePage() {
                     fw={600}
                     c={
                       liveData.positions.reduce(
-                        (sum, p) => sum + (p.funding?.allTime || 0),
+                        (sum, p) => sum + (p.funding?.allTime ?? 0),
                         0,
                       ) >= 0
                         ? "green"
@@ -630,7 +634,7 @@ export default function LivePage() {
                   >
                     $
                     {liveData.positions
-                      .reduce((sum, p) => sum + (p.funding?.allTime || 0), 0)
+                      .reduce((sum, p) => sum + (p.funding?.allTime ?? 0), 0)
                       .toFixed(2)}
                   </Text>
                   <Text size="xs" c="dimmed">
@@ -689,7 +693,7 @@ export default function LivePage() {
                             <Table.Td>
                               <div>
                                 <Text size="sm" fw={500}>
-                                  {position.pair?.split("/")[0] ||
+                                  {position.pair?.split("/")[0] ??
                                     position.pair}
                                 </Text>
                                 <Text size="xs" c="dimmed">
@@ -775,7 +779,7 @@ export default function LivePage() {
                             </Table.Td>
                             <Table.Td>
                               <Text size="sm">
-                                ${position.marginUsed?.toFixed(2) || "N/A"}
+                                ${position.marginUsed?.toFixed(2) ?? "N/A"}
                               </Text>
                             </Table.Td>
                             <Table.Td>
@@ -1029,7 +1033,7 @@ export default function LivePage() {
                       <Table.Tr key={index}>
                         <Table.Td>
                           <Text size="sm" fw={500}>
-                            {order.symbol?.split("/")[0] || order.symbol}
+                            {order.symbol?.split("/")[0] ?? order.symbol}
                           </Text>
                         </Table.Td>
                         <Table.Td>

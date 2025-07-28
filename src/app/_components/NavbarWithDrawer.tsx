@@ -7,7 +7,14 @@ import { Drawer } from '@mantine/core';
 import ManyChat from './ManyChat';
 
 interface NavbarWithDrawerProps {
-  session: any;
+  session: {
+    user?: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
+  } | null;
 }
 
 export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {

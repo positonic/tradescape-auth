@@ -7,7 +7,12 @@ import { notifications } from "@mantine/notifications";
 
 export default function PositionsAdminPage() {
   const [isRunning, setIsRunning] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<{
+    message: string;
+    createdPositions?: number;
+    matchedOrders?: number;
+    totalOrders?: number;
+  } | null>(null);
 
   const createPositionsMutation = api.pairs.createPositionsFromExistingOrders.useMutation();
 
@@ -49,7 +54,7 @@ export default function PositionsAdminPage() {
       </Title>
       
       <Text mb="xl">
-        This tool creates positions from existing orders that don't have positions assigned yet.
+        This tool creates positions from existing orders that don&apos;t have positions assigned yet.
       </Text>
 
       <Paper p="md" mb="xl">

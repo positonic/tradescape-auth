@@ -29,6 +29,25 @@ interface Message {
     agentName?: string; // Added: Name of the AI agent sending the message
 }
 
+interface ProjectData {
+    name: string;
+    description?: string;
+    status: string;
+    priority: string;
+}
+
+interface ProjectAction {
+    name: string;
+    status: string;
+    priority: string;
+}
+
+interface Agent {
+    id: string;
+    name: string;
+    instructions?: string;
+}
+
 interface ManyChatProps {
   initialMessages?: Message[];
   githubSettings?: {
@@ -59,12 +78,12 @@ export default function ManyChat({ initialMessages, githubSettings, buttons, pro
   };
 
   // Function to generate initial messages with project context
-  const generateInitialMessages = useCallback((projectData?: any, projectActions?: any[]): Message[] => {
+  const generateInitialMessages = useCallback((projectData?: ProjectData, projectActions?: ProjectAction[]): Message[] => {
     const projectContext = projectData && projectActions ? `
       
       CURRENT PROJECT CONTEXT:
       - Project: ${projectData.name}
-      - Description: ${projectData.description || 'No description'}
+      - Description: ${projectData.description ?? 'No description'}
       - Status: ${projectData.status}
       - Priority: ${projectData.priority}
       - Current Tasks: ${projectActions.length > 0 ? 
@@ -157,7 +176,7 @@ export default function ManyChat({ initialMessages, githubSettings, buttons, pro
   // Parse agent mentions from input
   const parseAgentMention = (text: string): { agentId: string | null; cleanMessage: string } => {
     const mentionRegex = /@(\w+)/;
-    const match = text.match(mentionRegex);
+    const match = mentionRegex.exec(text);
     
     if (match && mastraAgents) {
       const mentionedName = match[1];
@@ -219,7 +238,7 @@ export default function ManyChat({ initialMessages, githubSettings, buttons, pro
   // Handle input changes and autocomplete
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const position = e.target.selectionStart || 0;
+    const position = e.target.selectionStart ?? 0;
     
     setInput(value);
     setCursorPosition(position);
@@ -369,7 +388,7 @@ export default function ManyChat({ initialMessages, githubSettings, buttons, pro
 
       const aiResponse: Message = {
         type: 'ai', 
-        agentName: result.agentName || 'Agent',
+        agentName: result.agentName ?? 'Agent',
         content: typeof result.response === 'string' 
           ? result.response 
           : JSON.stringify(result.response)
@@ -493,7 +512,7 @@ export default function ManyChat({ initialMessages, githubSettings, buttons, pro
       const term = agentFilter.trim().toLowerCase();
       if (!term) return true;
       const nameMatch = agent.name.toLowerCase().includes(term);
-      const instr = (agent as any).instructions as string | undefined;
+      const instr = (agent as Agent).instructions;
       const instructionsMatch = instr?.toLowerCase().includes(term) ?? false;
       return nameMatch || instructionsMatch;
     });
@@ -552,13 +571,13 @@ export default function ManyChat({ initialMessages, githubSettings, buttons, pro
             >
               {message.type === 'ai' ? (
                 <Group align="flex-start" gap="xs" style={{ maxWidth: '85%' }}>
-                  <Tooltip label={message.agentName || 'Agent'} position="left" withArrow>
+                  <Tooltip label={message.agentName ?? 'Agent'} position="left" withArrow>
                     <Avatar 
                       size="md" 
                       radius="xl" 
-                      alt={message.agentName || 'AI'}
+                      alt={message.agentName ?? 'AI'}
                     >
-                      {getInitials(message.agentName || 'AI')}
+                      {getInitials(message.agentName ?? 'AI')}
                     </Avatar>
                   </Tooltip>
                   <Paper

@@ -5,9 +5,29 @@ import { Button, Modal, Title, Text, Group, Stack, Badge, Table, Progress } from
 import { api } from "~/trpc/react";
 import { notifications } from "@mantine/notifications";
 
+interface ValidationData {
+  totalPositions: number;
+  completePositions: number;
+  partialPositions: number;
+  buyOnlyPositions: number;
+  sellOnlyPositions: number;
+  positivePositions: number;
+  negativePositions: number;
+  averageOrdersPerPosition: number;
+  averageProfitLoss: number;
+  topTradingPairs: Array<{
+    pair: string;
+    count: number;
+  }>;
+  summary: {
+    totalPositions: number;
+    averageProfitLoss: number;
+  };
+}
+
 export function PositionValidationButton() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [validationData, setValidationData] = useState<any>(null);
+  const [validationData, setValidationData] = useState<ValidationData | null>(null);
   
   const validateQuery = api.pairs.validatePositionCreation.useQuery(undefined, {
     enabled: false,
@@ -16,7 +36,7 @@ export function PositionValidationButton() {
   const runValidation = async () => {
     try {
       const result = await validateQuery.refetch();
-      setValidationData(result.data);
+      setValidationData(result.data as ValidationData);
       setIsModalOpen(true);
     } catch (error) {
       console.error("Error validating positions:", error);
@@ -99,7 +119,7 @@ export function PositionValidationButton() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {validationData.topTradingPairs.map((item: any, index: number) => (
+                  {validationData.topTradingPairs.map((item, index: number) => (
                     <Table.Tr key={index}>
                       <Table.Td>{item.pair}</Table.Td>
                       <Table.Td>{item.count}</Table.Td>

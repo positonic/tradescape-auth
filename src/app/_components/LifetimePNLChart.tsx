@@ -61,7 +61,7 @@ export function LifetimePNLChart() {
           }}
           xAxisProps={{
             tickFormatter: (value) => {
-              const date = new Date(value);
+              const date = new Date(value as string | number | Date);
               return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
             },
           }}

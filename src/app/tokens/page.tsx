@@ -300,7 +300,7 @@ export default function TokensPage() {
                         >
                           {generatedToken}
                         </Code>
-                        <CopyButton value={generatedToken || ""}>
+                        <CopyButton value={generatedToken ?? ""}>
                           {({ copied, copy }) => (
                             <ActionIcon
                               color={copied ? "teal" : "gray"}
