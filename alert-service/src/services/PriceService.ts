@@ -54,7 +54,7 @@ export class PriceService {
         "MATCH",
         pattern,
         "COUNT",
-        100
+        100,
       );
       cursor = nextCursor;
       keys.push(...foundKeys);
@@ -165,7 +165,7 @@ export class PriceService {
           if (price !== null) {
             prices.set(market, price);
           }
-        })()
+        })(),
       );
     }
 
@@ -179,7 +179,7 @@ export class PriceService {
    */
   async fetchCandleClose(
     symbol: string,
-    interval: string
+    interval: string,
   ): Promise<number | null> {
     try {
       // Map interval format: 4h -> 4h, 1d -> 1d (CCXT compatible)
@@ -190,7 +190,7 @@ export class PriceService {
         symbol,
         ccxtInterval,
         undefined,
-        2
+        2,
       );
 
       if (ohlcv && ohlcv.length >= 2) {
@@ -203,7 +203,7 @@ export class PriceService {
     } catch (error) {
       console.error(
         `[PriceService] Error fetching candle for ${symbol}:`,
-        error
+        error,
       );
       return null;
     }

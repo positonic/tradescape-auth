@@ -14,7 +14,7 @@ export const config = {
   // Price polling
   pricePollIntervalMs: parseInt(
     process.env.PRICE_POLL_INTERVAL_MS ?? "5000",
-    10
+    10,
   ),
 
   // Exchange (hardcoded to match main app)

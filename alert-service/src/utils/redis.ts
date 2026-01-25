@@ -40,9 +40,8 @@ export const redisKeys = {
   candleAlertZSet: (
     market: string,
     interval: string,
-    direction: "ABOVE" | "BELOW"
-  ): string =>
-    `candle_alerts:${market.toUpperCase()}:${interval}:${direction}`,
+    direction: "ABOVE" | "BELOW",
+  ): string => `candle_alerts:${market.toUpperCase()}:${interval}:${direction}`,
 
   // Alert details hash: stores full alert data
   alertDetailsHash: (alertId: string): string => `alert_details:${alertId}`,

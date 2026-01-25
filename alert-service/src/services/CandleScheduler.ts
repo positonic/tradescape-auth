@@ -24,7 +24,7 @@ export class CandleScheduler {
   constructor(
     redis: Redis,
     priceService: PriceService,
-    alertChecker: AlertChecker
+    alertChecker: AlertChecker,
   ) {
     this.redis = redis;
     this.priceService = priceService;
@@ -43,7 +43,8 @@ export class CandleScheduler {
     }
 
     // Calculate current candle start (rounded down to interval)
-    const currentCandleStart = Math.floor(now.getTime() / intervalMs) * intervalMs;
+    const currentCandleStart =
+      Math.floor(now.getTime() / intervalMs) * intervalMs;
 
     // Next candle close is when current candle ends
     const nextClose = new Date(currentCandleStart + intervalMs);
@@ -78,7 +79,7 @@ export class CandleScheduler {
         "MATCH",
         pattern,
         "COUNT",
-        100
+        100,
       );
       cursor = nextCursor;
 
@@ -126,18 +127,22 @@ export class CandleScheduler {
       }
 
       console.log(
-        `[CandleScheduler] Running ${interval} candle check for ${markets.size} markets`
+        `[CandleScheduler] Running ${interval} candle check for ${markets.size} markets`,
       );
 
       for (const market of markets) {
         const symbol = this.marketToSymbol(market);
         const closePrice = await this.priceService.fetchCandleClose(
           symbol,
-          interval
+          interval,
         );
 
         if (closePrice !== null) {
-          await this.alertChecker.checkCandleAlerts(market, interval, closePrice);
+          await this.alertChecker.checkCandleAlerts(
+            market,
+            interval,
+            closePrice,
+          );
         }
       }
     } catch (error) {
@@ -155,7 +160,7 @@ export class CandleScheduler {
     const nextClose = this.getNextCandleClose(interval);
 
     console.log(
-      `[CandleScheduler] Next ${interval} check at ${nextClose.toISOString()} (in ${Math.round(delay / 1000)}s)`
+      `[CandleScheduler] Next ${interval} check at ${nextClose.toISOString()} (in ${Math.round(delay / 1000)}s)`,
     );
 
     const timer = setTimeout(async () => {

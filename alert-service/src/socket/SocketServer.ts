@@ -10,7 +10,9 @@ export function createSocketServer(): {
     // Health check endpoint
     if (req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }));
+      res.end(
+        JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }),
+      );
       return;
     }
 
@@ -71,7 +73,7 @@ export function createSocketServer(): {
 
 export function startSocketServer(
   httpServer: ReturnType<typeof createServer>,
-  port: number
+  port: number,
 ): Promise<void> {
   return new Promise((resolve) => {
     httpServer.listen(port, () => {

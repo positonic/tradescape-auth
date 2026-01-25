@@ -4,7 +4,10 @@ import { getRedisClient, disconnectRedis } from "./utils/redis.js";
 import { PriceService } from "./services/PriceService.js";
 import { AlertChecker } from "./services/AlertChecker.js";
 import { CandleScheduler } from "./services/CandleScheduler.js";
-import { createSocketServer, startSocketServer } from "./socket/SocketServer.js";
+import {
+  createSocketServer,
+  startSocketServer,
+} from "./socket/SocketServer.js";
 
 // Main application state
 let pricePollingInterval: ReturnType<typeof setInterval> | null = null;
@@ -48,7 +51,7 @@ async function main(): Promise<void> {
 
   // Start price polling loop
   console.log(
-    `[Init] Starting price polling (every ${config.pricePollIntervalMs}ms)...`
+    `[Init] Starting price polling (every ${config.pricePollIntervalMs}ms)...`,
   );
   pricePollingInterval = setInterval(async () => {
     try {

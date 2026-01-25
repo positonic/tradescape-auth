@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Modal,
-  TextInput,
-  Textarea,
-  Button,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Modal, TextInput, Textarea, Button, Stack, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
@@ -34,7 +27,8 @@ export function PasteTranscriptModal({
       void utils.transcription.getSessions.invalidate();
       notifications.show({
         title: "Session Created",
-        message: "Your transcript has been saved. Click into it to create setups.",
+        message:
+          "Your transcript has been saved. Click into it to create setups.",
         color: "green",
         icon: <IconCheck size="1rem" />,
       });
@@ -84,7 +78,8 @@ export function PasteTranscriptModal({
       <Stack gap="md">
         <Text size="sm" c="dimmed">
           Paste a stream transcript or trading notes. After creating, click into
-          the session and use &quot;Create Setups&quot; to extract trading setups.
+          the session and use &quot;Create Setups&quot; to extract trading
+          setups.
         </Text>
 
         <TextInput

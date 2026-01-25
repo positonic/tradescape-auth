@@ -30,7 +30,7 @@ export class AlertChecker {
    */
   async checkPriceAlerts(
     market: string,
-    currentPrice: number
+    currentPrice: number,
   ): Promise<TriggeredAlert[]> {
     const triggered: TriggeredAlert[] = [];
 
@@ -40,14 +40,14 @@ export class AlertChecker {
     const aboveAlertIds = await this.redis.zrangebyscore(
       aboveKey,
       "-inf",
-      currentPrice.toString()
+      currentPrice.toString(),
     );
 
     for (const alertId of aboveAlertIds) {
       const alert = await this.processTriggeredAlert(
         alertId,
         currentPrice,
-        aboveKey
+        aboveKey,
       );
       if (alert) triggered.push(alert);
     }
@@ -58,14 +58,14 @@ export class AlertChecker {
     const belowAlertIds = await this.redis.zrangebyscore(
       belowKey,
       currentPrice.toString(),
-      "+inf"
+      "+inf",
     );
 
     for (const alertId of belowAlertIds) {
       const alert = await this.processTriggeredAlert(
         alertId,
         currentPrice,
-        belowKey
+        belowKey,
       );
       if (alert) triggered.push(alert);
     }
@@ -79,7 +79,7 @@ export class AlertChecker {
   async checkCandleAlerts(
     market: string,
     interval: string,
-    closePrice: number
+    closePrice: number,
   ): Promise<TriggeredAlert[]> {
     const triggered: TriggeredAlert[] = [];
 
@@ -88,14 +88,14 @@ export class AlertChecker {
     const aboveAlertIds = await this.redis.zrangebyscore(
       aboveKey,
       "-inf",
-      closePrice.toString()
+      closePrice.toString(),
     );
 
     for (const alertId of aboveAlertIds) {
       const alert = await this.processTriggeredAlert(
         alertId,
         closePrice,
-        aboveKey
+        aboveKey,
       );
       if (alert) triggered.push(alert);
     }
@@ -105,14 +105,14 @@ export class AlertChecker {
     const belowAlertIds = await this.redis.zrangebyscore(
       belowKey,
       closePrice.toString(),
-      "+inf"
+      "+inf",
     );
 
     for (const alertId of belowAlertIds) {
       const alert = await this.processTriggeredAlert(
         alertId,
         closePrice,
-        belowKey
+        belowKey,
       );
       if (alert) triggered.push(alert);
     }
@@ -126,7 +126,7 @@ export class AlertChecker {
   private async processTriggeredAlert(
     alertId: string,
     triggeredPrice: number,
-    zsetKey: string
+    zsetKey: string,
   ): Promise<TriggeredAlert | null> {
     try {
       // Get alert details from Redis hash
@@ -149,9 +149,7 @@ export class AlertChecker {
       });
 
       if (!dbAlert || dbAlert.status !== "PENDING") {
-        console.log(
-          `[AlertChecker] Alert ${alertId} is not PENDING, skipping`
-        );
+        console.log(`[AlertChecker] Alert ${alertId} is not PENDING, skipping`);
         // Clean up Redis entries
         await this.redis.zrem(zsetKey, alertId);
         await this.redis.del(hashKey);
@@ -186,7 +184,7 @@ export class AlertChecker {
       this.sendNotification(triggeredAlert);
 
       console.log(
-        `[AlertChecker] Triggered alert ${alertId}: ${triggeredAlert.symbol} ${triggeredAlert.direction} ${triggeredAlert.threshold} (current: ${triggeredPrice})`
+        `[AlertChecker] Triggered alert ${alertId}: ${triggeredAlert.symbol} ${triggeredAlert.direction} ${triggeredAlert.threshold} (current: ${triggeredPrice})`,
       );
 
       return triggeredAlert;
@@ -217,7 +215,7 @@ export class AlertChecker {
 
     console.log(
       `[AlertChecker] Sent notification to user:${alert.userId}`,
-      notification
+      notification,
     );
   }
 
@@ -225,7 +223,7 @@ export class AlertChecker {
    * Run a full check cycle for all price alerts
    */
   async runPriceCheckCycle(
-    prices: Map<string, number>
+    prices: Map<string, number>,
   ): Promise<TriggeredAlert[]> {
     const allTriggered: TriggeredAlert[] = [];
 
@@ -236,7 +234,7 @@ export class AlertChecker {
 
     if (allTriggered.length > 0) {
       console.log(
-        `[AlertChecker] Price check cycle: ${allTriggered.length} alerts triggered`
+        `[AlertChecker] Price check cycle: ${allTriggered.length} alerts triggered`,
       );
     }
 
