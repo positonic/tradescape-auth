@@ -1,11 +1,13 @@
 // src/server/api/routers/alerts.ts
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure, type TRPCContext } from "~/server/api/trpc"; // Changed Context to TRPCContext
+import { createTRPCRouter, protectedProcedure, type TRPCContext } from "~/server/api/trpc";
 import { AlertType, Direction, AlertStatus, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { Decimal } from "@prisma/client/runtime/library";
 import type Redis from "ioredis";
+import { randomUUID } from "crypto";
+import type { ParsedAlert, AIAlertParseResult } from "~/types/alertImport";
 
 // Hard-coded exchange key for all alerts
 const exchangeKey = 'BINANCE';
@@ -318,4 +320,233 @@ export const alertsRouter = createTRPCRouter({
       // Return the deleted alert data (optional)
       return { ...alertToDelete, threshold: alertToDelete.threshold.toString() };
     }),
+
+  // Parse free-form text into structured alerts using AI
+  parseAlerts: protectedProcedure
+    .input(z.object({ text: z.string().min(1, "Text is required") }))
+    .mutation(async ({ ctx, input }: { ctx: TRPCContext, input: { text: string } }) => {
+      // Fetch available pairs for context
+      const pairs = await ctx.db.pair.findMany({
+        select: { id: true, symbol: true },
+      });
+
+      const pairsContext = pairs.map((p) => p.symbol).join(", ");
+
+      const systemPrompt = `You are an expert at extracting trading alerts from free-form text.
+Analyze the following text and extract all trading alert definitions.
+
+For each alert found, provide:
+- coinSymbol: The trading pair symbol (e.g., "BTC", "ETH", "ETHBTC", "SOL")
+- type: Either "PRICE" (for price alerts) or "CANDLE" (for candle close alerts)
+- threshold: The price level as a number (convert "100k" to 100000, "94.2k" to 94200, etc.)
+- direction: Either "ABOVE" or "BELOW"
+- interval: For CANDLE alerts, the timeframe in lowercase (e.g., "4h", "1d", "1h", "15m"). Null for PRICE alerts.
+- originalText: The original text snippet this alert was extracted from
+- confidence: How confident you are in the parsing (high/medium/low)
+- notes: Any additional context about this alert (conditions, targets, invalidation)
+
+IMPORTANT RULES:
+1. "close above/below" or "candle close" indicates a CANDLE alert
+2. "price touches/reaches/hits/at" indicates a PRICE alert
+3. "4H" means "4h", "Daily" means "1d", "Weekly" means "1w", "Hourly" or "1H" means "1h"
+4. Extract ALL price levels mentioned, even multiple per coin
+5. Convert shorthand: "100k" = 100000, "94.2k" = 94200, "~918" = 918
+6. If direction isn't explicit, infer from context (targets = ABOVE, stop losses = BELOW)
+7. For ratio pairs like "ETHBTC", keep them as is
+
+Available trading pairs in our system: ${pairsContext}
+
+Output format (JSON only):
+{
+  "alerts": [
+    {
+      "coinSymbol": "BTC",
+      "type": "CANDLE",
+      "threshold": 100000,
+      "direction": "ABOVE",
+      "interval": "4h",
+      "originalText": "BTC 4H close ABOVE 100k",
+      "confidence": "high",
+      "notes": "Confirms resistance reclaim"
+    }
+  ],
+  "unparseable": ["any lines that couldn't be parsed"]
+}`;
+
+      try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4-turbo-preview",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: input.text },
+            ],
+            temperature: 0.3,
+            max_tokens: 2000,
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `OpenAI API request failed: ${response.status} - ${errorText}`,
+          });
+        }
+
+        const data = (await response.json()) as {
+          choices: Array<{ message: { content: string } }>;
+        };
+        const rawContent = data.choices[0]?.message?.content ?? "{}";
+
+        let aiResult: AIAlertParseResult;
+        try {
+          aiResult = JSON.parse(rawContent) as AIAlertParseResult;
+        } catch {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to parse AI response as JSON",
+          });
+        }
+
+        // Map AI results to ParsedAlert format with pair matching
+        const parsedAlerts: ParsedAlert[] = (aiResult.alerts ?? []).map((alert) => {
+          // Try to match the coin symbol to a pair
+          const matchedPair = mapCoinToPair(alert.coinSymbol, pairs);
+
+          const isValid =
+            matchedPair !== null &&
+            !isNaN(alert.threshold) &&
+            alert.threshold > 0;
+
+          return {
+            id: randomUUID(),
+            coinSymbol: alert.coinSymbol,
+            pairId: matchedPair?.id ?? null,
+            pairSymbol: matchedPair?.symbol,
+            type: alert.type,
+            threshold: String(alert.threshold),
+            direction: alert.direction,
+            interval: alert.interval,
+            originalText: alert.originalText,
+            confidence: alert.confidence,
+            notes: alert.notes,
+            isValid,
+            validationError: matchedPair === null ? "No matching pair found" : undefined,
+          };
+        });
+
+        return {
+          alerts: parsedAlerts,
+          unparseable: aiResult.unparseable ?? [],
+          availablePairs: pairs,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to parse alerts: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+      }
+    }),
+
+  // Bulk create alerts from parsed data
+  bulkCreate: protectedProcedure
+    .input(
+      z.object({
+        alerts: z.array(
+          z.object({
+            pairId: z.number(),
+            type: z.nativeEnum(AlertType),
+            threshold: numericString,
+            direction: z.nativeEnum(Direction),
+            interval: z.string().optional().nullable(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ ctx, input }: { ctx: TRPCContext, input: { alerts: Array<{ pairId: number; type: AlertType; threshold: string; direction: Direction; interval?: string | null }> } }) => {
+      const userId = ctx.session!.user.id;
+      const results = { created: 0, failed: 0, errors: [] as string[] };
+
+      // Process alerts in a transaction for atomicity
+      await ctx.db.$transaction(async (tx) => {
+        for (const alertInput of input.alerts) {
+          try {
+            // Validate candle alerts have interval
+            if (alertInput.type === AlertType.CANDLE && !alertInput.interval) {
+              results.failed++;
+              results.errors.push(`Alert for pair ${alertInput.pairId}: Interval required for CANDLE alerts`);
+              continue;
+            }
+
+            const alert = await tx.alert.create({
+              data: {
+                userId,
+                pairId: alertInput.pairId,
+                type: alertInput.type,
+                threshold: new Decimal(alertInput.threshold),
+                direction: alertInput.direction,
+                interval: alertInput.interval,
+                status: AlertStatus.PENDING,
+              },
+              include: { pair: true },
+            });
+
+            // Add to Redis if available
+            if (ctx.redis) {
+              await addAlertToRedis(ctx.redis, alert as AlertWithPair);
+            }
+
+            results.created++;
+          } catch (error) {
+            results.failed++;
+            results.errors.push(
+              `Alert for pair ${alertInput.pairId}: ${error instanceof Error ? error.message : "Unknown error"}`
+            );
+          }
+        }
+      });
+
+      return results;
+    }),
 });
+
+// Helper function to match coin symbol to a pair
+function mapCoinToPair(
+  coinSymbol: string,
+  pairs: Array<{ id: number; symbol: string }>
+): { id: number; symbol: string } | null {
+  const upperSymbol = coinSymbol.toUpperCase();
+
+  // Exact match first (e.g., "ETHBTC" matches "ETHBTC")
+  const exact = pairs.find(
+    (p) => p.symbol.toUpperCase() === upperSymbol
+  );
+  if (exact) return exact;
+
+  // Try with common quote currencies
+  const commonQuotes = ["USDT", "USDC", "USD", "USDT:USDT", "USDC:USDC"];
+  for (const quote of commonQuotes) {
+    const withQuote = pairs.find(
+      (p) =>
+        p.symbol.toUpperCase() === `${upperSymbol}/${quote}` ||
+        p.symbol.toUpperCase() === `${upperSymbol}${quote}`
+    );
+    if (withQuote) return withQuote;
+  }
+
+  // Partial match - symbol starts with the coin
+  const partial = pairs.find((p) =>
+    p.symbol.toUpperCase().startsWith(upperSymbol + "/")
+  );
+  if (partial) return partial;
+
+  return null;
+}
