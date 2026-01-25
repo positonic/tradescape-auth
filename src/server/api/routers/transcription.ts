@@ -131,6 +131,26 @@ export const transcriptionRouter = createTRPCRouter({
       };
     }),
 
+  // Create a session from pasted transcript text
+  createFromPaste: protectedProcedure
+    .input(
+      z.object({
+        title: z.string().optional(),
+        transcription: z.string().min(1, "Transcript text is required"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const session = await ctx.db.transcriptionSession.create({
+        data: {
+          sessionId: `paste_${Date.now()}`,
+          title: input.title || `Pasted ${new Date().toLocaleDateString()}`,
+          transcription: input.transcription,
+          userId: ctx.session.user.id,
+        },
+      });
+      return session;
+    }),
+
   getSessions: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.transcriptionSession.findMany({
       where: {

@@ -1,0 +1,10 @@
+# Alert service - deployed separately on Railway
+alert-service/
+
+# Scripts not needed in production
+scripts/
+
+# Test files
+*.test.ts
+*.spec.ts
+__tests__/

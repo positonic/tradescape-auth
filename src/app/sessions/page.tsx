@@ -16,7 +16,9 @@ import SignInButton from "~/app/_components/SignInButton";
 import { useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react"; // Added client-side session hook
 import { useState } from 'react';
+import { IconClipboard } from "@tabler/icons-react";
 import SessionDetail from "~/app/_components/SessionDetail";
+import { PasteTranscriptModal } from "./components/PasteTranscriptModal";
 
 
 export default function ScansPage() { // Removed async
@@ -27,6 +29,7 @@ export default function ScansPage() { // Removed async
 
   const [drawerSessionId, setDrawerSessionId] = useState<string | null>(null);
   const [drawerOpened, setDrawerOpened] = useState(false);
+  const [pasteModalOpened, setPasteModalOpened] = useState(false);
 
   // Update loading state to consider both session and data fetching
   if (isLoadingSessions || sessionStatus === "loading") {
@@ -70,8 +73,26 @@ export default function ScansPage() { // Removed async
           />
         )}
       </Drawer>
+    <PasteTranscriptModal
+        opened={pasteModalOpened}
+        onClose={() => setPasteModalOpened(false)}
+        onSuccess={(sessionId) => {
+          setDrawerSessionId(sessionId);
+          setDrawerOpened(true);
+        }}
+      />
     <Paper p="md" radius="sm">
-      <Title order={2} mb="lg">Recordings</Title>
+      <Group justify="space-between" mb="lg">
+        <Title order={2}>Recordings</Title>
+        {clientSession?.user && (
+          <Button
+            leftSection={<IconClipboard size={16} />}
+            onClick={() => setPasteModalOpened(true)}
+          >
+            Paste Transcript
+          </Button>
+        )}
+      </Group>
       <Group gap="md" justify="center" wrap="wrap">
           {/* Use clientSession to determine auth state */}
           {!clientSession?.user ?  <SignInButton /> : <></>}

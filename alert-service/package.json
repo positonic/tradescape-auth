@@ -1,0 +1,26 @@
+{
+  "name": "alert-service",
+  "version": "1.0.0",
+  "description": "Background service for monitoring cryptocurrency prices and triggering alerts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^7.2.0",
+    "ccxt": "^4.4.94",
+    "ioredis": "^5.4.1",
+    "pg": "^8.17.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.17",
+    "@types/pg": "^8.16.0",
+    "prisma": "^7.2.0",
+    "typescript": "^5.7.3"
+  }
+}
