@@ -7,7 +7,7 @@ import { createTraderTools } from "~/server/tools/traderTools";
 import type { Context } from "~/server/auth/types";
 
 export const getTools = (ctx: Context) => {
-  const actionTools = createActionTools(ctx);
+  const _actionTools = createActionTools(ctx);
   const traderTools = createTraderTools(ctx);
   return [
     adderTool,

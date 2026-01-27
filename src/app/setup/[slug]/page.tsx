@@ -7,7 +7,6 @@ import {
   Image,
   Stack,
   Divider,
-  SimpleGrid,
   Button,
   ScrollArea,
 } from "@mantine/core";

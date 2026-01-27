@@ -209,7 +209,6 @@ export const pairsRouter = createTRPCRouter({
           trades: [], // Empty for now as we don't need trade details for position creation
           fee: Number(dbOrder.fee),
           closedPnL: Number(dbOrder.closedPnL) || 0,
-          status: dbOrder.status || undefined,
         }));
 
         if (dryRun) {

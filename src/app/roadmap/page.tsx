@@ -1,18 +1,11 @@
 "use client";
 
 import { Container, Title, Timeline, Text, Card, ThemeIcon, Badge, Stack } from "@mantine/core";
-import { 
-  IconCheck, 
-  IconProgressCheck,
-  IconLock,
-  IconBrain,
-  IconCalendarStats,
-  IconUsers,
-  IconShieldLock,
-  IconDatabase,
+import {
+  IconCheck,
   IconMicrophone,
   IconChartLine,
-  IconChartBar
+  IconChartBar,
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 
@@ -97,17 +90,6 @@ const roadmapData: RoadmapItem[] = [
   //   ]
   // }
 ];
-
-const getStatusIcon = (status: RoadmapItem["status"]) => {
-  switch (status) {
-    case "completed":
-      return IconCheck;
-    case "inProgress":
-      return IconProgressCheck;
-    case "upcoming":
-      return IconLock;
-  }
-};
 
 const getStatusColor = (status: RoadmapItem["status"]) => {
   switch (status) {

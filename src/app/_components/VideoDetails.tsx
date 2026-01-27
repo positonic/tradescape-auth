@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Button,
-  Paper,
-  Title,
-  Text,
-  Group,
-  Badge,
-  Table,
-  Checkbox,
-} from "@mantine/core";
+import { Button, Group } from "@mantine/core";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import type { TranscriptionSetups } from "~/types/transcription";

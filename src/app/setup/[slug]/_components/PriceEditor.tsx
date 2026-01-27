@@ -36,7 +36,6 @@ export function PriceEditor({ setup }: PriceEditorProps) {
       return null;
     }
 
-    const isLong = setup.direction.toLowerCase() === 'long';
     // For both long and short, reward is absolute distance to take profit
     const reward = Math.abs(takeProfit - entry);
     // For both long and short, risk is absolute distance to stop loss

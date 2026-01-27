@@ -8,7 +8,6 @@ import {
   Card,
   RingProgress,
   Progress,
-  Badge,
 } from "@mantine/core";
 import "@mantine/core/styles.css";
 import SignInButton from "~/app/_components/SignInButton";

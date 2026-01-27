@@ -17,7 +17,6 @@ import {
   Card,
   SimpleGrid,
   Table,
-  Skeleton,
   Collapse,
   Stack,
 } from "@mantine/core";
@@ -34,7 +33,7 @@ import {
 import { api } from "~/trpc/react";
 import { useSocket } from "~/lib/useSocket";
 import { notifications } from "@mantine/notifications";
-import { getEncryptedKeysForTransmission, hasStoredKeys } from "~/lib/keyUtils";
+import { getEncryptedKeysForTransmission } from "~/lib/keyUtils";
 import { KeyStorage, encryptForTransmission } from "~/lib/keyEncryption";
 
 interface LivePosition {
@@ -1198,7 +1197,7 @@ export default function LivePage() {
                   const plotHeight = chartHeight - padding * 2;
 
                   // Calculate starting value for PnL
-                  const startingValue = values[0];
+                  const startingValue = values[0] ?? 0;
 
                   // Generate SVG path
                   const pathData = chartData
@@ -1215,7 +1214,7 @@ export default function LivePage() {
                     .join(" ");
 
                   // Current vs starting PnL
-                  const currentValue = values[values.length - 1];
+                  const currentValue = values[values.length - 1] ?? 0;
                   const totalPnL = currentValue - startingValue;
                   const totalPnLPercent =
                     startingValue > 0 ? (totalPnL / startingValue) * 100 : 0;
@@ -1346,14 +1345,19 @@ export default function LivePage() {
                         }}
                       >
                         <span>
-                          {new Date(
-                            chartData[0].timestamp,
-                          ).toLocaleDateString()}
+                          {chartData[0]
+                            ? new Date(
+                                chartData[0].timestamp,
+                              ).toLocaleDateString()
+                            : "-"}
                         </span>
                         <span>
-                          {new Date(
-                            chartData[chartData.length - 1].timestamp,
-                          ).toLocaleDateString()}
+                          {(() => {
+                            const lastItem = chartData[chartData.length - 1];
+                            return lastItem
+                              ? new Date(lastItem.timestamp).toLocaleDateString()
+                              : "-";
+                          })()}
                         </span>
                       </div>
                     </div>

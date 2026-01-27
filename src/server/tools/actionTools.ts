@@ -2,7 +2,6 @@ import { z } from "zod";
 import { tool } from "@langchain/core/tools";
 import { PRIORITY_VALUES } from "~/types/priority";
 import type { Context } from "~/server/auth/types";
-import type { Action } from "@prisma/client";
 
 // Schemas for the Action CRUD operations
 const createActionSchema = z.object({

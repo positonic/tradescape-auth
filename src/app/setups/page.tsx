@@ -24,11 +24,9 @@ export default function SetupsPage() {
     api.setups.getPublic.useQuery();
   const { data: privateSetups, isLoading: privateLoading } =
     api.setups.getPrivate.useQuery();
-  const { data: transcriptionSessions, isLoading: transcriptionsLoading } =
-    api.transcription.getSessions.useQuery();
   const router = useRouter();
 
-  const createSetupsMutation = api.setups.createFromTranscription.useMutation({
+  const _createSetupsMutation = api.setups.createFromTranscription.useMutation({
     onSuccess: () => {
       notifications.show({
         title: "Success",
@@ -45,7 +43,7 @@ export default function SetupsPage() {
     },
   });
 
-  if (publicLoading || privateLoading || transcriptionsLoading) {
+  if (publicLoading || privateLoading) {
     return <Skeleton height={400} />;
   }
 

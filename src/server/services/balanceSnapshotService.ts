@@ -1,4 +1,4 @@
-import { type PrismaClient } from "@prisma/client";
+import { type PrismaClient, type PortfolioSnapshot as PrismaPortfolioSnapshot } from "@prisma/client";
 import { HyperliquidWebSocketManager } from "../hyperliquid/WebSocketManager";
 import { decryptFromTransmission } from "../../lib/keyEncryption";
 import Exchange from "../../app/tradeSync/exchange/Exchange";
@@ -32,7 +32,7 @@ export class PortfolioSnapshotService {
         totalUsdValue = liveData.totalUsdValue;
         exchange = "hyperliquid";
       }
-    } catch (error) {
+    } catch {
       console.log("No live data available, will try direct exchange fetch");
     }
 
@@ -50,6 +50,7 @@ export class PortfolioSnapshotService {
               hyperliquidKeys.apiSecret ?? "",
               "hyperliquid",
               hyperliquidKeys.walletAddress,
+              "",
             );
 
             const balanceData = await exchangeClient.getBalances();
@@ -124,7 +125,7 @@ export class PortfolioSnapshotService {
       skip: offset,
     });
 
-    return snapshots.map(this.transformDatabaseSnapshot);
+    return snapshots.map((snapshot) => this.transformDatabaseSnapshot(snapshot));
   }
 
   /**
@@ -201,7 +202,7 @@ export class PortfolioSnapshotService {
    */
   async cleanupOldSnapshots(
     userId: string,
-    retentionDays: number = 30,
+    retentionDays = 30,
   ): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
@@ -221,7 +222,7 @@ export class PortfolioSnapshotService {
   /**
    * Transform database snapshot to interface format
    */
-  private transformDatabaseSnapshot(snapshot: any): PortfolioSnapshot {
+  private transformDatabaseSnapshot(snapshot: PrismaPortfolioSnapshot): PortfolioSnapshot {
     return {
       id: snapshot.id,
       userId: snapshot.userId,

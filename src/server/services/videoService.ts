@@ -575,7 +575,7 @@ export async function getSetups(
         content = JSON.parse(rawContent) as TranscriptionSetups;
     } catch (parseError) {
         console.error('❌ Failed to parse OpenAI response as JSON:', parseError);
-        throw new Error(`Failed to parse OpenAI response: ${parseError}`);
+        throw new Error(`Failed to parse OpenAI response: ${String(parseError)}`);
     }
     
     console.log('🔍 Parsed content:', JSON.stringify(content, null, 2));

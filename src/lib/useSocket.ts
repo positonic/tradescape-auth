@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { Socket } from 'socket.io-client';
 import { useSocketConnection } from './socketService';
 
 export function useSocket() {

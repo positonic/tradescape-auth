@@ -167,8 +167,6 @@ export default function ManyChat({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const utils = api.useUtils();
-
   const transcribeAudio = api.tools.transcribe.useMutation();
   const callAgent = api.mastra.callAgent.useMutation();
   const chooseAgent = api.mastra.chooseAgent.useMutation();

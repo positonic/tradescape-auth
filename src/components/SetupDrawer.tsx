@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Drawer,
   Button,
-  TextInput,
   Textarea,
   Select,
   NumberInput,
@@ -116,7 +115,7 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
               });
             };
             reader.readAsDataURL(blob);
-          } catch (error) {
+          } catch {
             notifications.show({
               title: "Error",
               message: "Failed to process pasted image",
@@ -149,7 +148,7 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
         timeframe: values.timeframe,
         privacy: values.privacy,
       });
-    } catch (error) {
+    } catch {
       // Error handling is done in the mutation callbacks
     }
   };

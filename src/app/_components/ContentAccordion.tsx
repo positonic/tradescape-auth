@@ -11,32 +11,6 @@ interface ContentAccordionProps {
   useMarkdown?: boolean;
 }
 
-interface MarkdownProps {
-  children: ReactNode;
-}
-
-const YouTubePlayer = ({
-  videoId,
-  startTime,
-}: {
-  videoId: string;
-  startTime?: string;
-}) => {
-  const embedUrl = `https://www.youtube.com/embed/${videoId}${startTime ? `?start=${startTime}` : ""}`;
-
-  return (
-    <div className="sticky top-4 aspect-video">
-      <iframe
-        className="h-full w-full"
-        src={embedUrl}
-        title="YouTube video player"
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-    </div>
-  );
-};
 
 const TimeStampLink = ({
   href,
@@ -135,11 +109,6 @@ export function ContentAccordion({
   subtitle,
   useMarkdown = true,
 }: ContentAccordionProps) {
-  // Extract first video ID from content
-  const regex = /youtube\.com\/watch\?v=([^&\s]+)/;
-const firstVideoMatch = regex.exec(content);
-
-
   return (
     <Accordion>
       <Accordion.Item value={title.toLowerCase()}>

@@ -2,21 +2,20 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { api } from "~/trpc/react";
-import { 
-  Paper, 
-  TextInput, 
-  Button, 
-  Stack, 
-  ScrollArea, 
-  Avatar, 
-  Group, 
+import {
+  Paper,
+  TextInput,
+  Button,
+  Stack,
+  ScrollArea,
+  Avatar,
+  Group,
   Text,
   Box,
-  ActionIcon
 } from '@mantine/core';
 import Link from 'next/link';
 import { TradeSetups } from '~/app/_components/TradeSetups';
-import { IconSend, IconMicrophone, IconMicrophoneOff, IconCheck } from '@tabler/icons-react';
+import { IconSend, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { TextToSpeech } from '~/app/_components/TextToSpeech';
 //import { VoiceInput } from './VoiceInput';
@@ -34,8 +33,8 @@ export default function Chat( { initialMessages }: { initialMessages: Message[] 
   const viewport = useRef<HTMLDivElement>(null);
   const [selectedSetups, setSelectedSetups] = useState<number[]>([]);
   const [setups, setSetups] = useState<CoinData[]>([]);
-  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [_isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [audioEnabled, _setAudioEnabled] = useState(false);
   
   const chat = api.tools.chat.useMutation({
     onSuccess: async (results) => {
@@ -123,7 +122,7 @@ export default function Chat( { initialMessages }: { initialMessages: Message[] 
   //   }
   // };
 
-  const stopRecording = () => {
+  const _stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       // Stop the media recorder
       mediaRecorderRef.current.stop();
@@ -153,7 +152,7 @@ export default function Chat( { initialMessages }: { initialMessages: Message[] 
 
   
 
-  const handleVoiceInput = async (base64Audio: string) => {
+  const _handleVoiceInput = async (base64Audio: string) => {
     setIsProcessingVoice(true);
     try {
       const result = await transcribeAudio.mutateAsync({ audio: base64Audio });

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { api } from "~/trpc/react";
-import type { Decimal } from "@prisma/client/runtime/library";
+
+// Type alias for Prisma Decimal (serialized as number in tRPC)
+type Decimal = number | string;
 import {
   Paper,
   Title,
@@ -16,11 +18,9 @@ import {
   Tabs,
   Flex,
   ActionIcon,
-  Drawer,
   Select,
   Anchor,
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
 import { IconKey } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 import SignInButton from "~/app/_components/SignInButton";
@@ -60,17 +60,12 @@ interface Order {
   positionId: number | null;
 }
 
-interface Position {
+// Simplified position interface for state management
+interface PositionState {
   id: number;
-  time: number | bigint;
   pair: string;
   direction: string;
   status: string;
-  amount: Decimal;
-  averageEntryPrice: Decimal;
-  averageExitPrice: Decimal;
-  profitLoss: Decimal;
-  duration: string;
 }
 
 export default function TradesPage() {
@@ -80,7 +75,7 @@ export default function TradesPage() {
   const [activeTab, setActiveTab] = useState<"trades" | "orders" | "positions">(
     "trades",
   );
-  const [selectedPosition, setSelectedPosition] = useState<Position | null>(
+  const [selectedPosition, setSelectedPosition] = useState<PositionState | null>(
     null,
   );
   const [selectedPair, setSelectedPair] = useState<string | null>(null);
@@ -128,7 +123,7 @@ export default function TradesPage() {
       },
     );
 
-  const { data: positionTradesData, isLoading: isLoadingPositionTrades } =
+  const { data: _positionTradesData, isLoading: _isLoadingPositionTrades } =
     api.trades.getTradesForPosition.useQuery(
       {
         positionId: selectedPosition?.id ?? 0,
@@ -191,8 +186,18 @@ export default function TradesPage() {
     }
   };
 
-  const handlePositionClick = (position: Position) => {
-    setSelectedPosition(position);
+  const handlePositionClick = (position: {
+    id: number;
+    pair: string;
+    direction: string;
+    status: string;
+  }) => {
+    setSelectedPosition({
+      id: position.id,
+      pair: position.pair,
+      direction: position.direction,
+      status: position.status,
+    });
     setBottomBlockContent("orders");
   };
 
@@ -422,7 +427,7 @@ export default function TradesPage() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {ordersData?.orders.map((order: Order) => (
+                  {ordersData?.orders.map((order) => (
                     <Table.Tr key={order.id}>
                       <Table.Td>{formatDateTime(order.time)}</Table.Td>
                       <Table.Td>{order.pair}</Table.Td>
@@ -447,12 +452,12 @@ export default function TradesPage() {
                           </Text>
                         )}
                       </Table.Td>
-                      <Table.Td>{order.amount.toString()}</Table.Td>
+                      <Table.Td>{String(order.amount)}</Table.Td>
                       <Table.Td>
-                        {formatCurrency(order.averagePrice.toString())}
+                        {formatCurrency(String(order.averagePrice))}
                       </Table.Td>
                       <Table.Td>
-                        {formatCurrency(order.totalCost.toString())}
+                        {formatCurrency(String(order.totalCost))}
                       </Table.Td>
                       <Table.Td>{order.exchange}</Table.Td>
                       <Table.Td>
@@ -520,7 +525,7 @@ export default function TradesPage() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {positionsData?.positions.map((position: Position) => (
+                  {positionsData?.positions.map((position) => (
                     <Table.Tr
                       key={position.id}
                       onClick={() => handlePositionClick(position)}
@@ -551,22 +556,22 @@ export default function TradesPage() {
                           {position.status}
                         </Badge>
                       </Table.Td>
-                      <Table.Td>{position.amount.toString()}</Table.Td>
+                      <Table.Td>{String(position.amount)}</Table.Td>
                       <Table.Td>
-                        {formatCurrency(position.averageEntryPrice.toString())}
+                        {formatCurrency(String(position.averageEntryPrice))}
                       </Table.Td>
                       <Table.Td>
-                        {formatCurrency(position.averageExitPrice.toString())}
+                        {formatCurrency(String(position.averageExitPrice))}
                       </Table.Td>
                       <Table.Td>
                         <Badge
                           color={
-                            Number(position.profitLoss.toString()) >= 0
+                            Number(position.profitLoss) >= 0
                               ? "green"
                               : "red"
                           }
                         >
-                          {formatCurrency(position.profitLoss.toString())}
+                          {formatCurrency(String(position.profitLoss))}
                         </Badge>
                       </Table.Td>
                       <Table.Td>{position.duration}</Table.Td>
@@ -656,7 +661,7 @@ export default function TradesPage() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {positionOrdersData?.orders.map((order: Order) => (
+                  {positionOrdersData?.orders.map((order) => (
                     <Table.Tr key={order.id}>
                       <Table.Td>{formatDateTime(order.time)}</Table.Td>
                       <Table.Td>{order.pair}</Table.Td>
@@ -681,12 +686,12 @@ export default function TradesPage() {
                           </Text>
                         )}
                       </Table.Td>
-                      <Table.Td>{order.amount.toString()}</Table.Td>
+                      <Table.Td>{String(order.amount)}</Table.Td>
                       <Table.Td>
-                        {formatCurrency(order.averagePrice.toString())}
+                        {formatCurrency(String(order.averagePrice))}
                       </Table.Td>
                       <Table.Td>
-                        {formatCurrency(order.totalCost.toString())}
+                        {formatCurrency(String(order.totalCost))}
                       </Table.Td>
                       <Table.Td>{order.exchange}</Table.Td>
                     </Table.Tr>

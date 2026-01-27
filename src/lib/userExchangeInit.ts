@@ -2,7 +2,6 @@ import { db } from "~/server/db";
 import { UserExchangeRepository } from "~/app/tradeSync/repositories/UserExchangeRepository";
 import UserExchange from "~/app/tradeSync/UserExchange";
 import { decryptFromTransmission } from "~/lib/keyEncryption";
-import type { DecryptedKeys } from "~/lib/keyEncryption";
 
 interface InitUserExchangeResult {
   userExchange: UserExchange | null;

@@ -23,16 +23,16 @@ interface ValidationData {
   sellOnlyPositions: number;
   positivePositions: number;
   negativePositions: number;
+  breakEvenPositions: number;
   averageOrdersPerPosition: number;
   averageProfitLoss: number;
+  completenessScore: number;
+  profitabilityScore: number;
+  positionsByPair: Record<string, number>;
   topTradingPairs: Array<{
     pair: string;
     count: number;
   }>;
-  summary: {
-    totalPositions: number;
-    averageProfitLoss: number;
-  };
 }
 
 export function PositionValidationButton() {
@@ -119,8 +119,10 @@ export function PositionValidationButton() {
                 }
                 color="green"
                 size="lg"
-                label={`${validationData.completePositions}/${validationData.totalPositions}`}
               />
+              <Text size="xs" c="dimmed">
+                {validationData.completePositions}/{validationData.totalPositions}
+              </Text>
 
               <Group>
                 <Badge color="yellow">

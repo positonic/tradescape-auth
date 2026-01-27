@@ -125,8 +125,7 @@ export function VoiceInput({
     const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
     console.log('🎤 Process: Audio blob created', audioBlob.size, 'bytes');
     
-    // Create a copy of chunks and then clear the original for the next segment
-    const chunksToProcess = [...chunksRef.current];
+    // Clear the chunks for the next segment
     chunksRef.current = [];
     lastProcessTimeRef.current = now;
     

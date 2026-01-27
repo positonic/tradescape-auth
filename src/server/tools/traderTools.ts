@@ -19,15 +19,11 @@ const marketScanToolSchema = z.object({
   transcription: z.string()
 });
 
-interface MarketScanInput {
-  transcription: string;
-}
-
 interface TraderTools {
   marketScanTool: DynamicStructuredTool<typeof marketScanToolSchema>;
 }
 
-export const createTraderTools = (ctx: Context): TraderTools => {
+export const createTraderTools = (_ctx: Context): TraderTools => {
     const marketScanTool = tool(
         async (input: z.infer<typeof marketScanToolSchema>): Promise<string> => {
           try {
