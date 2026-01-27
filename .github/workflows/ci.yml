@@ -38,9 +38,13 @@ jobs:
       
       - name: Run linting
         run: bun run lint
-      
+        env:
+          SKIP_ENV_VALIDATION: true
+
       - name: Run type checking
         run: bun run typecheck
+        env:
+          SKIP_ENV_VALIDATION: true
       
       - name: Run tests
         run: bun run test:ci
