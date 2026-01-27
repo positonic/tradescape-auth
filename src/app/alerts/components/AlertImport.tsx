@@ -15,6 +15,8 @@ export function AlertImport({ onClose, onSuccess }: AlertImportProps) {
   const [unparseable, setUnparseable] = useState<string[]>([]);
   const [selectedAlerts, setSelectedAlerts] = useState<Set<string>>(new Set());
   const [step, setStep] = useState<"input" | "review" | "result">("input");
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const parseAlerts = api.alerts.parseAlerts.useMutation({
     onSuccess: (data) => {
@@ -26,6 +28,9 @@ export function AlertImport({ onClose, onSuccess }: AlertImportProps) {
       );
       setStep("review");
     },
+    onError: (error) => {
+      setParseError(error.message ?? "Failed to parse alerts");
+    },
   });
 
   const bulkCreate = api.alerts.bulkCreate.useMutation({
@@ -33,11 +38,16 @@ export function AlertImport({ onClose, onSuccess }: AlertImportProps) {
       if (result.created > 0) {
         onSuccess();
       }
+      setStep("result");
+    },
+    onError: (error) => {
+      setCreateError(error.message ?? "Failed to create alerts");
     },
   });
 
   const handleParse = () => {
     if (text.trim()) {
+      setParseError(null);
       parseAlerts.mutate({ text: text.trim() });
     }
   };
@@ -75,8 +85,8 @@ export function AlertImport({ onClose, onSuccess }: AlertImportProps) {
       }));
 
     if (alertsToCreate.length > 0) {
+      setCreateError(null);
       bulkCreate.mutate({ alerts: alertsToCreate });
-      setStep("result");
     }
   };
 
@@ -147,6 +157,11 @@ ETHBTC 4H close above 0.04 signals rotation`}
                   <li>Shorthand: 100k = 100,000 | 94.2k = 94,200</li>
                 </ul>
               </div>
+              {parseError && (
+                <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-3 text-sm text-red-400">
+                  ⚠️ {parseError}
+                </div>
+              )}
             </div>
           )}
 
@@ -258,6 +273,12 @@ ETHBTC 4H close above 0.04 signals rotation`}
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {createError && (
+                <div className="mt-4 rounded-lg border border-red-800/50 bg-red-900/20 p-3 text-sm text-red-400">
+                  ⚠️ {createError}
                 </div>
               )}
             </div>
