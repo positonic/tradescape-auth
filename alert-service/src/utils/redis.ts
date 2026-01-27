@@ -8,7 +8,6 @@ export function getRedisClient(): Redis {
   if (!redis) {
     redis = new Redis(config.redisUrl, {
       maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100,
       lazyConnect: true,
     });
 

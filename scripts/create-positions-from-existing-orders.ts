@@ -60,13 +60,19 @@ async function createPositionsFromExistingOrders(config: ScriptConfig = {
     console.log(`📦 Processing ${orders.length} orders in this batch`);
 
     // Group orders by user for processing
-    const ordersByUser = orders.reduce((groups: Record<string, any[]>, order) => {
-      if (!groups[order.userId]) {
-        groups[order.userId] = [];
-      }
-      groups[order.userId].push(order);
-      return groups;
-    }, {});
+    const ordersByUser = orders.reduce(
+      (groups: Record<string, typeof orders[number][]>, order) => {
+        if (!order.userId) {
+          return groups;
+        }
+
+        const existing = groups[order.userId] ?? [];
+        existing.push(order);
+        groups[order.userId] = existing;
+        return groups;
+      },
+      {},
+    );
 
     console.log(`👥 Processing orders for ${Object.keys(ordersByUser).length} users`);
 

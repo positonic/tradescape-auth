@@ -11,7 +11,6 @@ const createActionSchema = z.object({
   dueDate: z.string().optional(),
   status: z.enum(["ACTIVE", "COMPLETED", "CANCELLED"]).default("ACTIVE"),
   priority: z.enum(PRIORITY_VALUES).default("Quick"),
-  projectId: z.string().optional(),
 });
 
 const readActionSchema = z.object({
@@ -68,7 +67,6 @@ export const createActionTools = (ctx: Context) => {
             status: input.status,
             priority: input.priority,
             createdById: ctx.session.user.id,
-            projectId: input.projectId,
           },
         });
 
@@ -80,9 +78,6 @@ export const createActionTools = (ctx: Context) => {
           input,
         });
 
-        if (error instanceof Error && error.message.includes("foreign key")) {
-          return `Created action "${input?.name ?? "unknown"}" without a project association`;
-        }
         throw new Error(
           `Failed to create action: ${error instanceof Error ? error.message : String(error)}`,
         );

@@ -182,13 +182,13 @@ async function fetchRealOrders(pair: string = "UNI/USDC:USDC"): Promise<Order[]>
     console.log(`📦 Found ${dbOrders.length} orders in database`);
 
     // Convert DB orders to our Order interface
-    const orders: Order[] = dbOrders.map(dbOrder => ({
+    const orders: Order[] = dbOrders.map((dbOrder) => ({
       id: dbOrder.id,
-      ordertxid: dbOrder.ordertxid || `order-${dbOrder.id}`,
+      ordertxid: dbOrder.ordertxid ?? `order-${dbOrder.id}`,
       time: Number(dbOrder.time),
-      date: dbOrder.date,
-      type: dbOrder.type as 'buy' | 'sell',
-      direction: dbOrder.direction || undefined,
+      date: new Date(Number(dbOrder.time)),
+      type: dbOrder.type as "buy" | "sell",
+      direction: dbOrder.direction ?? undefined,
       pair: dbOrder.pair,
       amount: Number(dbOrder.amount),
       highestPrice: Number(dbOrder.highestPrice),
@@ -196,30 +196,33 @@ async function fetchRealOrders(pair: string = "UNI/USDC:USDC"): Promise<Order[]>
       averagePrice: Number(dbOrder.averagePrice),
       totalCost: Number(dbOrder.totalCost),
       exchange: dbOrder.exchange,
-      trades: dbOrder.trades?.map(trade => ({
-        id: trade.id?.toString() || '',
-        tradeId: trade.tradeId || '',
-        ordertxid: trade.ordertxid || '',
-        pair: trade.pair,
-        time: Number(trade.time),
-        type: trade.type as 'buy' | 'sell',
-        ordertype: trade.ordertype || '',
-        price: trade.price,
-        cost: trade.cost || '0',
-        fee: trade.fee || '0',
-        vol: Number(trade.vol),
-        margin: trade.margin || '0',
-        leverage: trade.leverage || '0',
-        misc: trade.misc || '',
-        exchange: trade.exchange,
-        date: trade.date,
-        closedPnL: Number(trade.closedPnL) || 0,
-        direction: trade.direction || undefined,
-        transactionId: trade.transactionId || undefined,
-      })) || [],
+      trades:
+        dbOrder.trades?.map((trade) => ({
+          id: trade.id?.toString() ?? "",
+          tradeId: trade.tradeId ?? "",
+          ordertxid: trade.ordertxid ?? "",
+          pair: trade.pair,
+          time: Number(trade.time),
+          type: trade.type as "buy" | "sell",
+          ordertype: trade.ordertype ?? "",
+          price: trade.price,
+          cost: trade.cost ?? "0",
+          fee: trade.fee ?? "0",
+          vol: Number(trade.vol),
+          margin: trade.margin ?? "0",
+          leverage: trade.leverage ?? "0",
+          misc: trade.misc ?? "",
+          exchange: trade.exchange,
+          date:
+            trade.time !== null && trade.time !== undefined
+              ? new Date(Number(trade.time))
+              : undefined,
+          closedPnL: Number(trade.closedPnL ?? 0),
+          direction: trade.direction ?? undefined,
+          transactionId: trade.transactionId ?? undefined,
+        })) ?? [],
       fee: Number(dbOrder.fee),
-      closedPnL: Number(dbOrder.closedPnL) || 0,
-      status: dbOrder.status || undefined,
+      closedPnL: Number(dbOrder.closedPnL ?? 0),
     }));
 
     // Output the raw data for copying
@@ -1034,8 +1037,12 @@ async function testPositionCreation() {
   
   // Single order
   if (realOrders.length > 0) {
-    const singleOrderResult = new EnhancedPositionAggregator().aggregate([realOrders[0]]);
-    console.log(`📦 Single order → ${singleOrderResult.length} positions`);
+    const firstOrder = realOrders[0];
+    if (firstOrder) {
+      const singleOrderResult =
+        new EnhancedPositionAggregator().aggregate([firstOrder]);
+      console.log(`📦 Single order → ${singleOrderResult.length} positions`);
+    }
   }
   
   // Different pairs mixed

@@ -1,10 +1,11 @@
 import ccxt from "ccxt";
+import type { Exchange } from "ccxt";
 import type Redis from "ioredis";
 import { getMarketIdentifier, redisKeys } from "../utils/redis.js";
 import { config } from "../config.js";
 
 export class PriceService {
-  private exchange: ccxt.Exchange;
+  private exchange: Exchange;
   private redis: Redis;
   private priceCache: Map<string, { price: number; timestamp: number }> =
     new Map();

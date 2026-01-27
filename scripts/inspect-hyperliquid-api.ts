@@ -51,7 +51,11 @@ async function inspectHyperliquidAPI() {
         console.log(`   Amount: ${trade.amount}`);
         console.log(`   Cost: $${trade.cost}`);
         console.log(`   Fee: ${trade.fee ? `${trade.fee.cost} ${trade.fee.currency}` : 'N/A'}`);
-        console.log(`   Timestamp: ${new Date(trade.timestamp).toLocaleString()}`);
+        const timestampValue = trade.timestamp ?? null;
+        const timestampLabel = timestampValue
+          ? new Date(Number(timestampValue)).toLocaleString()
+          : "N/A";
+        console.log(`   Timestamp: ${timestampLabel}`);
         console.log(`   Datetime: ${trade.datetime}`);
         console.log(`   Taker/Maker: ${trade.takerOrMaker || 'N/A'}`);
         
@@ -111,9 +115,9 @@ async function inspectHyperliquidAPI() {
     console.log(`Timeframes: ${exchange.timeframes ? Object.keys(exchange.timeframes).join(', ') : 'N/A'}`);
     
   } catch (error) {
-    console.error('❌ Error inspecting Hyperliquid API:', error);
-    if (error.message) {
-      console.error('Error message:', error.message);
+    console.error("❌ Error inspecting Hyperliquid API:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
     }
     throw error;
   } finally {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import {
   createTRPCRouter,
   publicProcedure,
@@ -74,7 +75,7 @@ export const pairsRouter = createTRPCRouter({
 
       for (const position of positions) {
         const pairSymbol = position.pair;
-        positionsByPair[pairSymbol] = (positionsByPair[pairSymbol] || 0) + 1;
+        positionsByPair[pairSymbol] = (positionsByPair[pairSymbol] ?? 0) + 1;
 
         totalOrders += position.orders.length;
 
@@ -177,7 +178,7 @@ export const pairsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const { userId, pairFilter, dryRun, maxOrders } = input;
-        const currentUserId = userId || ctx.session.user.id;
+        const currentUserId = userId ?? ctx.session.user.id;
 
         console.log("🚀 Creating positions from existing orders...");
         console.log("📋 Input:", {
@@ -188,7 +189,7 @@ export const pairsRouter = createTRPCRouter({
         });
 
         // Build where clause for orders
-        const whereClause: any = {
+        const whereClause: Prisma.OrderWhereInput = {
           positionId: null,
           userId: currentUserId,
         };
@@ -222,11 +223,11 @@ export const pairsRouter = createTRPCRouter({
         // Convert database orders to Order interface
         const mappedOrders = orders.map((dbOrder) => ({
           id: dbOrder.id,
-          ordertxid: dbOrder.ordertxid || `order-${dbOrder.id}`,
+          ordertxid: dbOrder.ordertxid ?? `order-${dbOrder.id}`,
           time: Number(dbOrder.time),
           date: new Date(Number(dbOrder.time)),
           type: dbOrder.type as "buy" | "sell",
-          direction: dbOrder.direction || undefined,
+          direction: dbOrder.direction ?? undefined,
           pair: dbOrder.pair,
           amount: Number(dbOrder.amount),
           highestPrice: Number(dbOrder.highestPrice),
@@ -236,7 +237,7 @@ export const pairsRouter = createTRPCRouter({
           exchange: dbOrder.exchange,
           trades: [], // Empty for now as we don't need trade details for position creation
           fee: Number(dbOrder.fee),
-          closedPnL: Number(dbOrder.closedPnL) || 0,
+          closedPnL: Number(dbOrder.closedPnL ?? 0),
         }));
 
         if (dryRun) {
@@ -365,7 +366,7 @@ export const pairsRouter = createTRPCRouter({
 
             // Generate and save orders
             const orders =
-              userExchange.getOrders(trades.allTrades)?.sort(sortDescending) ||
+              userExchange.getOrders(trades.allTrades)?.sort(sortDescending) ??
               [];
             console.log(`📝 Generated ${orders.length} orders`);
 

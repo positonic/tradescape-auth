@@ -4,12 +4,15 @@ import { Position } from '../exchange/types';
 export class PositionRepository {
   constructor(private prisma: PrismaClient) {}
 
-  async saveAll(positions: Position[], userId: string): Promise<Position[]> {
-    if (positions.length === 0) return positions;
+  async saveAll(
+    positions: Position[],
+    userId: string,
+  ): Promise<Array<Position & { id: number }>> {
+    if (positions.length === 0) return [];
 
     console.log(`📊 [PositionRepository] Saving ${positions.length} positions for user ${userId}`);
 
-    const savedPositions: Position[] = [];
+    const savedPositions: Array<Position & { id: number }> = [];
 
     for (const position of positions) {
       try {

@@ -6,7 +6,6 @@ import { getTools } from "~/server/tools";
 import { createAddVideoTool } from "~/server/tools/addVideoTool";
 import { gmTool } from "~/server/tools/gmTool";
 import { createVideoSearchTool } from "~/server/tools/videoSearchTool";
-import { createActionTools } from "~/server/tools/actionTools";
 import { createTraderTools } from "~/server/tools/traderTools";
 import OpenAI from "openai";
 import fs from "fs";
@@ -30,36 +29,8 @@ interface VideoArgs {
   isSearchable?: boolean;
 }
 
-interface CreateActionArgs {
-  description: string;
-  create: true;
-  name: string;
-  status?: "ACTIVE" | "COMPLETED" | "CANCELLED";
-  priority?: "Quick" | "Scheduled" | "1st Priority" | "2nd Priority" | "3rd Priority" | "4th Priority" | "5th Priority" | "Errand" | "Remember" | "Watch" | "Someday Maybe";
-  dueDate?: string;
-  projectId?: string;
-}
-
-interface ActionIdArgs {
-  id: string;
-}
-
-interface ActionUpdateArgs extends ActionIdArgs {
-  status?: "ACTIVE" | "COMPLETED" | "CANCELLED";
-  description?: string;
-  name?: string;
-  priority?: "Quick" | "Scheduled" | "1st Priority" | "2nd Priority" | "3rd Priority" | "4th Priority" | "5th Priority" | "Errand" | "Remember" | "Watch" | "Someday Maybe";
-  dueDate?: string;
-}
-
 interface TranscriptionArgs {
   transcription: string;
-}
-
-interface QueryArgs {
-  query_type: "date" | "today" | "all";
-  date?: string;
-  include_completed?: boolean;
 }
 
 // Add at the top with other interfaces
@@ -94,15 +65,6 @@ export const toolRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
         try {
-            // Fetch user's projects
-            const projects = await ctx.db.project.findMany({
-              where: { createdById: ctx.session.user.id },
-              select: { id: true, name: true }
-            });
-
-            // Convert projects to a more structured format
-            const projectsJson = JSON.stringify(projects);
-
             const model = new ChatOpenAI({ 
                 modelName: process.env.LLM_MODEL,
                 modelKwargs: { "tool_choice": "auto" }
@@ -116,22 +78,19 @@ export const toolRouter = createTRPCRouter({
                 `  * For all tasks including completed: { "query_type": "today", "include_completed": true }\n` +
                 `  * For specific date: { "query_type": "date", "date": "${today}" }\n` +
                 `  * For all tasks: { "query_type": "all" }\n` +
-                `Available projects: ${projectsJson}\n` +
                 // "- create_action: Creates a new action item. MUST include create: true flag. Example:\n" +
-                // "  { \"create\": true, \"name\": \"Task name\", \"description\": \"Task description\", \"projectId\": \"project-id\" }\n" +
-                // "  If a user mentions a project by name, try to match it to one of the available projects above and pass the projectId to the create_action tool.\n" +
+                // "  { \"create\": true, \"name\": \"Task name\", \"description\": \"Task description\" }\n" +
                 // "  IMPORTANT: When users mention ANY activities they've already completed (including calls, meetings, exercise, etc.), you MUST ALWAYS create a completed action using create_action with these parameters:\n" +
                 // "  - status: \"COMPLETED\"\n" +
                 // "  - name: The activity in past tense\n" +
                 // "  - description: Details about the activity\n" +
                 // "  - dueDate: Today's date (unless a specific date is mentioned)\n" +
-                // "  - projectId: For exercise activities, use the exercise project ID \"cm7q7bjf80000zu1r77bdcqdj\"\n" +
                 // `  Examples:\n` +
                 // `  For "I went for a run for 2.3 hours" use:\n` +
-                // `  { \"create\": true, \"name\": \"Completed a 2.3 hour run\", \"description\": \"Went for a run that lasted 2.3 hours\", \"status\": \"COMPLETED\", \"dueDate\": \"${today}\", \"projectId\": \"cm7q7bjf80000zu1r77bdcqdj\"}\n` +
+                // `  { \"create\": true, \"name\": \"Completed a 2.3 hour run\", \"description\": \"Went for a run that lasted 2.3 hours\", \"status\": \"COMPLETED\", \"dueDate\": \"${today}\"}\n` +
                 // `  For "I called my mom for 12 mins" use:\n` +
                 // `  { \"create\": true, \"name\": \"Called mom for 12 minutes\", \"description\": \"Had a phone call with mom that lasted 12 minutes\", \"status\": \"COMPLETED\", \"dueDate\": \"${today}\" }\n` +
-                // "  Note: Always create the action even if no project is specified. The projectId is optional.\n" +
+                // "  Note: Always create the action even if no project is specified.\n" +
                 "- add_video: Adds a YouTube video to the database. Use this when users want to analyze or process a video.\n" +
                // "- read_action: Retrieves an action's details by ID. Only use this when you have a specific action ID.\n" +
                // "- update_status_action: Updates the status of an existing action. Favoured over create_action for existing actions\n" +

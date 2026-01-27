@@ -17,7 +17,7 @@ const config = {
     "!src/**/node_modules/**",
   ],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
-  moduleNameMapping: {
+  moduleNameMapper: {
     "^~/(.*)$": "<rootDir>/src/$1",
   },
   extensionsToTreatAsEsm: [".ts"],

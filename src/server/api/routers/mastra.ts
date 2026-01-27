@@ -7,7 +7,6 @@ import {
 import OpenAI from "openai";
 import { TRPCError } from "@trpc/server";
 
-import { PRIORITY_VALUES } from "~/types/priority";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
@@ -21,6 +20,34 @@ if (!MASTRA_API_URL) {
   throw new Error("MASTRA_API_URL environment variable is not set");
 }
 
+type MastraAgentRecord = {
+  name?: string;
+  instructions: string;
+};
+
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+type JsonParseResult =
+  | { ok: true; value: JsonValue }
+  | { ok: false; error: Error };
+
+const parseJsonSafely = (input: string): JsonParseResult => {
+  try {
+    return { ok: true, value: JSON.parse(input) as JsonValue };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+};
+
 // Utility to cache agent instruction embeddings
 let agentEmbeddingsCache: { id: string; vector: number[] }[] | null = null;
 /**
@@ -33,13 +60,18 @@ async function loadAgentEmbeddings(): Promise<
   if (agentEmbeddingsCache) return agentEmbeddingsCache;
 
   // Use direct fetch instead of mastraClient
-  let data: Record<string, { instructions: string; [key: string]: any }>;
+  let data: Record<string, MastraAgentRecord>;
   try {
     const response = await fetch(`${MASTRA_API_URL}/api/agents`);
     if (!response.ok) {
       throw new Error(`Mastra API returned status ${response.status}`);
     }
-    data = await response.json();
+    const rawData: unknown = await response.json();
+    const parsed = MastraAgentsMapSchema.safeParse(rawData);
+    if (!parsed.success) {
+      throw new Error("Mastra agent response did not match expected schema");
+    }
+    data = parsed.data;
   } catch (error) {
     console.error("Failed to fetch Mastra agents using direct fetch:", error);
     throw new TRPCError({
@@ -80,6 +112,13 @@ const MastraAgentSchema = z.object({
   // description: z.string().optional(),
   // capabilities: z.array(z.string()).optional(),
 });
+
+const MastraAgentRecordSchema = z.object({
+  name: z.string().optional(),
+  instructions: z.string(),
+});
+
+const MastraAgentsMapSchema = z.record(MastraAgentRecordSchema);
 
 // Define the expected response array
 const MastraAgentsResponseSchema = z.array(MastraAgentSchema);
@@ -123,15 +162,12 @@ export const mastraRouter = createTRPCRouter({
           return [];
         }
 
-        const agentsData = await response.json();
+        const agentsData: unknown = await response.json();
         console.log("Mastra API data from direct fetch:", agentsData);
 
         // Check if the response is an object and not empty
-        if (
-          typeof agentsData !== "object" ||
-          agentsData === null ||
-          Object.keys(agentsData).length === 0
-        ) {
+        const parsedAgents = MastraAgentsMapSchema.safeParse(agentsData);
+        if (!parsedAgents.success || Object.keys(parsedAgents.data).length === 0) {
           console.error(
             "Mastra API response structure unexpected or empty. Expected a non-empty object.",
             agentsData,
@@ -141,14 +177,12 @@ export const mastraRouter = createTRPCRouter({
 
         // Transform the object into an array of { id, name, instructions }
         // The structure from the API is Record<string, AgentResponse>
-        const transformedAgents = Object.entries(agentsData).map(
-          ([agentId, agentDetails]: [string, any]) => {
-            return {
-              id: agentId,
-              name: agentDetails.name,
-              instructions: agentDetails.instructions,
-            };
-          },
+        const transformedAgents = Object.entries(parsedAgents.data).map(
+          ([agentId, agentDetails]) => ({
+            id: agentId,
+            name: agentDetails.name ?? agentId,
+            instructions: agentDetails.instructions,
+          }),
         );
 
         // Validate the TRANSFORMED array against the Zod schema
@@ -257,17 +291,15 @@ export const mastraRouter = createTRPCRouter({
           message: `Mastra generate failed (${res.status}): ${text}`,
         });
       }
-      let data;
-      const textData = JSON.parse(text);
-      try {
-        data = { response: textData.text, agentName: agentId };
-      } catch {
-        // Response is not JSON, return raw text
-        return { response: text, agentName: agentId };
+      const parsed = parseJsonSafely(text);
+      if (parsed.ok && typeof parsed.value === "object" && parsed.value) {
+        const textValue = parsed.value as { text?: JsonValue };
+        if (typeof textValue.text === "string") {
+          return { response: textValue.text, agentName: agentId };
+        }
       }
-      const responseText =
-        typeof data === "object" && "response" in data ? data.response : text;
-      return { response: responseText, agentName: agentId };
+
+      return { response: text, agentName: agentId };
     }),
 
   // API Token Generation for Mastra Agents (NextAuth-aligned)
@@ -306,7 +338,7 @@ export const mastraRouter = createTRPCRouter({
           picture: ctx.session.user.image,
         };
 
-        const token = jwt.sign(tokenPayload, process.env.AUTH_SECRET, {
+        jwt.sign(tokenPayload, process.env.AUTH_SECRET, {
           algorithm: "HS256", // Same as NextAuth default
           issuer: "todo-app",
           audience: "mastra-agents",
@@ -424,264 +456,4 @@ export const mastraRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  // Project Manager Agent API Endpoints
-  projectContext: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Use authenticated user's ID from session
-      const userId = ctx.session.user.id;
-
-      // Verify user has access to this project
-      const project = await ctx.db.project.findUnique({
-        where: {
-          id: input.projectId,
-          createdById: userId,
-        },
-        include: {
-          actions: {
-            where: { status: "ACTIVE" },
-            orderBy: [{ priority: "asc" }, { dueDate: "asc" }],
-          },
-          goals: {
-            include: {
-              lifeDomain: true,
-            },
-          },
-          outcomes: true,
-          teamMembers: true,
-        },
-      });
-
-      if (!project) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Project not found or access denied",
-        });
-      }
-
-      return {
-        project: {
-          id: project.id,
-          name: project.name,
-          description: project.description,
-          status: project.status,
-          priority: project.priority,
-          progress: project.progress ?? 0,
-          createdAt: project.createdAt.toISOString(),
-          reviewDate: project.reviewDate?.toISOString(),
-          nextActionDate: project.nextActionDate?.toISOString(),
-        },
-        actions: project.actions.map((action) => ({
-          id: action.id,
-          name: action.name,
-          description: action.description,
-          status: action.status,
-          priority: action.priority,
-          dueDate: action.dueDate?.toISOString(),
-        })),
-        goals: project.goals.map((goal) => ({
-          id: goal.id,
-          title: goal.title,
-          description: goal.description,
-          dueDate: goal.dueDate?.toISOString(),
-          lifeDomain: {
-            title: goal.lifeDomain.title,
-            description: goal.lifeDomain.description,
-          },
-        })),
-        outcomes: project.outcomes.map((outcome) => ({
-          id: outcome.id,
-          description: outcome.description,
-          type: outcome.type ?? "daily",
-          dueDate: outcome.dueDate?.toISOString(),
-        })),
-        teamMembers: project.teamMembers.map((member) => ({
-          id: member.id,
-          name: member.name,
-          role: member.role,
-          responsibilities: member.responsibilities,
-        })),
-      };
-    }),
-
-  projectActions: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-        status: z.enum(["ACTIVE", "COMPLETED", "CANCELLED"]).optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Use authenticated user's ID from session
-      const userId = ctx.session.user.id;
-
-      // Verify user has access to this project
-      const project = await ctx.db.project.findUnique({
-        where: {
-          id: input.projectId,
-          createdById: userId,
-        },
-      });
-
-      if (!project) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Project not found or access denied",
-        });
-      }
-
-      const actions = await ctx.db.action.findMany({
-        where: {
-          projectId: input.projectId,
-          createdById: userId,
-          ...(input.status && { status: input.status }),
-        },
-        include: {
-          project: {
-            select: {
-              id: true,
-              name: true,
-              priority: true,
-            },
-          },
-        },
-        orderBy: [{ priority: "asc" }, { dueDate: "asc" }],
-      });
-
-      return {
-        actions: actions.map((action) => ({
-          id: action.id,
-          name: action.name,
-          description: action.description,
-          status: action.status,
-          priority: action.priority,
-          dueDate: action.dueDate?.toISOString(),
-          project: action.project,
-        })),
-      };
-    }),
-
-  createAction: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-        name: z.string().min(1),
-        description: z.string().optional(),
-        priority: z.enum(PRIORITY_VALUES),
-        dueDate: z.string().optional(), // ISO string
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Use authenticated user's ID from session
-      const userId = ctx.session.user.id;
-
-      // Verify user has access to this project
-      const project = await ctx.db.project.findUnique({
-        where: {
-          id: input.projectId,
-          createdById: userId,
-        },
-      });
-
-      if (!project) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Project not found or access denied",
-        });
-      }
-
-      const action = await ctx.db.action.create({
-        data: {
-          name: input.name,
-          description: input.description,
-          priority: input.priority,
-          dueDate: input.dueDate ? new Date(input.dueDate) : null,
-          projectId: input.projectId,
-          createdById: userId,
-        },
-      });
-
-      return {
-        action: {
-          id: action.id,
-          name: action.name,
-          description: action.description,
-          status: action.status,
-          priority: action.priority,
-          dueDate: action.dueDate?.toISOString(),
-          projectId: action.projectId,
-        },
-      };
-    }),
-
-  updateProjectStatus: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string(),
-        status: z
-          .enum(["ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"])
-          .optional(),
-        priority: z.enum(["HIGH", "MEDIUM", "LOW", "NONE"]).optional(),
-        progress: z.number().min(0).max(100).optional(),
-        reviewDate: z.string().optional(), // ISO string
-        nextActionDate: z.string().optional(), // ISO string
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Use authenticated user's ID from session
-      const userId = ctx.session.user.id;
-
-      // Verify user has access to this project
-      const project = await ctx.db.project.findUnique({
-        where: {
-          id: input.projectId,
-          createdById: userId,
-        },
-      });
-
-      if (!project) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Project not found or access denied",
-        });
-      }
-
-      const { projectId, ...updateData } = input;
-
-      const updatedProject = await ctx.db.project.update({
-        where: {
-          id: projectId,
-          createdById: userId,
-        },
-        data: {
-          ...(updateData.status && { status: updateData.status }),
-          ...(updateData.priority && { priority: updateData.priority }),
-          ...(updateData.progress !== undefined && {
-            progress: updateData.progress,
-          }),
-          ...(updateData.reviewDate && {
-            reviewDate: new Date(updateData.reviewDate),
-          }),
-          ...(updateData.nextActionDate && {
-            nextActionDate: new Date(updateData.nextActionDate),
-          }),
-        },
-      });
-
-      return {
-        project: {
-          id: updatedProject.id,
-          name: updatedProject.name,
-          status: updatedProject.status,
-          priority: updatedProject.priority,
-          progress: updatedProject.progress ?? 0,
-          reviewDate: updatedProject.reviewDate?.toISOString(),
-          nextActionDate: updatedProject.nextActionDate?.toISOString(),
-        },
-      };
-    }),
 });

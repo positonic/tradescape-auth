@@ -64,10 +64,11 @@ async function quickTest() {
       const calculatedSellCost = sellOrders.reduce((sum, o) => sum + Number(o.totalCost), 0);
       
       // Track pair statistics
-      if (!pairStats[position.pair]) {
-        pairStats[position.pair] = { total: 0, issues: 0 };
+      const pair = position.pair ?? "UNKNOWN";
+      if (!pairStats[pair]) {
+        pairStats[pair] = { total: 0, issues: 0 };
       }
-      pairStats[position.pair].total++;
+      pairStats[pair].total++;
       
       console.log(`\n🔸 Position ${position.id} (${position.pair}):`);
       console.log(`   Orders: ${position.orders.length} total (${buyOrders.length} buy, ${sellOrders.length} sell)`);
@@ -120,7 +121,7 @@ async function quickTest() {
         issues.forEach(issue => console.log(`      - ${issue}`));
         totalIssues += issues.length;
         positionsWithIssues++;
-        pairStats[position.pair].issues++;
+        pairStats[pair].issues++;
       } else {
         console.log(`   ✅ No issues detected`);
       }

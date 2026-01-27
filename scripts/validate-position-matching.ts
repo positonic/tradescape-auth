@@ -7,7 +7,7 @@ interface PositionAnalysis {
   positionId: number;
   pair: string;
   orders: {
-    id: string;
+    id: number;
     type: string;
     amount: number;
     totalCost: number;
@@ -94,8 +94,12 @@ async function validatePositionMatching() {
     const totalSellCost = sellOrders.reduce((sum, order) => sum + Number(order.totalCost), 0);
     
     const calculatedPnL = totalSellCost - totalBuyCost;
-    const calculatedDuration = orders.length > 1 ? 
-      Number(orders[orders.length - 1].time) - Number(orders[0].time) : 0;
+    const firstOrder = orders[0];
+    const lastOrder = orders[orders.length - 1];
+    const calculatedDuration =
+      orders.length > 1 && firstOrder && lastOrder
+        ? Number(lastOrder.time) - Number(firstOrder.time)
+        : 0;
 
     const calculatedMetrics = {
       totalBuyVolume,

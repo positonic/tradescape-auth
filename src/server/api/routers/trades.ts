@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 
@@ -18,16 +19,15 @@ export const tradesRouter = createTRPCRouter({
       const { limit, offset, pairFilter } = input;
 
       try {
-        // Build where clause
-        const whereClause: any = { userId };
-        if (pairFilter) {
-          whereClause.pair = pairFilter;
-        }
+        const whereClause: Prisma.UserTradeWhereInput = {
+          userId,
+          ...(pairFilter ? { pair: pairFilter } : {}),
+        };
 
         // Fetch trades from database
         const trades = await ctx.db.userTrade.findMany({
           where: whereClause,
-          orderBy: { time: 'desc' },
+          orderBy: { time: "desc" },
           take: limit,
           skip: offset,
         });
@@ -37,7 +37,9 @@ export const tradesRouter = createTRPCRouter({
           where: whereClause,
         });
         
-        console.log(`📊 Retrieved ${trades.length} trades from database for user ${userId}`);
+        console.log(
+          `📊 Retrieved ${trades.length} trades from database for user ${userId}`,
+        );
         
         return {
           trades,
@@ -46,7 +48,7 @@ export const tradesRouter = createTRPCRouter({
         };
         
       } catch (error) {
-        console.error('Failed to fetch trades:', error);
+        console.error("Failed to fetch trades:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to fetch trades",
@@ -68,16 +70,15 @@ export const tradesRouter = createTRPCRouter({
       const { limit, offset, pairFilter } = input;
 
       try {
-        // Build where clause
-        const whereClause: any = { userId };
-        if (pairFilter) {
-          whereClause.pair = pairFilter;
-        }
+        const whereClause: Prisma.OrderWhereInput = {
+          userId,
+          ...(pairFilter ? { pair: pairFilter } : {}),
+        };
 
         // Fetch orders from database
         const orders = await ctx.db.order.findMany({
           where: whereClause,
-          orderBy: { time: 'desc' },
+          orderBy: { time: "desc" },
           take: limit,
           skip: offset,
         });
@@ -87,7 +88,9 @@ export const tradesRouter = createTRPCRouter({
           where: whereClause,
         });
         
-        console.log(`📊 Retrieved ${orders.length} orders from database for user ${userId}`);
+        console.log(
+          `📊 Retrieved ${orders.length} orders from database for user ${userId}`,
+        );
         
         return {
           orders,
@@ -96,7 +99,7 @@ export const tradesRouter = createTRPCRouter({
         };
         
       } catch (error) {
-        console.error('Failed to fetch orders:', error);
+        console.error("Failed to fetch orders:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to fetch orders",
@@ -118,16 +121,15 @@ export const tradesRouter = createTRPCRouter({
       const { limit, offset, pairFilter } = input;
 
       try {
-        // Build where clause
-        const whereClause: any = { userId };
-        if (pairFilter) {
-          whereClause.pair = pairFilter;
-        }
+        const whereClause: Prisma.PositionWhereInput = {
+          userId,
+          ...(pairFilter ? { pair: pairFilter } : {}),
+        };
 
         // Fetch positions from database
         const positions = await ctx.db.position.findMany({
           where: whereClause,
-          orderBy: { time: 'desc' },
+          orderBy: { time: "desc" },
           take: limit,
           skip: offset,
         });
@@ -137,7 +139,9 @@ export const tradesRouter = createTRPCRouter({
           where: whereClause,
         });
         
-        console.log(`📊 Retrieved ${positions.length} positions from database for user ${userId}`);
+        console.log(
+          `📊 Retrieved ${positions.length} positions from database for user ${userId}`,
+        );
         
         return {
           positions,
@@ -146,7 +150,7 @@ export const tradesRouter = createTRPCRouter({
         };
         
       } catch (error) {
-        console.error('Failed to fetch positions:', error);
+        console.error("Failed to fetch positions:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to fetch positions",
@@ -177,17 +181,19 @@ export const tradesRouter = createTRPCRouter({
           include: {
             order: true,
           },
-          orderBy: { time: 'desc' },
+          orderBy: { time: "desc" },
         });
         
-        console.log(`📊 Retrieved ${trades.length} trades for position ${positionId} for user ${userId}`);
+        console.log(
+          `📊 Retrieved ${trades.length} trades for position ${positionId} for user ${userId}`,
+        );
         
         return {
           trades,
         };
         
       } catch (error) {
-        console.error('Failed to fetch trades for position:', error);
+        console.error("Failed to fetch trades for position:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to fetch trades for position",
@@ -213,17 +219,19 @@ export const tradesRouter = createTRPCRouter({
             userId,
             positionId,
           },
-          orderBy: { time: 'desc' },
+          orderBy: { time: "desc" },
         });
         
-        console.log(`📊 Retrieved ${orders.length} orders for position ${positionId} for user ${userId}`);
+        console.log(
+          `📊 Retrieved ${orders.length} orders for position ${positionId} for user ${userId}`,
+        );
         
         return {
           orders,
         };
         
       } catch (error) {
-        console.error('Failed to fetch orders for position:', error);
+        console.error("Failed to fetch orders for position:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to fetch orders for position",
@@ -252,16 +260,18 @@ export const tradesRouter = createTRPCRouter({
         });
         
         if (!position) {
-          console.log(`❌ Position ${positionId} not found for user ${userId}`);
+          console.log(
+            `❌ Position ${positionId} not found for user ${userId}`,
+          );
           return null;
         }
-        
+
         console.log(`📊 Retrieved position ${positionId} for user ${userId}`);
-        
+
         return position;
-        
+
       } catch (error) {
-        console.error('Failed to fetch position:', error);
+        console.error("Failed to fetch position:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to fetch position",
