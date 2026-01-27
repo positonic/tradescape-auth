@@ -21,7 +21,7 @@ const tradingData = {
   losses: 424,
   breakeven: 0,
   totalTrades: 1131,
-  totalVolume: 128.90,
+  totalVolume: 128.9,
   avgVolumePerTrade: 113965,
   longRatio: 48,
   shortRatio: 52,
@@ -30,13 +30,13 @@ const tradingData = {
 function TradingDashboard() {
   return (
     <Container size="xl" className="">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* Portfolio Value Card */}
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className="border-gray-700 bg-gray-800">
           <Text size="sm" c="dimmed" className="mb-2">
             Portfolio Value
           </Text>
-          <Title order={2} className="text-2xl font-bold text-white mb-2">
+          <Title order={2} className="mb-2 text-2xl font-bold text-white">
             ${tradingData.portfolioValue.toLocaleString()}
           </Title>
           <Text size="xs" c="dimmed">
@@ -45,7 +45,7 @@ function TradingDashboard() {
         </Card>
 
         {/* Win Rate Card */}
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className="border-gray-700 bg-gray-800">
           <Text size="sm" c="dimmed" className="mb-4">
             Total Win Rate
           </Text>
@@ -54,8 +54,8 @@ function TradingDashboard() {
               size={80}
               thickness={8}
               sections={[
-                { value: tradingData.winRate, color: 'teal' },
-                { value: 100 - tradingData.winRate, color: 'red' }
+                { value: tradingData.winRate, color: "teal" },
+                { value: 100 - tradingData.winRate, color: "red" },
               ]}
               label={
                 <Text ta="center" size="lg" fw={700} c="white">
@@ -75,34 +75,47 @@ function TradingDashboard() {
               </Text>
             </div>
           </div>
-          <Text size="xs" c="teal" className="mt-2 cursor-pointer hover:underline">
+          <Text
+            size="xs"
+            c="teal"
+            className="mt-2 cursor-pointer hover:underline"
+          >
             Set Breakeven filter ↗
           </Text>
         </Card>
 
         {/* Total Trade Count Card */}
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className="border-gray-700 bg-gray-800">
           <Text size="sm" c="dimmed" className="mb-2">
             Total Trade Count
           </Text>
-          <Title order={2} className="text-2xl font-bold text-white mb-2">
+          <Title order={2} className="mb-2 text-2xl font-bold text-white">
             {tradingData.totalTrades.toLocaleString()}
           </Title>
           <Text size="xs" c="dimmed">
-            Total volume of ${tradingData.totalVolume}m with an average of ${tradingData.avgVolumePerTrade.toLocaleString()} volume per trade
+            Total volume of ${tradingData.totalVolume}m with an average of $
+            {tradingData.avgVolumePerTrade.toLocaleString()} volume per trade
           </Text>
         </Card>
 
         {/* Long/Short Ratio Card */}
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className="border-gray-700 bg-gray-800">
           <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <Text size="sm" c="dimmed">Long Ratio</Text>
-              <Text size="sm" c="teal" fw={600}>{tradingData.longRatio}%</Text>
+            <div className="mb-2 flex items-center justify-between">
+              <Text size="sm" c="dimmed">
+                Long Ratio
+              </Text>
+              <Text size="sm" c="teal" fw={600}>
+                {tradingData.longRatio}%
+              </Text>
             </div>
-            <div className="flex justify-between items-center">
-              <Text size="sm" c="dimmed">Short Ratio</Text>
-              <Text size="sm" c="red" fw={600}>{tradingData.shortRatio}%</Text>
+            <div className="flex items-center justify-between">
+              <Text size="sm" c="dimmed">
+                Short Ratio
+              </Text>
+              <Text size="sm" c="red" fw={600}>
+                {tradingData.shortRatio}%
+              </Text>
             </div>
           </div>
           <Progress
@@ -111,14 +124,10 @@ function TradingDashboard() {
             color="teal"
             className="mb-2"
           />
-          <Progress
-            size="md"
-            value={tradingData.shortRatio}
-            color="red"
-          />
+          <Progress size="md" value={tradingData.shortRatio} color="red" />
         </Card>
       </div>
-      <br/>
+      <br />
       {/* Lifetime PNL Chart */}
       <LifetimePNLChart />
     </Container>
@@ -131,7 +140,6 @@ export async function LandingPage() {
     <Container size="xl" className="py-16">
       {/* Hero Section */}
       <Stack align="center" className="mb-16 text-center">
-        
         <Group gap="md" justify="center" wrap="wrap">
           {!session?.user ? <SignInButton /> : <></>}
         </Group>

@@ -54,56 +54,58 @@ export function VoiceInput({
   // Cleanup resources
   useEffect(() => {
     return () => {
-      console.log('🎤 Cleanup: Component unmounting');
+      console.log("🎤 Cleanup: Component unmounting");
       void cleanupAudioResources();
     };
   }, []);
 
   const cleanupAudioResources = () => {
     if (mediaRecorderRef.current) {
-      console.log('🎤 Cleanup: Stopping media recorder');
+      console.log("🎤 Cleanup: Stopping media recorder");
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current = null;
-      console.log('🎤 Cleanup: Media recorder nulled');
+      console.log("🎤 Cleanup: Media recorder nulled");
     }
-    
+
     if (chunksRef.current) {
-      console.log('🎤 Cleanup: Clearing chunks');
+      console.log("🎤 Cleanup: Clearing chunks");
       chunksRef.current = [];
     }
-    
+
     if (streamRef.current) {
-      console.log('🎤 Cleanup: Found active stream, cleaning up tracks');
+      console.log("🎤 Cleanup: Found active stream, cleaning up tracks");
       const tracks = streamRef.current.getTracks();
       console.log(`🎤 Cleanup: Found ${tracks.length} tracks to clean up`);
       tracks.forEach((track, index) => {
-        console.log(`🎤 Cleanup: Stopping track ${index}, kind: ${track.kind}, state: ${track.readyState}`);
+        console.log(
+          `🎤 Cleanup: Stopping track ${index}, kind: ${track.kind}, state: ${track.readyState}`,
+        );
         track.stop();
         track.enabled = false;
         console.log(`🎤 Cleanup: Track ${index} stopped and disabled`);
       });
       streamRef.current = null;
-      console.log('🎤 Cleanup: Stream reference nulled');
+      console.log("🎤 Cleanup: Stream reference nulled");
     }
-    
+
     if (audioContextRef.current) {
       void audioContextRef.current.close();
       audioContextRef.current = null;
     }
-    
+
     analyserRef.current = null;
     silenceStartRef.current = null;
-    
+
     // Cancel the animation frame if it exists
     if (silenceCheckIdRef.current !== null) {
-      console.log('🎤 Cleanup: Cancelling silence check animation frame');
+      console.log("🎤 Cleanup: Cancelling silence check animation frame");
       cancelAnimationFrame(silenceCheckIdRef.current);
       silenceCheckIdRef.current = null;
     }
 
     // Clear the processing timer if it exists
     if (processingTimerRef.current) {
-      console.log('🎤 Cleanup: Clearing forced processing timer');
+      console.log("🎤 Cleanup: Clearing forced processing timer");
       clearInterval(processingTimerRef.current);
       processingTimerRef.current = null;
     }
@@ -111,81 +113,104 @@ export function VoiceInput({
 
   const processAudioChunk = async () => {
     if (chunksRef.current.length === 0) {
-      console.log('🎤 Process: No chunks to process');
+      console.log("🎤 Process: No chunks to process");
       return;
     }
-    
-    console.log('🎤 Process: Processing audio chunk with', chunksRef.current.length, 'chunks');
+
+    console.log(
+      "🎤 Process: Processing audio chunk with",
+      chunksRef.current.length,
+      "chunks",
+    );
     const now = Date.now();
     if (now - lastProcessTimeRef.current < 1000) {
-      console.log('🎤 Process: Skipping processing, too soon since last processing');
+      console.log(
+        "🎤 Process: Skipping processing, too soon since last processing",
+      );
       return;
     }
-    
+
     const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-    console.log('🎤 Process: Audio blob created', audioBlob.size, 'bytes');
-    
+    console.log("🎤 Process: Audio blob created", audioBlob.size, "bytes");
+
     // Clear the chunks for the next segment
     chunksRef.current = [];
     lastProcessTimeRef.current = now;
-    
+
     // Skip tiny audio clips
     if (audioBlob.size < 1000) {
-      console.log('🎤 Process: Audio clip too small, skipping');
+      console.log("🎤 Process: Audio clip too small, skipping");
       return;
     }
-    
+
     try {
-      console.log('🎤 Process: Starting transcription of chunk');
+      console.log("🎤 Process: Starting transcription of chunk");
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
       reader.onloadend = async () => {
         if (reader.result && typeof reader.result === "string") {
           const base64Audio = reader.result.split(",")[1];
           if (base64Audio) {
-            console.log('🎤 Process: Sending audio for transcription', base64Audio.length, 'chars');
-            console.log('🎤 API: About to send transcription request with data length:', base64Audio.length);
+            console.log(
+              "🎤 Process: Sending audio for transcription",
+              base64Audio.length,
+              "chars",
+            );
+            console.log(
+              "🎤 API: About to send transcription request with data length:",
+              base64Audio.length,
+            );
             try {
-              const result = await transcribeAudio.mutateAsync({ audio: base64Audio });
-              console.log('🎤 Process: Transcription result received', result);
-              console.log('🎤 API: Raw response from transcribeAudio:', JSON.stringify(result));
+              const result = await transcribeAudio.mutateAsync({
+                audio: base64Audio,
+              });
+              console.log("🎤 Process: Transcription result received", result);
+              console.log(
+                "🎤 API: Raw response from transcribeAudio:",
+                JSON.stringify(result),
+              );
               if (result.text) {
                 const newText = result.text.trim();
-                console.log('🎤 Process: Adding new transcription to UI:', newText);
-                setTranscribedText(prev => {
+                console.log(
+                  "🎤 Process: Adding new transcription to UI:",
+                  newText,
+                );
+                setTranscribedText((prev) => {
                   const updated = prev + (prev ? " " : "") + newText;
-                  console.log('🎤 Process: Updated transcribed text:', updated);
+                  console.log("🎤 Process: Updated transcribed text:", updated);
                   return updated;
                 });
               } else {
-                console.log('🎤 Process: No text in transcription result');
+                console.log("🎤 Process: No text in transcription result");
               }
             } catch (error) {
-              console.error('🎤 Process: Transcription API error:', error);
+              console.error("🎤 Process: Transcription API error:", error);
             }
           } else {
-            console.log('🎤 Process: No base64 audio extracted from blob');
+            console.log("🎤 Process: No base64 audio extracted from blob");
           }
         } else {
-          console.log('🎤 Process: FileReader result not available or not a string');
+          console.log(
+            "🎤 Process: FileReader result not available or not a string",
+          );
         }
       };
     } catch (error) {
-      console.error('🎤 Error: Transcription process failed:', error);
+      console.error("🎤 Error: Transcription process failed:", error);
     }
   };
 
   const startRecording = async () => {
     try {
-      console.log('🎤 Start: Beginning recording process');
+      console.log("🎤 Start: Beginning recording process");
       cleanupAudioResources();
       setTranscribedText("");
-      
-      console.log('🎤 Start: Requesting media stream');
+
+      console.log("🎤 Start: Requesting media stream");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log('🎤 Start: Media stream obtained');
+      console.log("🎤 Start: Media stream obtained");
       streamRef.current = stream;
-      
+
       // Set up audio context for silence detection
       audioContextRef.current = new AudioContext();
       analyserRef.current = audioContextRef.current.createAnalyser();
@@ -193,170 +218,190 @@ export function VoiceInput({
       analyserRef.current.minDecibels = -90;
       analyserRef.current.maxDecibels = -10;
       analyserRef.current.smoothingTimeConstant = 0.85;
-      
+
       const source = audioContextRef.current.createMediaStreamSource(stream);
       source.connect(analyserRef.current);
-      
+
       const bufferLength = analyserRef.current.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
-      
+
       // Function to monitor audio levels and detect silence
       const checkSilence = () => {
         // Log the call count and current state
         frameCountRef.current++;
-        console.log('🎤 Silence Check:', {
+        console.log("🎤 Silence Check:", {
           frameCount: frameCountRef.current,
           isRecording,
           hasAnalyser: !!analyserRef.current,
           buttonExists: !!document.querySelector('[color="red"]'),
-          time: new Date().toISOString()
+          time: new Date().toISOString(),
         });
 
         if (!analyserRef.current) {
-          console.log('🎤 Silence Check: Stopping due to no analyzer');
+          console.log("🎤 Silence Check: Stopping due to no analyzer");
           return;
         }
-        
+
         // Always keep checking until explicitly told to stop - the recording state
         // might still be updating
-        
+
         analyserRef.current.getByteFrequencyData(dataArray);
         let sum = 0;
         for (let i = 0; i < bufferLength; i++) {
           // @ts-expect-error: We know dataArray is defined here because we created it above
           sum += dataArray[i];
         }
-        
+
         const average = sum / bufferLength;
         const dB = 20 * Math.log10(average / 255);
-        
+
         // Log audio levels every 10 frames to avoid console flood
         if (frameCountRef.current % 10 === 0) {
           console.log(`🎤 Levels: Frame ${frameCountRef.current}:`, {
             dB: dB.toFixed(2),
             threshold: SILENCE_THRESHOLD,
-            silenceStarted: silenceStartRef.current ? new Date(silenceStartRef.current).toISOString() : null
+            silenceStarted: silenceStartRef.current
+              ? new Date(silenceStartRef.current).toISOString()
+              : null,
           });
         }
-        
+
         const now = Date.now();
         const recordingDuration = now - lastProcessTimeRef.current;
-        
+
         // If sound is below threshold, mark silence start
         if (dB < SILENCE_THRESHOLD) {
           if (silenceStartRef.current === null) {
             silenceStartRef.current = now;
-            console.log('🎤 Silence: Started at', new Date(now).toISOString());
+            console.log("🎤 Silence: Started at", new Date(now).toISOString());
           } else {
             const silenceDuration = now - silenceStartRef.current;
             // Log silence duration every 10 frames
             if (frameCountRef.current % 10 === 0) {
-              console.log(`🎤 Silence: Duration ${silenceDuration}ms / ${SILENCE_DURATION}ms needed`);
+              console.log(
+                `🎤 Silence: Duration ${silenceDuration}ms / ${SILENCE_DURATION}ms needed`,
+              );
             }
-            
-            if (silenceDuration > SILENCE_DURATION && recordingDuration > MIN_RECORDING_LENGTH) {
-              console.log(`🎤 Silence: Threshold reached! Processing chunk after ${silenceDuration}ms of silence`);
+
+            if (
+              silenceDuration > SILENCE_DURATION &&
+              recordingDuration > MIN_RECORDING_LENGTH
+            ) {
+              console.log(
+                `🎤 Silence: Threshold reached! Processing chunk after ${silenceDuration}ms of silence`,
+              );
               void processAudioChunk();
               silenceStartRef.current = null;
             }
           }
         } else {
           if (silenceStartRef.current !== null) {
-            console.log('🎤 Silence: Broken, resetting silence detection');
+            console.log("🎤 Silence: Broken, resetting silence detection");
             silenceStartRef.current = null;
           }
         }
-        
+
         // Ensure we don't go too long without processing
         if (recordingDuration > MAX_CHUNK_DURATION) {
-          console.log(`🎤 Duration: Max chunk duration reached (${MAX_CHUNK_DURATION}ms), processing`);
+          console.log(
+            `🎤 Duration: Max chunk duration reached (${MAX_CHUNK_DURATION}ms), processing`,
+          );
           void processAudioChunk();
         }
-        
+
         // Log before and after requestAnimationFrame call
-        console.log('🎤 Silence Check: Before RAF, button color:', document.querySelector('[color="red"]') ? 'red' : 'not red');
-        
+        console.log(
+          "🎤 Silence Check: Before RAF, button color:",
+          document.querySelector('[color="red"]') ? "red" : "not red",
+        );
+
         // We changed our check here - only look at the DOM element to determine if we should
         // be recording, not the React state which might lag
         if (document.querySelector('[color="red"]')) {
           // Continue silence detection if red record button is visible
           silenceCheckIdRef.current = requestAnimationFrame(checkSilence);
-          console.log('🎤 Silence Check: RAF scheduled, ID:', silenceCheckIdRef.current);
+          console.log(
+            "🎤 Silence Check: RAF scheduled, ID:",
+            silenceCheckIdRef.current,
+          );
         } else {
-          console.log('🎤 Silence Check: Stopping because recording button is no longer red');
+          console.log(
+            "🎤 Silence Check: Stopping because recording button is no longer red",
+          );
         }
       };
-      
+
       // Set isRecording to true BEFORE starting silence detection
       setIsRecording(true);
-      
+
       // Set up media recorder
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus' // or 'audio/wav' if supported
+        mimeType: "audio/webm;codecs=opus", // or 'audio/wav' if supported
       });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
-      
+
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           console.log(`🎤 Data: Received chunk of ${e.data.size} bytes`);
           chunksRef.current.push(e.data);
-          console.log(`🎤 Data: Now have ${chunksRef.current.length} chunks total`);
+          console.log(
+            `🎤 Data: Now have ${chunksRef.current.length} chunks total`,
+          );
         } else {
-          console.log('🎤 Data: Received empty chunk');
+          console.log("🎤 Data: Received empty chunk");
         }
       };
-      
+
       lastProcessTimeRef.current = Date.now();
       mediaRecorder.start(500); // Collect data every 500ms
-      console.log('🎤 Start: Recording started');
-      
+      console.log("🎤 Start: Recording started");
+
       // Start silence detection with proper ID tracking AFTER setting isRecording = true
       silenceCheckIdRef.current = requestAnimationFrame(checkSilence);
-      
+
       // Add a timer as a fallback to ensure processing occurs
       const processingTimerId = setInterval(() => {
-        console.log('🎤 Timer: Forced processing timer fired');
+        console.log("🎤 Timer: Forced processing timer fired");
         if (chunksRef.current.length > 0) {
-          console.log('🎤 Timer: Found chunks to process, forcing processing');
+          console.log("🎤 Timer: Found chunks to process, forcing processing");
           void processAudioChunk();
         } else {
-          console.log('🎤 Timer: No chunks to process');
+          console.log("🎤 Timer: No chunks to process");
         }
       }, 3000); // Process every 3 seconds as a fallback
-      
+
       // Store the timer ID for later cleanup
       processingTimerRef.current = processingTimerId;
-      
     } catch (err) {
-      console.error('🎤 Error: Recording failed:', err);
+      console.error("🎤 Error: Recording failed:", err);
       setIsRecording(false);
     }
   };
 
   const stopRecording = async () => {
-    console.log('🎤 Stop: Manual stop recording triggered');
+    console.log("🎤 Stop: Manual stop recording triggered");
     if (isRecording) {
       // Process any remaining audio
       await processAudioChunk();
-      
+
       // Submit the complete transcribed text
       if (transcribedText.trim()) {
         onTranscriptionComplete(transcribedText.trim());
       }
-      
+
       // Clean up resources
       void cleanupAudioResources();
       setIsRecording(false);
-      console.log('🎤 Stop: Recording stopped completely');
+      console.log("🎤 Stop: Recording stopped completely");
     }
   };
-  console.log('🎤 transcribedText!!', transcribedText);
-  console.log('🎤 isRecording!!', isRecording);
+  console.log("🎤 transcribedText!!", transcribedText);
+  console.log("🎤 isRecording!!", isRecording);
 
   // Add this useEffect to track isRecording changes
   useEffect(() => {
-    console.log('🎤 State: isRecording changed to', isRecording);
+    console.log("🎤 State: isRecording changed to", isRecording);
   }, [isRecording]);
 
   return (
@@ -367,12 +412,17 @@ export function VoiceInput({
         radius="lg"
         style={{ backgroundColor: "#f8f9fa" }}
       >
-        <Box style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <Box
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
           <Text size="sm" c="dimmed" mb="xs">
-            Click the microphone icon to start recording your voice, then click again when finished.
+            Click the microphone icon to start recording your voice, then click
+            again when finished.
           </Text>
-          
-          <Box style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+
+          <Box
+            style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
+          >
             <Tooltip
               label={
                 isRecording
@@ -395,12 +445,21 @@ export function VoiceInput({
                 }}
               >
                 {isRecording ? (
-                  <Box style={{ position: 'relative' }}>
+                  <Box style={{ position: "relative" }}>
                     <IconWaveSine
                       size={24}
                       style={{ animation: "pulse 1s infinite" }}
                     />
-                    <Text size="xs" style={{ position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}>
+                    <Text
+                      size="xs"
+                      style={{
+                        position: "absolute",
+                        bottom: -20,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       Recording...
                     </Text>
                   </Box>
@@ -435,15 +494,17 @@ export function VoiceInput({
               <Switch
                 label="Enable voice responses"
                 checked={audioEnabled}
-                onChange={(event) => setAudioEnabled(event.currentTarget.checked)}
+                onChange={(event) =>
+                  setAudioEnabled(event.currentTarget.checked)
+                }
                 size="md"
                 description="AI will respond with voice"
               />
             </Tooltip>
           </Box>
-          
+
           {transcribedText && (
-            <Text size="sm" mt="xs" style={{ fontStyle: 'italic' }}>
+            <Text size="sm" mt="xs" style={{ fontStyle: "italic" }}>
               Detected: {transcribedText}
             </Text>
           )}

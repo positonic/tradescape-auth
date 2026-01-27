@@ -34,7 +34,7 @@ export function VideoDetails({
   );
   const [setups, setSetups] = useState<TranscriptionSetups | null>(null);
   const [selectedSetups, setSelectedSetups] = useState<number[]>([]);
-  
+
   const videoId = getVideoIdFromYoutubeUrl(videoUrl);
   if (!videoId) {
     throw new Error("Invalid YouTube URL");
@@ -120,7 +120,7 @@ export function VideoDetails({
             allowFullScreen
           />
         </div>
-        <br/>
+        <br />
         {setups && (
           <TradeSetups
             setups={setups}
@@ -140,8 +140,6 @@ export function VideoDetails({
         {transcription && (
           <ContentAccordion title="Transcription" content={transcription} />
         )}
-
-       
 
         {/* Buttons */}
         <Group gap="md" mt="xl">

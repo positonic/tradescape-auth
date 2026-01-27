@@ -121,7 +121,8 @@ export function PositionValidationButton() {
                 size="lg"
               />
               <Text size="xs" c="dimmed">
-                {validationData.completePositions}/{validationData.totalPositions}
+                {validationData.completePositions}/
+                {validationData.totalPositions}
               </Text>
 
               <Group>

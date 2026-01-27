@@ -1355,7 +1355,9 @@ export default function LivePage() {
                           {(() => {
                             const lastItem = chartData[chartData.length - 1];
                             return lastItem
-                              ? new Date(lastItem.timestamp).toLocaleDateString()
+                              ? new Date(
+                                  lastItem.timestamp,
+                                ).toLocaleDateString()
                               : "-";
                           })()}
                         </span>

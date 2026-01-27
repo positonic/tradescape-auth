@@ -10,15 +10,20 @@ interface InitUserExchangeResult {
 
 export async function initUserExchange(
   encryptedKeys: string,
-  userId: string
+  userId: string,
 ): Promise<InitUserExchangeResult> {
   try {
-    console.log('initUserExchange called with userId:', userId, 'type:', typeof userId);
-    
+    console.log(
+      "initUserExchange called with userId:",
+      userId,
+      "type:",
+      typeof userId,
+    );
+
     if (!userId) {
       return {
         userExchange: null,
-        error: 'User ID is required',
+        error: "User ID is required",
       };
     }
 
@@ -28,7 +33,7 @@ export async function initUserExchange(
     if (!decryptedKeys?.length) {
       return {
         userExchange: null,
-        error: 'No valid API keys found',
+        error: "No valid API keys found",
       };
     }
 
@@ -36,15 +41,15 @@ export async function initUserExchange(
       userId,
       decryptedKeys,
       {},
-      userExchangeRepository
+      userExchangeRepository,
     );
 
     return { userExchange };
   } catch (error) {
-    console.error('Failed to initialize UserExchange:', error);
+    console.error("Failed to initialize UserExchange:", error);
     return {
       userExchange: null,
-      error: 'Failed to initialize exchange connection',
+      error: "Failed to initialize exchange connection",
     };
   }
 }

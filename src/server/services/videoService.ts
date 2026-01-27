@@ -51,7 +51,7 @@ type VideoUpdateInput = {
 // };
 
 const prompts = {
-  'trade-setups': `Below is a transcript of a crypto trading video from an influencer. The transcript contains both trade ideas and non-trading commentary. Please extract a list of trade ideas for each crypto coin or token mentioned. For each coin/token, provide a structured output in JSON format with the following details:
+  "trade-setups": `Below is a transcript of a crypto trading video from an influencer. The transcript contains both trade ideas and non-trading commentary. Please extract a list of trade ideas for each crypto coin or token mentioned. For each coin/token, provide a structured output in JSON format with the following details:
   
   - coinSymbol: symbol of the cryptocurrency (e.g., BTC, ETH, SOL, etc.).
   - sentiment: The overall sentiment expressed about the coin (bullish, bearish, or neutral).
@@ -119,8 +119,8 @@ const prompts = {
   Remember: Output only the JSON.
   
   Transcript:`,
-  
-    'basic': `Please provide a concise summary of the following transcript in markdown format:
+
+  basic: `Please provide a concise summary of the following transcript in markdown format:
   
   1. First, give me a 3-line overview that captures the main essence of the content.
   2. Then, list 3-5 key bullet points highlighting the most important specific information or takeaways.
@@ -143,8 +143,8 @@ const prompts = {
   Remember: Output only the markdown formatted text.
 
   Transcript:`,
-  
-    'description': `You are a crypto trading analyst expert. Below is a transcript of a crypto trading video that you created. Please extract and structure the information using markdown formatting. The transcript includes timestamps that you should use to create clickable links to the video sections.
+
+  description: `You are a crypto trading analyst expert. Below is a transcript of a crypto trading video that you created. Please extract and structure the information using markdown formatting. The transcript includes timestamps that you should use to create clickable links to the video sections.
 
   IMPORTANT: The transcript is provided with timestamps in the format "(123.45) Some text here". You MUST use these exact timestamps from the transcript to create your section links. DO NOT use arbitrary timestamps. Each section should use the timestamp of the first relevant mention of that topic in the transcript.
   
@@ -224,7 +224,7 @@ const prompts = {
   
   Transcript:{{TRANSCRIPT_WITH_SECONDS}}
   `,
-  'multiFirst': `Below is a transcript of a crypto trading video. Your task is to scan the transcript and create a structured outline that identifies high-level topics, key segments, and timestamps with clickable links. Use the following guidelines:
+  multiFirst: `Below is a transcript of a crypto trading video. Your task is to scan the transcript and create a structured outline that identifies high-level topics, key segments, and timestamps with clickable links. Use the following guidelines:
 
 1. **Topics to Identify:**
    - Intro / Overview
@@ -262,7 +262,7 @@ const prompts = {
 - Tickers discussed: [BTC, ETH]
 
 Now, please output only the structured outline in markdown format based on the provided transcript.`,
-  'multiSecond': `Enrich this outline with detailed trading analysis. For each segment:
+  multiSecond: `Enrich this outline with detailed trading analysis. For each segment:
 
   1. Keep existing timestamps and structure
   2. Add for each ticker:
@@ -271,7 +271,7 @@ Now, please output only the structured outline in markdown format based on the p
      - Sentiment (bullish/bearish/neutral)
      - Trade recommendations
   `,
-  'multiFirstAlpha': `You are analyzing a crypto trading video transcript. Create a high-level outline with exact timestamps.
+  multiFirstAlpha: `You are analyzing a crypto trading video transcript. Create a high-level outline with exact timestamps.
 
   Common tickers to identify: SPX, COIN, ARC, FARTCOIN, BONK, WIF, AVAAI, IREN, GOLD, PLTR, BONKGUY, ZEREBRO, MSTR, BERA, NVDA, ETHBTC, SOLBTC
 
@@ -296,7 +296,7 @@ Now, please output only the structured outline in markdown format based on the p
 
   `,
 
-  'multiSecondAlpha': `Enrich this outline with detailed trading analysis. For each segment:
+  multiSecondAlpha: `Enrich this outline with detailed trading analysis. For each segment:
 
   1. Keep existing timestamps and structure
   2. Add for each ticker:
@@ -305,11 +305,13 @@ Now, please output only the structured outline in markdown format based on the p
      - Sentiment (bullish/bearish/neutral)
      - Trade recommendations
   
-  Maintain exact timestamp links: [MM:SS]({{VIDEO_URL}}&t=N)`
+  Maintain exact timestamp links: [MM:SS]({{VIDEO_URL}}&t=N)`,
 } as const;
 
 const getPrompt = (summaryType: string): string => {
-  return summaryType in prompts ? prompts[summaryType as keyof typeof prompts] : prompts.basic;
+  return summaryType in prompts
+    ? prompts[summaryType as keyof typeof prompts]
+    : prompts.basic;
 };
 
 // Add proper typing for OpenAI API response
@@ -324,13 +326,14 @@ type OpenAIResponse = {
 type PipelineContext = {
   transcription: string;
   videoUrl: string;
-  captions?: {text: string, startSeconds: number, endSeconds: number}[];
+  captions?: { text: string; startSeconds: number; endSeconds: number }[];
   outline?: string;
   result?: string;
 };
 
 class Pipeline {
-  private steps: ((context: PipelineContext) => Promise<PipelineContext>)[] = [];
+  private steps: ((context: PipelineContext) => Promise<PipelineContext>)[] =
+    [];
 
   addStep(step: (context: PipelineContext) => Promise<PipelineContext>) {
     this.steps.push(step);
@@ -340,29 +343,34 @@ class Pipeline {
   async execute(initialContext: PipelineContext): Promise<PipelineContext> {
     return this.steps.reduce(
       async (contextPromise, step) => step(await contextPromise),
-      Promise.resolve(initialContext)
+      Promise.resolve(initialContext),
     );
   }
 }
 
-async function generateOutline(context: PipelineContext): Promise<PipelineContext> {
+async function generateOutline(
+  context: PipelineContext,
+): Promise<PipelineContext> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: "gpt-4-turbo-preview",
       messages: [
         {
           role: "system",
-          content: prompts.multiFirst.replace(/\{\{VIDEO_URL\}\}/g, context.videoUrl)
+          content: prompts.multiFirst.replace(
+            /\{\{VIDEO_URL\}\}/g,
+            context.videoUrl,
+          ),
         },
         {
           role: "user",
-          content: context.transcription
-        }
+          content: context.transcription,
+        },
       ],
       temperature: 0.7,
       max_tokens: 1500,
@@ -375,31 +383,36 @@ async function generateOutline(context: PipelineContext): Promise<PipelineContex
   }
 
   const data = (await response.json()) as OpenAIResponse;
-  console.log('jpf: Outline generated is ', data.choices[0]?.message?.content)
+  console.log("jpf: Outline generated is ", data.choices[0]?.message?.content);
   return {
     ...context,
-    outline: data.choices[0]?.message?.content ?? ''
+    outline: data.choices[0]?.message?.content ?? "",
   };
 }
 
-async function enrichOutline(context: PipelineContext): Promise<PipelineContext> {
+async function enrichOutline(
+  context: PipelineContext,
+): Promise<PipelineContext> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: "gpt-4-turbo-preview",
       messages: [
         {
           role: "system",
-          content: prompts.multiSecond.replace(/\{\{VIDEO_URL\}\}/g, context.videoUrl)
+          content: prompts.multiSecond.replace(
+            /\{\{VIDEO_URL\}\}/g,
+            context.videoUrl,
+          ),
         },
         {
           role: "user",
-          content: context.outline
-        }
+          content: context.outline,
+        },
       ],
       temperature: 0.7,
       max_tokens: 1500,
@@ -414,28 +427,26 @@ async function enrichOutline(context: PipelineContext): Promise<PipelineContext>
   const data = (await response.json()) as OpenAIResponse;
   return {
     ...context,
-    result: data.choices[0]?.message?.content
+    result: data.choices[0]?.message?.content,
   };
 }
 
 async function multiPass(
   transcription: string,
   videoUrl: string,
-  captions?: {text: string, startSeconds: number, endSeconds: number}[]
+  captions?: { text: string; startSeconds: number; endSeconds: number }[],
 ): Promise<string> {
   const pipeline = new Pipeline();
-  
-  pipeline
-    .addStep(generateOutline)
-    .addStep(enrichOutline);
+
+  pipeline.addStep(generateOutline).addStep(enrichOutline);
 
   const result = await pipeline.execute({
     transcription,
     videoUrl,
-    captions
+    captions,
   });
 
-  return result.result ?? '';
+  return result.result ?? "";
 }
 
 // Define a common interface for all summarization strategies
@@ -443,15 +454,21 @@ interface SummarizationStrategy {
   summarize(
     transcription: string,
     captions?: { text: string; startSeconds: number; endSeconds: number }[],
-    videoUrl?: string
+    videoUrl?: string,
   ): Promise<string | TranscriptionSetups>;
 }
 
 // Implement specific strategies
 class DescriptionSummarizer implements SummarizationStrategy {
-  async summarize(transcription: string, captions?: Caption[], videoUrl?: string): Promise<string> {
+  async summarize(
+    transcription: string,
+    captions?: Caption[],
+    videoUrl?: string,
+  ): Promise<string> {
     if (!captions?.length || !videoUrl) {
-      throw new Error('Captions and videoUrl are required for description summary');
+      throw new Error(
+        "Captions and videoUrl are required for description summary",
+      );
     }
     return await multiPass(transcription, videoUrl, captions);
   }
@@ -471,19 +488,20 @@ class BasicSummarizer implements SummarizationStrategy {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-4-turbo-preview",
         messages: [
           {
             role: "system",
-            content: "You are a crypto trading analysis assistant that extracts structured trade ideas from video transcripts."
+            content:
+              "You are a crypto trading analysis assistant that extracts structured trade ideas from video transcripts.",
           },
           {
             role: "user",
-            content: `${getPrompt('basic')}${transcription}`
-          }
+            content: `${getPrompt("basic")}${transcription}`,
+          },
         ],
         temperature: 0.7,
         max_tokens: 1500,
@@ -495,15 +513,17 @@ class BasicSummarizer implements SummarizationStrategy {
       throw new Error(`OpenAI API request failed: ${response.status}`);
     }
 
-    const data = await response.json() as OpenAIResponse;
-    return data.choices[0]?.message?.content ?? '';
+    const data = (await response.json()) as OpenAIResponse;
+    return data.choices[0]?.message?.content ?? "";
   }
 }
 
 // Factory to get the appropriate strategy
-const getSummarizationStrategy = (summaryType: string): SummarizationStrategy => {
+const getSummarizationStrategy = (
+  summaryType: string,
+): SummarizationStrategy => {
   switch (summaryType) {
-    case 'description':
+    case "description":
       return new DescriptionSummarizer();
     // case 'trade-setups':
     //   return new TradeSetupsSummarizer();
@@ -517,80 +537,85 @@ export async function summarizeTranscription(
   transcription: string,
   summaryType: string,
   captions?: { text: string; startSeconds: number; endSeconds: number }[],
-  videoUrl?: string
+  videoUrl?: string,
 ): Promise<string | TranscriptionSetups> {
   const strategy = getSummarizationStrategy(summaryType);
   return await strategy.summarize(transcription, captions, videoUrl);
 }
 
 export async function getSetups(
-  transcription: string, 
+  transcription: string,
   summaryType: string,
-  availablePairs?: Array<{ id: number; symbol: string }>
+  availablePairs?: Array<{ id: number; symbol: string }>,
 ): Promise<TranscriptionSetups> {
-    // Build the pairs context if provided
-    let pairsContext = '';
-    if (availablePairs && availablePairs.length > 0) {
-        pairsContext = `\n\nIMPORTANT: Use ONLY the following trading pairs that exist in our system. Match the exact symbol format:\n`;
-        pairsContext += availablePairs.map(p => `- ${p.symbol} (ID: ${p.id})`).join('\n');
-        pairsContext += `\n\nFor the coinSymbol field in your response, use the FULL pair symbol (e.g., "BTC/USDC:USDC" not just "BTC").`;
-    }
+  // Build the pairs context if provided
+  let pairsContext = "";
+  if (availablePairs && availablePairs.length > 0) {
+    pairsContext = `\n\nIMPORTANT: Use ONLY the following trading pairs that exist in our system. Match the exact symbol format:\n`;
+    pairsContext += availablePairs
+      .map((p) => `- ${p.symbol} (ID: ${p.id})`)
+      .join("\n");
+    pairsContext += `\n\nFor the coinSymbol field in your response, use the FULL pair symbol (e.g., "BTC/USDC:USDC" not just "BTC").`;
+  }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.OPENAI_API_KEY ?? ''}`
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4-turbo-preview",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a crypto trading analysis assistant that extracts structured trade ideas from video transcripts. You focus on identifying specific trade setups, entry/exit points, and market context for each cryptocurrency mentioned.",
         },
-        body: JSON.stringify({
-            model: "gpt-4-turbo-preview",
-            messages: [
-                {
-                    role: "system",
-                    content: "You are a crypto trading analysis assistant that extracts structured trade ideas from video transcripts. You focus on identifying specific trade setups, entry/exit points, and market context for each cryptocurrency mentioned."
-                },
-                {
-                    role: "user",
-                    content: `${getPrompt(summaryType)}${transcription}${pairsContext}`
-                }
-            ],
-            temperature: 0.7,
-            max_tokens: 1500,
-            response_format: { type: "json_object" },
-        }),
+        {
+          role: "user",
+          content: `${getPrompt(summaryType)}${transcription}${pairsContext}`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `OpenAI API request failed: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+
+  const data = (await response.json()) as OpenAIResponse;
+  const rawContent = data.choices[0]?.message?.content ?? "{}";
+
+  console.log("🔍 Raw OpenAI response:", rawContent);
+
+  let content: TranscriptionSetups;
+  try {
+    content = JSON.parse(rawContent) as TranscriptionSetups;
+  } catch (parseError) {
+    console.error("❌ Failed to parse OpenAI response as JSON:", parseError);
+    throw new Error(`Failed to parse OpenAI response: ${String(parseError)}`);
+  }
+
+  console.log("🔍 Parsed content:", JSON.stringify(content, null, 2));
+
+  if (!content.generalMarketContext || !Array.isArray(content.coins)) {
+    console.error("❌ Invalid response structure:", {
+      hasGeneralMarketContext: !!content.generalMarketContext,
+      coinsIsArray: Array.isArray(content.coins),
+      contentKeys: Object.keys(content),
+      content: content,
     });
+    throw new Error("Invalid response format from OpenAI");
+  }
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    const data = (await response.json()) as OpenAIResponse;
-    const rawContent = data.choices[0]?.message?.content ?? '{}';
-    
-    console.log('🔍 Raw OpenAI response:', rawContent);
-    
-    let content: TranscriptionSetups;
-    try {
-        content = JSON.parse(rawContent) as TranscriptionSetups;
-    } catch (parseError) {
-        console.error('❌ Failed to parse OpenAI response as JSON:', parseError);
-        throw new Error(`Failed to parse OpenAI response: ${String(parseError)}`);
-    }
-    
-    console.log('🔍 Parsed content:', JSON.stringify(content, null, 2));
-    
-    if (!content.generalMarketContext || !Array.isArray(content.coins)) {
-        console.error('❌ Invalid response structure:', {
-            hasGeneralMarketContext: !!content.generalMarketContext,
-            coinsIsArray: Array.isArray(content.coins),
-            contentKeys: Object.keys(content),
-            content: content
-        });
-        throw new Error('Invalid response format from OpenAI');
-    }
-
-    return content;
+  return content;
 }
 
 export async function summarizeAndSaveSummary(
@@ -598,10 +623,16 @@ export async function summarizeAndSaveSummary(
   transcription: string,
   summaryType: string,
   captions?: { text: string; startSeconds: number; endSeconds: number }[],
-  videoUrl?: string
+  videoUrl?: string,
 ): Promise<string> {
-  const summary = await summarizeTranscription(transcription, summaryType, captions, videoUrl);
-  const content = typeof summary === 'string' ? summary : JSON.stringify(summary);
+  const summary = await summarizeTranscription(
+    transcription,
+    summaryType,
+    captions,
+    videoUrl,
+  );
+  const content =
+    typeof summary === "string" ? summary : JSON.stringify(summary);
   const repository = new VideoRepository(db);
 
   if (content) {
@@ -615,10 +646,16 @@ export async function describeAndSave(
   transcription: string,
   summaryType: string,
   captions?: { text: string; startSeconds: number; endSeconds: number }[],
-  videoUrl?: string
+  videoUrl?: string,
 ): Promise<string> {
-  const summary = await summarizeTranscription(transcription, summaryType, captions, videoUrl);
-  const content = typeof summary === 'string' ? summary : JSON.stringify(summary);
+  const summary = await summarizeTranscription(
+    transcription,
+    summaryType,
+    captions,
+    videoUrl,
+  );
+  const content =
+    typeof summary === "string" ? summary : JSON.stringify(summary);
   const repository = new VideoRepository(db);
 
   if (content) {
@@ -635,31 +672,39 @@ export class VideoService {
     this.repository = new VideoRepository(prisma);
   }
 
-  async summarizeAndSave(videoId: string, transcription: string, summaryType: string): Promise<unknown> {
+  async summarizeAndSave(
+    videoId: string,
+    transcription: string,
+    summaryType: string,
+  ): Promise<unknown> {
     try {
       const summary = await summarizeTranscription(transcription, summaryType);
-      const summaryContent = typeof summary === 'string' ? summary : JSON.stringify(summary);
-      
+      const summaryContent =
+        typeof summary === "string" ? summary : JSON.stringify(summary);
+
       return await this.repository.updateVideoContent(videoId, {
-        summary: summaryType === 'basic' ? summaryContent : undefined,
-        description: summaryType === 'description' ? summaryContent : undefined,
+        summary: summaryType === "basic" ? summaryContent : undefined,
+        description: summaryType === "description" ? summaryContent : undefined,
       });
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to summarize and save: ${error.message}`);
       }
-      throw new Error('Failed to summarize and save: Unknown error');
+      throw new Error("Failed to summarize and save: Unknown error");
     }
   }
 
   async createVideo(data: VideoCreateInput) {
     // First, check if a video with this URL already exists
     const existingVideo = await this.repository.getVideoByUrl(data.videoUrl);
-    console.log("createVideo: existingVideo is ", existingVideo?.videoUrl)
-    
+    console.log("createVideo: existingVideo is ", existingVideo?.videoUrl);
+
     if (existingVideo) {
       // Check if the user-video relation already exists
-      const existingUserVideo = await this.repository.getUserVideo(data.userId, existingVideo.id);
+      const existingUserVideo = await this.repository.getUserVideo(
+        data.userId,
+        existingVideo.id,
+      );
 
       // Only create the relation if it doesn't exist
       if (!existingUserVideo) {

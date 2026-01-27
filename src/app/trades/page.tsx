@@ -75,9 +75,8 @@ export default function TradesPage() {
   const [activeTab, setActiveTab] = useState<"trades" | "orders" | "positions">(
     "trades",
   );
-  const [selectedPosition, setSelectedPosition] = useState<PositionState | null>(
-    null,
-  );
+  const [selectedPosition, setSelectedPosition] =
+    useState<PositionState | null>(null);
   const [selectedPair, setSelectedPair] = useState<string | null>(null);
   const [selectedPositionId, setSelectedPositionId] = useState<number | null>(
     null,
@@ -566,9 +565,7 @@ export default function TradesPage() {
                       <Table.Td>
                         <Badge
                           color={
-                            Number(position.profitLoss) >= 0
-                              ? "green"
-                              : "red"
+                            Number(position.profitLoss) >= 0 ? "green" : "red"
                           }
                         >
                           {formatCurrency(String(position.profitLoss))}

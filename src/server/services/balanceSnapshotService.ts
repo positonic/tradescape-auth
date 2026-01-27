@@ -1,4 +1,7 @@
-import { type PrismaClient, type PortfolioSnapshot as PrismaPortfolioSnapshot } from "@prisma/client";
+import {
+  type PrismaClient,
+  type PortfolioSnapshot as PrismaPortfolioSnapshot,
+} from "@prisma/client";
 import { HyperliquidWebSocketManager } from "../hyperliquid/WebSocketManager";
 import { decryptFromTransmission } from "../../lib/keyEncryption";
 import Exchange from "../../app/tradeSync/exchange/Exchange";
@@ -125,7 +128,9 @@ export class PortfolioSnapshotService {
       skip: offset,
     });
 
-    return snapshots.map((snapshot) => this.transformDatabaseSnapshot(snapshot));
+    return snapshots.map((snapshot) =>
+      this.transformDatabaseSnapshot(snapshot),
+    );
   }
 
   /**
@@ -222,7 +227,9 @@ export class PortfolioSnapshotService {
   /**
    * Transform database snapshot to interface format
    */
-  private transformDatabaseSnapshot(snapshot: PrismaPortfolioSnapshot): PortfolioSnapshot {
+  private transformDatabaseSnapshot(
+    snapshot: PrismaPortfolioSnapshot,
+  ): PortfolioSnapshot {
     return {
       id: snapshot.id,
       userId: snapshot.userId,

@@ -32,7 +32,7 @@ const deleteActionSchema = z.object({
 });
 
 const retrieveActionsSchema = z.object({
-  query_type: z.enum(['today', 'date', 'all']),
+  query_type: z.enum(["today", "date", "all"]),
   date: z.string().optional(),
   include_completed: z.boolean().optional().default(false),
 });
@@ -58,8 +58,8 @@ export const createActionTools = (ctx: Context) => {
           throw new Error("User not authenticated");
         }
 
-        console.log('input is ', input);
-        
+        console.log("input is ", input);
+
         const action = await ctx.db.action.create({
           data: {
             name: input.name,
@@ -71,26 +71,29 @@ export const createActionTools = (ctx: Context) => {
             projectId: input.projectId,
           },
         });
-        
-        console.log('create action is ', action);
+
+        console.log("create action is ", action);
         return `Successfully created action "${action.name}" with ID: ${action.id}`;
       } catch (error) {
-        console.error('Error creating action:', {
+        console.error("Error creating action:", {
           error: error instanceof Error ? error.message : String(error),
-          input
+          input,
         });
-        
-        if (error instanceof Error && error.message.includes('foreign key')) {
-          return `Created action "${input?.name ?? 'unknown'}" without a project association`;
+
+        if (error instanceof Error && error.message.includes("foreign key")) {
+          return `Created action "${input?.name ?? "unknown"}" without a project association`;
         }
-        throw new Error(`Failed to create action: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `Failed to create action: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     },
     {
       name: "create_action",
-      description: "Creates a new action item. MUST include create: true in the input. Example: { create: true, name: 'Task name', description: 'Task description' }",
-      schema: createActionSchema
-    }
+      description:
+        "Creates a new action item. MUST include create: true in the input. Example: { create: true, name: 'Task name', description: 'Task description' }",
+      schema: createActionSchema,
+    },
   );
 
   const readActionTool = tool(
@@ -104,21 +107,23 @@ export const createActionTools = (ctx: Context) => {
         }
         return JSON.stringify(action, null, 2);
       } catch (error) {
-        console.error('Error reading action:', error);
-        throw new Error(`Failed to read action: ${error instanceof Error ? error.message : String(error)}`);
+        console.error("Error reading action:", error);
+        throw new Error(
+          `Failed to read action: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     },
     {
       name: "read_action",
       description: "Retrieves an action by its ID",
       schema: readActionSchema,
-    }
+    },
   );
 
   const updateActionTool = tool(
     async (input: z.infer<typeof updateActionSchema>): Promise<string> => {
       try {
-        console.log('Update status action input is ', input);
+        console.log("Update status action input is ", input);
         const action = await ctx.db.action.update({
           where: { id: input.id },
           data: {
@@ -131,15 +136,17 @@ export const createActionTools = (ctx: Context) => {
         });
         return `Successfully updated action "${action.name}"`;
       } catch (error) {
-        console.error('Error updating action:', error);
-        throw new Error(`Failed to update action: ${error instanceof Error ? error.message : String(error)}`);
+        console.error("Error updating action:", error);
+        throw new Error(
+          `Failed to update action: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     },
     {
       name: "update_status_action",
       description: "Updates an existing action by ID with optional new values",
       schema: updateActionSchema,
-    }
+    },
   );
 
   const deleteActionTool = tool(
@@ -150,15 +157,17 @@ export const createActionTools = (ctx: Context) => {
         });
         return `Successfully deleted action with ID: ${input.id}`;
       } catch (error) {
-        console.error('Error deleting action:', error);
-        throw new Error(`Failed to delete action: ${error instanceof Error ? error.message : String(error)}`);
+        console.error("Error deleting action:", error);
+        throw new Error(
+          `Failed to delete action: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     },
     {
       name: "delete_action",
       description: "Deletes an action by its ID",
       schema: deleteActionSchema,
-    }
+    },
   );
 
   const retrieveActionsTool = tool(
@@ -168,46 +177,46 @@ export const createActionTools = (ctx: Context) => {
           throw new Error("User not authenticated");
         }
 
-        const where: WhereClause = { 
+        const where: WhereClause = {
           createdById: ctx.session.user.id,
-          ...(input.include_completed ? {} : { status: 'ACTIVE' })
+          ...(input.include_completed ? {} : { status: "ACTIVE" }),
         };
-        
-        if (input.query_type === 'today') {
+
+        if (input.query_type === "today") {
           const today = new Date();
           where.dueDate = {
             gte: new Date(today.setHours(0, 0, 0, 0)),
-            lte: new Date(today.setHours(23, 59, 59, 999))
+            lte: new Date(today.setHours(23, 59, 59, 999)),
           };
-        } else if (input.query_type === 'date' && input.date) {
+        } else if (input.query_type === "date" && input.date) {
           const targetDate = new Date(input.date);
           where.dueDate = {
             gte: new Date(targetDate.setHours(0, 0, 0, 0)),
-            lte: new Date(targetDate.setHours(23, 59, 59, 999))
+            lte: new Date(targetDate.setHours(23, 59, 59, 999)),
           };
         }
 
-        console.log('Retrieve actions where clause:', where);
+        console.log("Retrieve actions where clause:", where);
 
         const actions = await ctx.db.action.findMany({
           where,
-          orderBy: [
-            { priority: 'desc' },
-            { dueDate: 'asc' }
-          ]
+          orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
         });
-        
+
         return JSON.stringify(actions, null, 2);
       } catch (error) {
-        console.error('Error retrieving actions:', error);
-        throw new Error(`Failed to retrieve actions: ${error instanceof Error ? error.message : String(error)}`);
+        console.error("Error retrieving actions:", error);
+        throw new Error(
+          `Failed to retrieve actions: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     },
     {
       name: "retrieve_actions",
-      description: "Retrieves actions from the system. Use query_type='today' for today's tasks, 'date' with a specific date, or 'all' for all tasks.",
-      schema: retrieveActionsSchema
-    }
+      description:
+        "Retrieves actions from the system. Use query_type='today' for today's tasks, 'date' with a specific date, or 'all' for all tasks.",
+      schema: retrieveActionsSchema,
+    },
   );
 
   return {
@@ -217,4 +226,4 @@ export const createActionTools = (ctx: Context) => {
     deleteActionTool,
     retrieveActionsTool,
   };
-}; 
+};

@@ -16,7 +16,7 @@ import type { Context } from "~/server/auth/types";
 //       .describe("Type of market scan to perform")
 //   });
 const marketScanToolSchema = z.object({
-  transcription: z.string()
+  transcription: z.string(),
 });
 
 interface TraderTools {
@@ -24,82 +24,91 @@ interface TraderTools {
 }
 
 export const createTraderTools = (_ctx: Context): TraderTools => {
-    const marketScanTool = tool(
-        async (input: z.infer<typeof marketScanToolSchema>): Promise<string> => {
-          try {
-            if (!input) {
-              throw new Error("Input is required");
-            }
-    
-            const setups: TranscriptionSetups = await getSetups(input.transcription, 'trade-setups')
-            
-            if (!setups?.coins) {
-                return JSON.stringify({
-                    generalMarketContext: "",
-                    coins: []
-                });
-            }
-            
-            // Ensure the data matches the expected format
-            const validatedSetups: TranscriptionSetups = {
-              generalMarketContext: setups.generalMarketContext,
-              coins: setups.coins.map(coin => ({
-                coinSymbol: coin.coinSymbol,
-                sentiment: coin.sentiment,
-                marketContext: coin.marketContext,
-                tradeSetups: coin.tradeSetups.map(setup => ({
-                  position: setup.position,
-                  entryTriggers: setup.entryTriggers,
-                  entryPrice: setup.entryPrice,
-                  timeframe: setup.timeframe,
-                  takeProfit: setup.takeProfit,
-                  t1: setup.t1 ?? '',
-                  t2: setup.t2 ?? '',
-                  t3: setup.t3 ?? '',
-                  stopLoss: setup.stopLoss,
-                  stopLossPrice: typeof setup.stopLossPrice === 'number' ? setup.stopLossPrice : 0,
-                  invalidation: setup.invalidation,
-                  confidenceLevel: setup.confidenceLevel,
-                  transcriptExcerpt: setup.transcriptExcerpt
-                }))
-              }))
-            };
-            
-            return JSON.stringify(validatedSetups);
-          } catch (error) {
-            console.error('Error scanning market:', {
-              error: error instanceof Error ? error.message : String(error),
-              input
-            });
-            throw new Error(`Failed to scan market: ${error instanceof Error ? error.message : String(error)}`);
-          }
-        },
-        {
-          name: "market_scan",
-          description: "Analyzes audio/video transcriptions for trading setups and market patterns.",
-          schema: marketScanToolSchema
+  const marketScanTool = tool(
+    async (input: z.infer<typeof marketScanToolSchema>): Promise<string> => {
+      try {
+        if (!input) {
+          throw new Error("Input is required");
         }
-      );
-      // const timelineTool = tool(
-      //   async (input: { transcription: string }): Promise<string> => {
-      //     try {
-      //       const timeline = await createTimeline(input.transcription, input.videoUrl)
-      //       return timeline
-      //     } catch (error) {
-      //       console.error('Error creating action:', {
-      //         error: error instanceof Error ? error.message : String(error),
-      //         input
-      //       });
-      //     }
-      //   },
-      //   {
-      //     name: "create_timeline",
-      //     description: "Creates a timeline for a video. Input must include a transcription string. Example: { transcription: 'In this video, we're looking at Bitcoin's price action...' }",
-      //     schema: marketScanToolSchema
-      //   }
-      // )
-      return {
-        marketScanTool,
-        //timelineTool
+
+        const setups: TranscriptionSetups = await getSetups(
+          input.transcription,
+          "trade-setups",
+        );
+
+        if (!setups?.coins) {
+          return JSON.stringify({
+            generalMarketContext: "",
+            coins: [],
+          });
+        }
+
+        // Ensure the data matches the expected format
+        const validatedSetups: TranscriptionSetups = {
+          generalMarketContext: setups.generalMarketContext,
+          coins: setups.coins.map((coin) => ({
+            coinSymbol: coin.coinSymbol,
+            sentiment: coin.sentiment,
+            marketContext: coin.marketContext,
+            tradeSetups: coin.tradeSetups.map((setup) => ({
+              position: setup.position,
+              entryTriggers: setup.entryTriggers,
+              entryPrice: setup.entryPrice,
+              timeframe: setup.timeframe,
+              takeProfit: setup.takeProfit,
+              t1: setup.t1 ?? "",
+              t2: setup.t2 ?? "",
+              t3: setup.t3 ?? "",
+              stopLoss: setup.stopLoss,
+              stopLossPrice:
+                typeof setup.stopLossPrice === "number"
+                  ? setup.stopLossPrice
+                  : 0,
+              invalidation: setup.invalidation,
+              confidenceLevel: setup.confidenceLevel,
+              transcriptExcerpt: setup.transcriptExcerpt,
+            })),
+          })),
+        };
+
+        return JSON.stringify(validatedSetups);
+      } catch (error) {
+        console.error("Error scanning market:", {
+          error: error instanceof Error ? error.message : String(error),
+          input,
+        });
+        throw new Error(
+          `Failed to scan market: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
-}
+    },
+    {
+      name: "market_scan",
+      description:
+        "Analyzes audio/video transcriptions for trading setups and market patterns.",
+      schema: marketScanToolSchema,
+    },
+  );
+  // const timelineTool = tool(
+  //   async (input: { transcription: string }): Promise<string> => {
+  //     try {
+  //       const timeline = await createTimeline(input.transcription, input.videoUrl)
+  //       return timeline
+  //     } catch (error) {
+  //       console.error('Error creating action:', {
+  //         error: error instanceof Error ? error.message : String(error),
+  //         input
+  //       });
+  //     }
+  //   },
+  //   {
+  //     name: "create_timeline",
+  //     description: "Creates a timeline for a video. Input must include a transcription string. Example: { transcription: 'In this video, we're looking at Bitcoin's price action...' }",
+  //     schema: marketScanToolSchema
+  //   }
+  // )
+  return {
+    marketScanTool,
+    //timelineTool
+  };
+};

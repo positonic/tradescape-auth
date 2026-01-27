@@ -11,7 +11,6 @@ interface ContentAccordionProps {
   useMarkdown?: boolean;
 }
 
-
 const TimeStampLink = ({
   href,
   children,

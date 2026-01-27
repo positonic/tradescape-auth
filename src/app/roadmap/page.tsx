@@ -1,6 +1,15 @@
 "use client";
 
-import { Container, Title, Timeline, Text, Card, ThemeIcon, Badge, Stack } from "@mantine/core";
+import {
+  Container,
+  Title,
+  Timeline,
+  Text,
+  Card,
+  ThemeIcon,
+  Badge,
+  Stack,
+} from "@mantine/core";
 import {
   IconCheck,
   IconMicrophone,
@@ -28,9 +37,9 @@ const roadmapData: RoadmapItem[] = [
       "Voice recording for trade analysis",
       "Automatic setup detection",
       "Real-time audio visualization",
-      "Direct storage to user account"
+      "Direct storage to user account",
     ],
-    video: ""
+    video: "",
   },
   {
     title: "Core Trading Features",
@@ -41,18 +50,15 @@ const roadmapData: RoadmapItem[] = [
       "Setup creation and tracking",
       "Price level management",
       "Trade status monitoring",
-      "Basic analytics"
-    ]
+      "Basic analytics",
+    ],
   },
   {
     title: "Shared Setups",
     description: "Essential trading setup management and analysis.",
     status: "inProgress",
     icon: IconChartLine,
-    features: [
-      "Share your setups with other users",
-      "Role-based access",
-    ]
+    features: ["Share your setups with other users", "Role-based access"],
   },
   {
     title: "Setup alerts",
@@ -62,8 +68,8 @@ const roadmapData: RoadmapItem[] = [
     features: [
       "Context within which to activate / invalidate setups",
       "Price and moving average alerts",
-      "Candle close alerts"
-    ]
+      "Candle close alerts",
+    ],
   },
   {
     title: "Advanced Analytics",
@@ -74,8 +80,8 @@ const roadmapData: RoadmapItem[] = [
       "Performance metrics",
       "Win rate analysis",
       "Risk management tools",
-      "Pattern recognition"
-    ]
+      "Pattern recognition",
+    ],
   },
   // {
   //   title: "Team Trading",
@@ -120,15 +126,14 @@ export default function RoadmapPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="text-center mb-12"
+        className="mb-12 text-center"
       >
-        <Title
-          className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent mb-4"
-        >
+        <Title className="mb-4 bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-4xl font-bold text-transparent">
           Product Roadmap
         </Title>
-        <Text c="dimmed" size="xl" className="max-w-3xl mx-auto">
-          Track our journey from idea to reality. See what we&apos;ve built and what&apos;s coming next.
+        <Text c="dimmed" size="xl" className="mx-auto max-w-3xl">
+          Track our journey from idea to reality. See what we&apos;ve built and
+          what&apos;s coming next.
         </Text>
       </motion.div>
 
@@ -153,7 +158,7 @@ export default function RoadmapPage() {
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
               <Card withBorder className="mb-4">
-                <div className="flex justify-between items-start mb-4">
+                <div className="mb-4 flex items-start justify-between">
                   <div>
                     <Text size="lg" fw={500} className="mb-1">
                       {item.title}
@@ -177,12 +182,19 @@ export default function RoadmapPage() {
                       key={feature}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: (index * 0.1) + (fIndex * 0.05) }}
+                      transition={{
+                        duration: 0.3,
+                        delay: index * 0.1 + fIndex * 0.05,
+                      }}
                     >
                       <Text size="sm" className="flex items-start gap-2">
-                        <IconCheck 
-                          size={16} 
-                          className={item.status === "upcoming" ? "text-gray-500" : "text-violet-400"} 
+                        <IconCheck
+                          size={16}
+                          className={
+                            item.status === "upcoming"
+                              ? "text-gray-500"
+                              : "text-violet-400"
+                          }
                         />
                         {feature}
                       </Text>
@@ -194,13 +206,13 @@ export default function RoadmapPage() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5, delay: (index * 0.1) + 0.3 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 + 0.3 }}
                     className="mt-4"
                   >
                     <div className="relative pt-[62.5%]">
                       <iframe
                         src={item.video}
-                        className="absolute inset-0 w-full h-full rounded-md"
+                        className="absolute inset-0 h-full w-full rounded-md"
                         frameBorder="0"
                         allowFullScreen
                       />
@@ -226,7 +238,7 @@ export default function RoadmapPage() {
             href="https://github.com/positonic/ai-todo/discussions"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-violet-400 hover:text-violet-300 transition-colors"
+            className="text-violet-400 transition-colors hover:text-violet-300"
           >
             GitHub
           </Text>
