@@ -11,15 +11,15 @@ import { api } from "~/trpc/react";
 export function AlertsPageWrapper() {
   const [modalOpened, setModalOpened] = useState(false);
   const [importOpened, setImportOpened] = useState(false);
-  
+
   const utils = api.useUtils();
 
   const openModal = () => setModalOpened(true);
   const closeModal = () => setModalOpened(false);
-  
+
   const openImport = () => setImportOpened(true);
   const closeImport = () => setImportOpened(false);
-  
+
   const handleImportSuccess = () => {
     // Refresh alerts list
     void utils.alerts.getAllForUser.invalidate();

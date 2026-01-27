@@ -22,7 +22,7 @@ export function AlertImport({ onClose, onSuccess }: AlertImportProps) {
       setUnparseable(data.unparseable);
       // Auto-select all valid alerts
       setSelectedAlerts(
-        new Set(data.alerts.filter((a) => a.isValid).map((a) => a.id))
+        new Set(data.alerts.filter((a) => a.isValid).map((a) => a.id)),
       );
       setStep("review");
     },
@@ -99,9 +99,9 @@ export function AlertImport({ onClose, onSuccess }: AlertImportProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-gray-900 shadow-xl">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+        <div className="flex items-center justify-between border-b border-gray-700 px-6 py-4">
           <h2 className="text-xl font-semibold text-white">
             {step === "input" && "Import Alerts from Text"}
             {step === "review" && "Review Parsed Alerts"}
@@ -109,7 +109,7 @@ export function AlertImport({ onClose, onSuccess }: AlertImportProps) {
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none"
+            className="text-2xl leading-none text-gray-400 hover:text-white"
           >
             ×
           </button>
@@ -131,14 +131,18 @@ BTC 4H close ABOVE 100k confirms breakout
 ETH price touches 4000 - major resistance
 SOL BELOW 180 invalidates bullish structure
 ETHBTC 4H close above 0.04 signals rotation`}
-                className="w-full h-64 bg-gray-800 text-white rounded-lg p-4 font-mono text-sm border border-gray-700 focus:border-blue-500 focus:outline-none resize-none"
+                className="h-64 w-full resize-none rounded-lg border border-gray-700 bg-gray-800 p-4 font-mono text-sm text-white focus:border-blue-500 focus:outline-none"
               />
-              <div className="text-gray-500 text-sm">
+              <div className="text-sm text-gray-500">
                 <strong>Supported formats:</strong>
-                <ul className="list-disc ml-5 mt-1">
-                  <li>Price alerts: &quot;BTC touches 100k&quot;, &quot;ETH at 4000&quot;</li>
+                <ul className="ml-5 mt-1 list-disc">
                   <li>
-                    Candle alerts: &quot;4H close above&quot;, &quot;Daily close below&quot;
+                    Price alerts: &quot;BTC touches 100k&quot;, &quot;ETH at
+                    4000&quot;
+                  </li>
+                  <li>
+                    Candle alerts: &quot;4H close above&quot;, &quot;Daily close
+                    below&quot;
                   </li>
                   <li>Shorthand: 100k = 100,000 | 94.2k = 94,200</li>
                 </ul>
@@ -150,7 +154,7 @@ ETHBTC 4H close above 0.04 signals rotation`}
             <div className="space-y-4">
               {parsedAlerts.length > 0 && (
                 <>
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-center justify-between">
                     <p className="text-gray-300">
                       Found {parsedAlerts.length} alerts.{" "}
                       {parsedAlerts.filter((a) => a.isValid).length} valid.
@@ -176,12 +180,12 @@ ETHBTC 4H close above 0.04 signals rotation`}
                     {parsedAlerts.map((alert) => (
                       <div
                         key={alert.id}
-                        className={`p-4 rounded-lg border ${
+                        className={`rounded-lg border p-4 ${
                           alert.isValid
                             ? selectedAlerts.has(alert.id)
-                              ? "bg-gray-800 border-blue-500"
-                              : "bg-gray-800/50 border-gray-700"
-                            : "bg-red-900/20 border-red-800/50"
+                              ? "border-blue-500 bg-gray-800"
+                              : "border-gray-700 bg-gray-800/50"
+                            : "border-red-800/50 bg-red-900/20"
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -192,13 +196,13 @@ ETHBTC 4H close above 0.04 signals rotation`}
                             disabled={!alert.isValid}
                             className="mt-1 h-5 w-5 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500"
                           />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className="font-semibold text-white">
                                 {alert.pairSymbol ?? alert.coinSymbol}
                               </span>
                               <span
-                                className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                className={`rounded px-2 py-0.5 text-xs font-medium ${
                                   alert.type === "CANDLE"
                                     ? "bg-purple-900/50 text-purple-300"
                                     : "bg-blue-900/50 text-blue-300"
@@ -212,7 +216,7 @@ ETHBTC 4H close above 0.04 signals rotation`}
                               >
                                 {alert.direction}
                               </span>
-                              <span className="text-white font-mono">
+                              <span className="font-mono text-white">
                                 {parseFloat(alert.threshold).toLocaleString()}
                               </span>
                               <span
@@ -221,16 +225,16 @@ ETHBTC 4H close above 0.04 signals rotation`}
                                 ({alert.confidence})
                               </span>
                             </div>
-                            <p className="text-gray-400 text-sm mt-1 truncate">
+                            <p className="mt-1 truncate text-sm text-gray-400">
                               {alert.originalText}
                             </p>
                             {alert.notes && (
-                              <p className="text-gray-500 text-sm mt-1">
+                              <p className="mt-1 text-sm text-gray-500">
                                 💡 {alert.notes}
                               </p>
                             )}
                             {!alert.isValid && (
-                              <p className="text-red-400 text-sm mt-1">
+                              <p className="mt-1 text-sm text-red-400">
                                 ⚠️ {alert.validationError}
                               </p>
                             )}
@@ -243,11 +247,11 @@ ETHBTC 4H close above 0.04 signals rotation`}
               )}
 
               {unparseable.length > 0 && (
-                <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
-                  <p className="text-yellow-400 font-medium mb-2">
+                <div className="mt-4 rounded-lg border border-yellow-800/50 bg-yellow-900/20 p-4">
+                  <p className="mb-2 font-medium text-yellow-400">
                     Could not parse ({unparseable.length}):
                   </p>
-                  <ul className="text-gray-400 text-sm space-y-1">
+                  <ul className="space-y-1 text-sm text-gray-400">
                     {unparseable.map((line, i) => (
                       <li key={i} className="truncate">
                         • {line}
@@ -260,7 +264,7 @@ ETHBTC 4H close above 0.04 signals rotation`}
           )}
 
           {step === "result" && (
-            <div className="text-center py-8">
+            <div className="py-8 text-center">
               {bulkCreate.isPending ? (
                 <div className="text-gray-300">Creating alerts...</div>
               ) : bulkCreate.data ? (
@@ -278,7 +282,7 @@ ETHBTC 4H close above 0.04 signals rotation`}
                     )}
                   </div>
                   {bulkCreate.data.errors.length > 0 && (
-                    <div className="text-red-400 text-sm mt-4">
+                    <div className="mt-4 text-sm text-red-400">
                       {bulkCreate.data.errors.map((err, i) => (
                         <p key={i}>{err}</p>
                       ))}
@@ -291,7 +295,7 @@ ETHBTC 4H close above 0.04 signals rotation`}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-700 flex justify-end gap-3">
+        <div className="flex justify-end gap-3 border-t border-gray-700 px-6 py-4">
           {step === "input" && (
             <>
               <button
@@ -303,7 +307,7 @@ ETHBTC 4H close above 0.04 signals rotation`}
               <button
                 onClick={handleParse}
                 disabled={!text.trim() || parseAlerts.isPending}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {parseAlerts.isPending ? "Parsing..." : "Parse Alerts"}
               </button>
@@ -321,7 +325,7 @@ ETHBTC 4H close above 0.04 signals rotation`}
               <button
                 onClick={handleCreate}
                 disabled={selectedAlerts.size === 0 || bulkCreate.isPending}
-                className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Create {selectedAlerts.size} Alerts
               </button>
@@ -331,7 +335,7 @@ ETHBTC 4H close above 0.04 signals rotation`}
           {step === "result" && (
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-500"
             >
               Done
             </button>
