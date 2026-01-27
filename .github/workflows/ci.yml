@@ -38,9 +38,21 @@ jobs:
       
       - name: Run linting
         run: bun run lint
-      
+        env:
+          AUTH_SECRET: placeholder
+          AUTH_DISCORD_ID: placeholder
+          AUTH_DISCORD_SECRET: placeholder
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crypto_fox_test
+          NEXT_PUBLIC_SOCKET_SERVER_URL: http://localhost:3001
+
       - name: Run type checking
         run: bun run typecheck
+        env:
+          AUTH_SECRET: placeholder
+          AUTH_DISCORD_ID: placeholder
+          AUTH_DISCORD_SECRET: placeholder
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crypto_fox_test
+          NEXT_PUBLIC_SOCKET_SERVER_URL: http://localhost:3001
       
       - name: Run tests
         run: bun run test:ci
