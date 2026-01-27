@@ -340,9 +340,7 @@ export class HyperliquidWebSocketManager {
         const raw = rawDataToString(data);
         const parsed = parseJsonSafely(raw);
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          console.error(
-            `Failed to parse WebSocket message for user ${userId}`,
-          );
+          console.error(`Failed to parse WebSocket message for user ${userId}`);
           return;
         }
 
@@ -631,7 +629,9 @@ export class HyperliquidWebSocketManager {
         );
       } else {
         // No stop loss - use best available risk calculation
-        const liquidationValue = toNumber(position.info?.position?.liquidationPx);
+        const liquidationValue = toNumber(
+          position.info?.position?.liquidationPx,
+        );
         const liquidationPrice =
           liquidationValue > 0 ? liquidationValue : undefined;
         const marginUsed = toNumber(
@@ -757,9 +757,7 @@ export class HyperliquidWebSocketManager {
     });
   }
 
-  private transformBalances(
-    balances: Record<string, unknown>,
-  ): LiveBalance[] {
+  private transformBalances(balances: Record<string, unknown>): LiveBalance[] {
     const result: LiveBalance[] = [];
 
     for (const [asset, balance] of Object.entries(balances)) {
@@ -795,8 +793,10 @@ export class HyperliquidWebSocketManager {
     return total;
   }
 
-  private debounceTimers: Map<string, NodeJS.Timeout> =
-    new Map<string, NodeJS.Timeout>();
+  private debounceTimers: Map<string, NodeJS.Timeout> = new Map<
+    string,
+    NodeJS.Timeout
+  >();
 
   private debouncedDataRefresh(userId: string): void {
     // Clear existing timer

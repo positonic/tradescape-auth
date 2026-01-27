@@ -12,7 +12,7 @@ export const tradesRouter = createTRPCRouter({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
         pairFilter: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -31,22 +31,21 @@ export const tradesRouter = createTRPCRouter({
           take: limit,
           skip: offset,
         });
-        
+
         // Get total count for pagination
         const totalCount = await ctx.db.userTrade.count({
           where: whereClause,
         });
-        
+
         console.log(
           `📊 Retrieved ${trades.length} trades from database for user ${userId}`,
         );
-        
+
         return {
           trades,
           totalCount,
           hasMore: offset + trades.length < totalCount,
         };
-        
       } catch (error) {
         console.error("Failed to fetch trades:", error);
         throw new TRPCError({
@@ -63,7 +62,7 @@ export const tradesRouter = createTRPCRouter({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
         pairFilter: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -82,22 +81,21 @@ export const tradesRouter = createTRPCRouter({
           take: limit,
           skip: offset,
         });
-        
+
         // Get total count for pagination
         const totalCount = await ctx.db.order.count({
           where: whereClause,
         });
-        
+
         console.log(
           `📊 Retrieved ${orders.length} orders from database for user ${userId}`,
         );
-        
+
         return {
           orders,
           totalCount,
           hasMore: offset + orders.length < totalCount,
         };
-        
       } catch (error) {
         console.error("Failed to fetch orders:", error);
         throw new TRPCError({
@@ -114,7 +112,7 @@ export const tradesRouter = createTRPCRouter({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
         pairFilter: z.string().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -133,22 +131,21 @@ export const tradesRouter = createTRPCRouter({
           take: limit,
           skip: offset,
         });
-        
+
         // Get total count for pagination
         const totalCount = await ctx.db.position.count({
           where: whereClause,
         });
-        
+
         console.log(
           `📊 Retrieved ${positions.length} positions from database for user ${userId}`,
         );
-        
+
         return {
           positions,
           totalCount,
           hasMore: offset + positions.length < totalCount,
         };
-        
       } catch (error) {
         console.error("Failed to fetch positions:", error);
         throw new TRPCError({
@@ -163,7 +160,7 @@ export const tradesRouter = createTRPCRouter({
     .input(
       z.object({
         positionId: z.number(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -183,15 +180,14 @@ export const tradesRouter = createTRPCRouter({
           },
           orderBy: { time: "desc" },
         });
-        
+
         console.log(
           `📊 Retrieved ${trades.length} trades for position ${positionId} for user ${userId}`,
         );
-        
+
         return {
           trades,
         };
-        
       } catch (error) {
         console.error("Failed to fetch trades for position:", error);
         throw new TRPCError({
@@ -206,7 +202,7 @@ export const tradesRouter = createTRPCRouter({
     .input(
       z.object({
         positionId: z.number(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -221,15 +217,14 @@ export const tradesRouter = createTRPCRouter({
           },
           orderBy: { time: "desc" },
         });
-        
+
         console.log(
           `📊 Retrieved ${orders.length} orders for position ${positionId} for user ${userId}`,
         );
-        
+
         return {
           orders,
         };
-        
       } catch (error) {
         console.error("Failed to fetch orders for position:", error);
         throw new TRPCError({
@@ -244,7 +239,7 @@ export const tradesRouter = createTRPCRouter({
     .input(
       z.object({
         positionId: z.number(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -258,18 +253,15 @@ export const tradesRouter = createTRPCRouter({
             userId,
           },
         });
-        
+
         if (!position) {
-          console.log(
-            `❌ Position ${positionId} not found for user ${userId}`,
-          );
+          console.log(`❌ Position ${positionId} not found for user ${userId}`);
           return null;
         }
 
         console.log(`📊 Retrieved position ${positionId} for user ${userId}`);
 
         return position;
-
       } catch (error) {
         console.error("Failed to fetch position:", error);
         throw new TRPCError({

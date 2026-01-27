@@ -167,7 +167,10 @@ export const mastraRouter = createTRPCRouter({
 
         // Check if the response is an object and not empty
         const parsedAgents = MastraAgentsMapSchema.safeParse(agentsData);
-        if (!parsedAgents.success || Object.keys(parsedAgents.data).length === 0) {
+        if (
+          !parsedAgents.success ||
+          Object.keys(parsedAgents.data).length === 0
+        ) {
           console.error(
             "Mastra API response structure unexpected or empty. Expected a non-empty object.",
             agentsData,
@@ -455,5 +458,4 @@ export const mastraRouter = createTRPCRouter({
 
       return { success: true };
     }),
-
 });
