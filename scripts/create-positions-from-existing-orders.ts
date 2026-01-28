@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { EnhancedPositionAggregator } from "../src/app/tradeSync/aggregation/EnhancedPositionAggregator";
 import { PositionRepository } from "../src/app/tradeSync/repositories/PositionRepository";
+import type { Order } from "../src/app/tradeSync/interfaces/Order";
 
 const prisma = new PrismaClient();
 
@@ -93,8 +94,28 @@ async function createPositionsFromExistingOrders(
         config.strategy,
       );
 
+      const mappedOrders: Order[] = userOrders.map((order) => ({
+        id: order.id,
+        ordertxid: order.ordertxid ?? `order-${order.id}`,
+        time: Number(order.time),
+        date: new Date(Number(order.time)),
+        type: order.type as "buy" | "sell",
+        direction: order.direction ?? undefined,
+        pair: order.pair,
+        amount: Number(order.amount),
+        highestPrice: Number(order.highestPrice),
+        lowestPrice: Number(order.lowestPrice),
+        averagePrice: Number(order.averagePrice),
+        exchange: order.exchange,
+        trades: [],
+        totalCost: Number(order.totalCost),
+        fee: Number(order.fee),
+        closedPnL: Number(order.closedPnL ?? 0),
+        positionId: order.positionId ?? null,
+      }));
+
       // Generate positions from orders
-      const positions = positionAggregator.aggregate(userOrders);
+      const positions = positionAggregator.aggregate(mappedOrders);
 
       console.log(
         `📊 Generated ${positions.length} positions for user ${userId}`,
