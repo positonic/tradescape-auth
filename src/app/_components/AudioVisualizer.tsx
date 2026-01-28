@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from "react";
 
 interface AudioVisualizerProps {
   width: number;
@@ -56,62 +56,66 @@ export function AudioVisualizer({
 
     const initializeAudio = async () => {
       try {
-        console.log('🎹 Visualizer Init: Starting initialization');
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        console.log("🎹 Visualizer Init: Starting initialization");
+        const AudioContextClass =
+          window.AudioContext || window.webkitAudioContext;
         const audioContext = new AudioContextClass();
         const analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
-        console.log('🎹 Visualizer Init: Created audio context and analyser');
+        console.log("🎹 Visualizer Init: Created audio context and analyser");
 
         analyser.fftSize = fftSize;
         analyser.smoothingTimeConstant = smoothingTimeConstant;
         analyser.minDecibels = minDecibels;
         analyser.maxDecibels = maxDecibels;
-        console.log('🎹 Visualizer Init: Configured analyser node');
+        console.log("🎹 Visualizer Init: Configured analyser node");
 
         source.connect(analyser);
         if (isActive) {
           const nextState = { audioContext, analyser, source };
           audioRef.current = nextState;
           setAudioState(nextState);
-          console.log('🎹 Visualizer Init: Setup complete');
+          console.log("🎹 Visualizer Init: Setup complete");
         }
       } catch (error) {
-        console.error('🎹 Visualizer Error: Failed to initialize:', error);
+        console.error("🎹 Visualizer Error: Failed to initialize:", error);
       }
     };
 
     void initializeAudio();
 
     return () => {
-      console.log('🎹 Visualizer Cleanup: Starting cleanup');
+      console.log("🎹 Visualizer Cleanup: Starting cleanup");
       isActive = false;
-      
+
       // Clean up audio resources
       if (audioRef.current.source) {
-        console.log('🎹 Visualizer Cleanup: Disconnecting audio source');
+        console.log("🎹 Visualizer Cleanup: Disconnecting audio source");
         audioRef.current.source.disconnect();
       }
-      
+
       // Close audio context if it exists and is not already closed
       const ctx = audioRef.current.audioContext;
-      if (ctx && ctx.state !== 'closed') {
-        console.log('🎹 Visualizer Cleanup: Closing AudioContext');
-        void ctx.close().catch(error => {
-          console.error('🎹 Visualizer Error: Failed to close audio context:', error);
+      if (ctx && ctx.state !== "closed") {
+        console.log("🎹 Visualizer Cleanup: Closing AudioContext");
+        void ctx.close().catch((error) => {
+          console.error(
+            "🎹 Visualizer Error: Failed to close audio context:",
+            error,
+          );
         });
       }
 
       // Cancel any pending animation frame
       if (animationFrameId.current !== null) {
-        console.log('🎹 Visualizer Cleanup: Canceling animation frame');
+        console.log("🎹 Visualizer Cleanup: Canceling animation frame");
         cancelAnimationFrame(animationFrameId.current);
       }
 
       // Reset audio state
       audioRef.current = { audioContext: null, analyser: null, source: null };
       setAudioState(audioRef.current);
-      console.log('🎹 Visualizer Cleanup: Complete');
+      console.log("🎹 Visualizer Cleanup: Complete");
     };
   }, [stream, fftSize, smoothingTimeConstant, minDecibels, maxDecibels]);
 
@@ -119,7 +123,7 @@ export function AudioVisualizer({
     if (!canvasRef.current || !audioState.analyser) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     canvas.width = width;
@@ -143,7 +147,10 @@ export function AudioVisualizer({
 
       context.clearRect(0, 0, width, height);
 
-      const barCount = Math.min(bufferLength, Math.floor(width / (barWidth + barSpacing)));
+      const barCount = Math.min(
+        bufferLength,
+        Math.floor(width / (barWidth + barSpacing)),
+      );
       const totalWidth = barCount * (barWidth + barSpacing);
       const startX = (width - totalWidth) / 2;
 
@@ -168,7 +175,14 @@ export function AudioVisualizer({
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [width, height, barWidth, barSpacing, gradientColors, audioState.analyser]);
+  }, [
+    width,
+    height,
+    barWidth,
+    barSpacing,
+    gradientColors,
+    audioState.analyser,
+  ]);
 
   return (
     <canvas
@@ -176,8 +190,8 @@ export function AudioVisualizer({
       style={{
         width: width,
         height: height,
-        display: 'block',
+        display: "block",
       }}
     />
   );
-} 
+}

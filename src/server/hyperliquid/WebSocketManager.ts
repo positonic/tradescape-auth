@@ -455,10 +455,7 @@ export class HyperliquidWebSocketManager {
     // Handle position and balance updates
   }
 
-  private handleUserFills(
-    _userId: string,
-    _data: JsonValue | undefined,
-  ): void {
+  private handleUserFills(_userId: string, _data: JsonValue | undefined): void {
     // Handle trade fills
   }
 
