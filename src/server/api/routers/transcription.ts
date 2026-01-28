@@ -278,7 +278,7 @@ export const transcriptionRouter = createTRPCRouter({
         const blob = await uploadToBlob(input.screenshot, filename);
 
         // Save metadata in database
-        const screenshot = await ctx.db.screenshot.create({
+        await ctx.db.screenshot.create({
           data: {
             url: blob.url,
             timestamp: input.timestamp,

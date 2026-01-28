@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   IconHome,
   IconRobot,
@@ -36,9 +37,11 @@ export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {
       <nav className="flex w-20 flex-col items-center space-y-4 border-r bg-white py-4">
         <div className="p-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg">
-            <img
+            <Image
               src="/tradescape-logo-trans.png"
               alt="TradeScape Logo"
+              width={128}
+              height={32}
               className="h-8 w-auto"
             />
           </div>

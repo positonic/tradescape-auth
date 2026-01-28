@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import { api } from "~/trpc/react";
 
-// Type alias for Prisma Decimal (serialized as number in tRPC)
-type Decimal = number | string;
 import {
   Paper,
   Title,
@@ -45,19 +43,6 @@ interface Trade {
   cost: string;
   fee: string;
   exchange: string;
-}
-
-interface Order {
-  id: number;
-  time: number | bigint;
-  pair: string;
-  type: string;
-  direction?: string | null;
-  amount: Decimal;
-  averagePrice: Decimal;
-  totalCost: Decimal;
-  exchange: string;
-  positionId: number | null;
 }
 
 // Simplified position interface for state management
@@ -119,16 +104,6 @@ export default function TradesPage() {
       },
       {
         enabled: !!clientSession?.user && activeTab === "positions",
-      },
-    );
-
-  const { data: _positionTradesData, isLoading: _isLoadingPositionTrades } =
-    api.trades.getTradesForPosition.useQuery(
-      {
-        positionId: selectedPosition?.id ?? 0,
-      },
-      {
-        enabled: !!selectedPosition,
       },
     );
 

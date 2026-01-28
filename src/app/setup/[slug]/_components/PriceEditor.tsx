@@ -45,7 +45,7 @@ export function PriceEditor({ setup }: PriceEditorProps) {
 
     const ratio = reward / risk;
     return ratio.toFixed(2);
-  }, [prices, setup.direction]);
+  }, [prices]);
 
   useEffect(() => {
     setPrices({

@@ -44,6 +44,11 @@ export function AudioVisualizer({
     analyser: null,
     source: null,
   });
+  const audioRef = useRef<AudioState>({
+    audioContext: null,
+    analyser: null,
+    source: null,
+  });
   const animationFrameId = useRef<number | null>(null);
 
   useEffect(() => {
@@ -66,7 +71,9 @@ export function AudioVisualizer({
 
         source.connect(analyser);
         if (isActive) {
-          setAudioState({ audioContext, analyser, source });
+          const nextState = { audioContext, analyser, source };
+          audioRef.current = nextState;
+          setAudioState(nextState);
           console.log('🎹 Visualizer Init: Setup complete');
         }
       } catch (error) {
@@ -81,13 +88,13 @@ export function AudioVisualizer({
       isActive = false;
       
       // Clean up audio resources
-      if (audioState.source) {
+      if (audioRef.current.source) {
         console.log('🎹 Visualizer Cleanup: Disconnecting audio source');
-        audioState.source.disconnect();
+        audioRef.current.source.disconnect();
       }
       
       // Close audio context if it exists and is not already closed
-      const ctx = audioState.audioContext;
+      const ctx = audioRef.current.audioContext;
       if (ctx && ctx.state !== 'closed') {
         console.log('🎹 Visualizer Cleanup: Closing AudioContext');
         void ctx.close().catch(error => {
@@ -102,11 +109,8 @@ export function AudioVisualizer({
       }
 
       // Reset audio state
-      setAudioState({
-        audioContext: null,
-        analyser: null,
-        source: null,
-      });
+      audioRef.current = { audioContext: null, analyser: null, source: null };
+      setAudioState(audioRef.current);
       console.log('🎹 Visualizer Cleanup: Complete');
     };
   }, [stream, fftSize, smoothingTimeConstant, minDecibels, maxDecibels]);

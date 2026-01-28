@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Paper,
   Title,
@@ -311,7 +311,7 @@ export default function LivePage() {
     if (status === "authenticated" && !isConnected) {
       void connectToLiveData();
     }
-  }, [status]);
+  }, [connectToLiveData, isConnected, status]);
 
   // Poll for data every 5 seconds when connected
   useEffect(() => {
@@ -341,7 +341,7 @@ export default function LivePage() {
         void disconnectFromLiveData();
       }
     };
-  }, []);
+  }, [disconnectFromLiveData, isConnected]);
 
   if (status === "loading") {
     return <LoadingOverlay visible />;

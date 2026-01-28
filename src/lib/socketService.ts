@@ -20,9 +20,6 @@ export function useSocketConnection() {
     // Only connect if user is authenticated
     if (!session?.user?.id) return;
 
-    // Close any existing connection
-    if (socket) socket.close();
-
     console.log('socket: Connecting to socket server...', process.env.NEXT_PUBLIC_SOCKET_SERVER_URL);
     console.log('socket: userId: session.user.id ', session.user.id);
     // Create new socket connection with userId in query params

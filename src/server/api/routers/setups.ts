@@ -3,25 +3,6 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { getSetups } from "~/server/services/videoService";
 
-// First, define the types for the response
-type TradeSetup = {
-  transcriptExcerpt: string;
-  position: "long" | "short";
-  entryPrice: string;
-  t1: string;
-  stopLossPrice: number;
-  timeframe: string;
-};
-
-type Coin = {
-  coinSymbol: string;
-  tradeSetups: TradeSetup[];
-};
-
-type SetupResponse = {
-  coins: Coin[];
-};
-
 export const setupsRouter = createTRPCRouter({
   getPairBySymbol: protectedProcedure
     .input(

@@ -14,7 +14,6 @@ import {
   Button,
 } from "@mantine/core";
 import { useRouter } from "next/navigation";
-import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
 import { SetupDrawer } from "~/components/SetupDrawer";
 
@@ -25,23 +24,6 @@ export default function SetupsPage() {
   const { data: privateSetups, isLoading: privateLoading } =
     api.setups.getPrivate.useQuery();
   const router = useRouter();
-
-  const _createSetupsMutation = api.setups.createFromTranscription.useMutation({
-    onSuccess: () => {
-      notifications.show({
-        title: "Success",
-        message: "Setups created successfully",
-        color: "green",
-      });
-    },
-    onError: (error) => {
-      notifications.show({
-        title: "Error",
-        message: error.message,
-        color: "red",
-      });
-    },
-  });
 
   if (publicLoading || privateLoading) {
     return <Skeleton height={400} />;

@@ -1,6 +1,7 @@
 "use client";
 
 import { Title, Text, Card } from "@mantine/core";
+import Image from "next/image";
 import { LineChart } from "@mantine/charts";
 import "@mantine/charts/styles.css";
 
@@ -72,9 +73,11 @@ export function LifetimePNLChart() {
         {/* TradeStream Logo Overlay */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="flex items-center gap-2 opacity-20">
-            <img
+            <Image
               src="/tradescape-logo-trans.png"
               alt="TradeScape Logo"
+              width={128}
+              height={32}
               className="h-8 w-auto"
             />
             <Text size="lg" c="dimmed" fw={600}>

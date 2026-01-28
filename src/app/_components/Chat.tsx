@@ -38,15 +38,11 @@ export default function Chat({
     initialMessages ? initialMessages : [],
   );
   const [input, setInput] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
   const [isAiThinking, setIsAiThinking] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const viewport = useRef<HTMLDivElement>(null);
   const [selectedSetups, setSelectedSetups] = useState<number[]>([]);
   const [setups, setSetups] = useState<CoinData[]>([]);
-  const [_isProcessingVoice, setIsProcessingVoice] = useState(false);
-  const [audioEnabled, _setAudioEnabled] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
   const chat = api.tools.chat.useMutation({
     onSuccess: async (results) => {
@@ -78,7 +74,6 @@ export default function Chat({
     },
   });
   //const transcribeAudio = api.tools.transcribe.useMutation();
-  const transcribeAudio = api.tools.transcribeFox.useMutation();
   const getPairBySymbol = api.setups.getPairBySymbol.useMutation();
   const saveSetups = api.setups.create.useMutation({
     onSuccess: () => {
@@ -141,54 +136,10 @@ export default function Chat({
   //   }
   // };
 
-  const _stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      // Stop the media recorder
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current = null;
-
-      // Stop all tracks in the stream
-      if (chunksRef.current) {
-        chunksRef.current = [];
-      }
-
-      setIsRecording(false);
-    }
-  };
-
-  // Clean up resources when component unmounts
   useEffect(() => {
-    return () => {
-      if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current = null;
-      }
-      if (chunksRef.current) {
-        chunksRef.current = [];
-      }
-    };
+    const saved = localStorage.getItem("audioEnabled");
+    setAudioEnabled(saved === "true");
   }, []);
-
-  const _handleVoiceInput = async (base64Audio: string) => {
-    setIsProcessingVoice(true);
-    try {
-      const result = await transcribeAudio.mutateAsync({ audio: base64Audio });
-      if (result.text) {
-        setInput(result.text);
-        // Submit the transcribed text directly without event
-        void submitMessage(result.text);
-      }
-    } catch (error: unknown) {
-      console.error("Error processing voice input:", error);
-      notifications.show({
-        title: "Error",
-        message: "Failed to process voice input. Please try again.",
-        color: "red",
-      });
-    } finally {
-      setIsProcessingVoice(false);
-    }
-  };
 
   const submitMessage = async (message: string) => {
     if (!message.trim()) return;
