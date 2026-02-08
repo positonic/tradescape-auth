@@ -20,7 +20,7 @@ const exchangeKey = "BINANCE";
 
 /** Extracts JSON from AI responses that may contain markdown code fences or surrounding text. */
 function extractJSONFromText(text: string): string {
-  const codeFenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  const codeFenceMatch = /```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/.exec(text);
   if (codeFenceMatch?.[1]) {
     return codeFenceMatch[1].trim();
   }
