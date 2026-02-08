@@ -181,20 +181,24 @@ import { useState, useCallback } from "react"; // useCallback not used
 **CRITICAL: Always validate code before considering work complete**
 
 1. **After generating/modifying code, ALWAYS run:**
+
    ```bash
    bun run check  # Runs both linting and type checking
    ```
 
 2. **If `bun run check` fails:**
+
    - Fix ESLint errors immediately (these break Vercel builds)
    - Fix TypeScript errors immediately
    - Address ESLint warnings if they indicate code quality issues
 
 3. **Before major changes:**
+
    - Run `bun run typecheck` to catch type issues early
    - Test import paths by running typecheck after adding new files
 
 4. **For React/Next.js code:**
+
    - Use the `react-best-practices` skill proactively
    - Follow hook dependency rules strictly
    - Wrap event handlers in `useCallback` when used in effects
