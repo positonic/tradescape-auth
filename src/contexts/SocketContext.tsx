@@ -1,28 +1,49 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  type ReactNode,
+} from "react";
 import { io, type Socket } from "socket.io-client";
 import { useSession } from "next-auth/react";
 import { notifications } from "@mantine/notifications";
 
 interface Alert {
   asset: string;
-  threshold: number | string; // Assuming threshold can be a number or string
-  direction: "above" | "below"; // Assuming these are the only possible values
+  threshold: number | string;
+  direction: "above" | "below";
+  type: "PRICE" | "CANDLE";
+  triggeredPrice: number;
+  interval?: string | null;
 }
 
-export function useSocketConnection() {
+interface SocketContextValue {
+  socket: Socket | null;
+  connected: boolean;
+}
+
+const SocketContext = createContext<SocketContextValue>({
+  socket: null,
+  connected: false,
+});
+
+export function SocketProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState(false);
-  const connectionAttempted = useRef(false);
   const socketRef = useRef<Socket | null>(null);
+  const connectionAttempted = useRef(false);
 
   useEffect(() => {
     // Only connect if user is authenticated
     if (!session?.user?.id) {
       // Cleanup any existing socket if user logs out
       if (socketRef.current) {
+        console.log("User logged out, disconnecting socket");
         socketRef.current.disconnect();
         socketRef.current = null;
         setSocket(null);
@@ -32,55 +53,51 @@ export function useSocketConnection() {
       return;
     }
 
-    // Prevent duplicate connections using ref
+    // Prevent duplicate connections
     if (connectionAttempted.current && socketRef.current?.connected) {
-      console.log("Socket already connected, skipping duplicate connection");
+      console.log("Socket already connected, skipping duplicate");
       return;
     }
 
-    // Mark that we're attempting a connection
     connectionAttempted.current = true;
 
     console.log(
-      "socket: Connecting to socket server...",
+      "🔌 [SocketProvider] Connecting to socket server...",
       process.env.NEXT_PUBLIC_SOCKET_SERVER_URL,
     );
-    console.log("socket: userId: session.user.id ", session.user.id);
+    console.log("👤 [SocketProvider] User ID:", session.user.id);
+
     // Create new socket connection with userId in query params
     const alertsSocket = io(
       `${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL}/alerts`,
       {
         query: { userId: session.user.id },
-        withCredentials: false, // Send cookies for additional auth if needed
+        withCredentials: false,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         timeout: 60000,
       },
     );
 
-    // const alertsSocket = io("/alerts");
-    // Add this to check transport
-    alertsSocket.on("connect", () => {
-      console.log("Transport used:", alertsSocket.io.engine.transport.name);
-    });
     // Connection event handlers
     alertsSocket.on("connect", () => {
-      console.log("Socket connected!", new Date().toISOString());
+      console.log("✅ [SocketProvider] Connected!", new Date().toISOString());
+      console.log("🚀 Transport:", alertsSocket.io.engine.transport.name);
       setConnected(true);
-
-      // Tell server we're ready for notifications
       alertsSocket.emit("ready_for_notifications", true);
     });
 
     alertsSocket.on("disconnect", (reason) => {
-      console.log(`Socket disconnected: ${reason}`, new Date().toISOString());
+      console.log(
+        `❌ [SocketProvider] Disconnected: ${reason}`,
+        new Date().toISOString(),
+      );
       setConnected(false);
     });
 
-    // Listen for notifications
+    // Test event handler
     alertsSocket.on("test", (message) => {
-      console.log("socket: Alert message received: ", message);
-      // Display user notification using Mantine notifications
+      console.log("🧪 [SocketProvider] Test message:", message);
       notifications.show({
         title: "Alert Triggered",
         message: `${message}`,
@@ -88,19 +105,19 @@ export function useSocketConnection() {
       });
     });
 
-    // Notification deduplication (prevent showing same alert multiple times)
+    // Notification deduplication
     const recentNotifications = new Set<string>();
 
-    // Listen for notifications
+    // Listen for alert notifications
     alertsSocket.on("notification", (alert: Alert) => {
-      console.log("socket [notification]: Alert notification received:", alert);
+      console.log("🔔 [SocketProvider] Alert received:", alert);
 
-      // Create unique key for this notification
+      // Create unique key for deduplication
       const notificationKey = `${alert.asset}-${alert.threshold}-${alert.direction}`;
 
       // Check if we recently showed this notification
       if (recentNotifications.has(notificationKey)) {
-        console.log("Duplicate notification suppressed:", notificationKey);
+        console.log("🚫 Duplicate notification suppressed:", notificationKey);
         return;
       }
 
@@ -110,7 +127,7 @@ export function useSocketConnection() {
         recentNotifications.delete(notificationKey);
       }, 10000);
 
-      // Display user notification using Mantine notifications
+      // Display browser notification
       notifications.show({
         title: "Alert Triggered",
         message: `Alert triggered for ${alert.asset} at ${alert.threshold}`,
@@ -118,20 +135,33 @@ export function useSocketConnection() {
       });
     });
 
-    // Store socket in both state and ref
+    // Store socket in ref and state
     socketRef.current = alertsSocket;
     setSocket(alertsSocket);
 
     // Cleanup on unmount
     return () => {
       if (socketRef.current) {
-        console.log("Cleaning up socket connection");
+        console.log("🧹 [SocketProvider] Cleaning up socket connection");
         socketRef.current.disconnect();
         socketRef.current = null;
         connectionAttempted.current = false;
+        setConnected(false);
       }
     };
   }, [session?.user?.id]);
 
-  return { socket, connected };
+  return (
+    <SocketContext.Provider value={{ socket, connected }}>
+      {children}
+    </SocketContext.Provider>
+  );
+}
+
+export function useSocket() {
+  const context = useContext(SocketContext);
+  if (context === undefined) {
+    throw new Error("useSocket must be used within a SocketProvider");
+  }
+  return context;
 }

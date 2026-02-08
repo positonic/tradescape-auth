@@ -7,7 +7,7 @@ import {
   IconCircleX,
   IconCircleDashed,
 } from "@tabler/icons-react";
-import { useSocketConnection } from "~/lib/socketService";
+import { useSocket } from "~/app/_components/SocketProvider";
 
 interface HealthStatus {
   status: "ok" | "error" | "checking";
@@ -16,7 +16,7 @@ interface HealthStatus {
 }
 
 export function AlertServiceStatus() {
-  const { connected: socketConnected } = useSocketConnection();
+  const { connected: socketConnected } = useSocket();
   const [healthStatus, setHealthStatus] = useState<HealthStatus>({
     status: "checking",
   });

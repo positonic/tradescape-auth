@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconTrash } from "@tabler/icons-react";
-import { useSocketConnection } from "~/lib/socketService";
+import { useSocket } from "~/app/_components/SocketProvider";
 
 export function AlertsList() {
   const {
@@ -24,7 +24,7 @@ export function AlertsList() {
     error,
     refetch,
   } = api.alerts.getAllForUser.useQuery();
-  const { socket } = useSocketConnection();
+  const { socket } = useSocket();
 
   // Listen for alert notifications and auto-refresh the list
   useEffect(() => {

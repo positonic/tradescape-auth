@@ -1,15 +1,2 @@
-'use client';
-
-import { type ReactNode } from 'react';
-import { useSocketConnection } from '~/lib/socketService';
-
-interface SocketProviderProps {
-  children: ReactNode;
-}
-
-export function SocketProvider({ children }: SocketProviderProps) {
-  // Initialize socket connection
-  useSocketConnection();
-  
-  return <>{children}</>;
-} 
+// Re-export the new context-based SocketProvider
+export { SocketProvider, useSocket } from "~/contexts/SocketContext"; 
