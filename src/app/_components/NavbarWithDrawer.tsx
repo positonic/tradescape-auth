@@ -34,7 +34,7 @@ export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {
 
   return (
     <>
-      <nav className="flex w-20 flex-col items-center space-y-4 border-r bg-white py-4">
+      <nav className="flex w-20 flex-col items-center space-y-4 border-r border-gray-200 bg-white text-gray-700 py-4 dark:border-[var(--mantine-color-dark-4)] dark:bg-[var(--mantine-color-dark-7)] dark:text-gray-300">
         <div className="p-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg">
             <Image
@@ -51,7 +51,7 @@ export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {
           <NavItem href="/" icon={<IconHome size={24} />} />
           <button
             onClick={() => setChatDrawerOpened(!chatDrawerOpened)}
-            className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+            className="rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-[var(--mantine-color-dark-5)]"
           >
             <IconRobot size={24} />
           </button>
@@ -100,7 +100,7 @@ function NavItem({ href, icon }: { href: string; icon: React.ReactNode }) {
   return (
     <Link
       href={href}
-      className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+      className="rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-[var(--mantine-color-dark-5)]"
     >
       {icon}
     </Link>

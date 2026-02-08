@@ -4,7 +4,7 @@ import TopMenu from "./TopMenu";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 dark:bg-[var(--mantine-color-body)]">
       {/* Left Navbar */}
       <Navbar />
       
