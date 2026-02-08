@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Button } from "@mantine/core";
 import { api } from "~/trpc/react";
 import { notifications } from "@mantine/notifications";
 
-export function CreatePositionsButton() {
+export const CreatePositionsButton = forwardRef<HTMLDivElement>(function CreatePositionsButton(_props, ref) {
   const [isRunning, setIsRunning] = useState(false);
   const createPositionsMutation = api.pairs.createPositionsFromExistingOrders.useMutation();
 
@@ -19,7 +19,7 @@ export function CreatePositionsButton() {
       });
 
       console.log("Position creation result:", result);
-      
+
       if (result.success) {
         notifications.show({
           title: "Success",
@@ -40,13 +40,15 @@ export function CreatePositionsButton() {
   };
 
   return (
-    <Button
-      onClick={() => runPositionCreation(false)}
-      loading={isRunning}
-      size="sm"
-      variant="outline"
-    >
-      Create Positions
-    </Button>
+    <div ref={ref} {..._props}>
+      <Button
+        onClick={() => runPositionCreation(false)}
+        loading={isRunning}
+        size="sm"
+        variant="outline"
+      >
+        Create Positions
+      </Button>
+    </div>
   );
-}
+});

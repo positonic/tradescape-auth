@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import {
   Button,
   Modal,
@@ -35,7 +35,7 @@ interface ValidationData {
   }>;
 }
 
-export function PositionValidationButton() {
+export const PositionValidationButton = forwardRef<HTMLDivElement>(function PositionValidationButton(_props, ref) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [validationData, setValidationData] = useState<ValidationData | null>(
     null,
@@ -61,7 +61,7 @@ export function PositionValidationButton() {
   };
 
   return (
-    <>
+    <div ref={ref} {..._props}>
       <Button
         onClick={runValidation}
         loading={validateQuery.isLoading}
@@ -252,6 +252,6 @@ export function PositionValidationButton() {
           </Stack>
         )}
       </Modal>
-    </>
+    </div>
   );
-}
+});

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Button, Modal, Text, Group } from "@mantine/core";
 import { api } from "~/trpc/react";
 import { notifications } from "@mantine/notifications";
 
-export function DeletePositionsButton() {
+export const DeletePositionsButton = forwardRef<HTMLDivElement>(function DeletePositionsButton(_props, ref) {
   const [isRunning, setIsRunning] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const deletePositionsMutation = api.pairs.deleteAllPositions.useMutation();
@@ -50,7 +50,7 @@ export function DeletePositionsButton() {
   };
 
   return (
-    <>
+    <div ref={ref} {..._props}>
       <Button
         onClick={() => setConfirmModalOpen(true)}
         loading={isRunning}
@@ -90,6 +90,6 @@ export function DeletePositionsButton() {
           </Button>
         </Group>
       </Modal>
-    </>
+    </div>
   );
-}
+});

@@ -18,6 +18,7 @@ import {
   ActionIcon,
   Select,
   Anchor,
+  Tooltip,
 } from "@mantine/core";
 import { IconKey } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
@@ -240,25 +241,55 @@ export default function TradesPage() {
           {/* Sync buttons - only show if we have keys */}
           {hasStoredKeys && (
             <Group gap="sm">
-              <Button
-                onClick={handleQuickSync}
-                loading={syncTradesMutation.isPending}
-                variant="gradient"
-                gradient={{ from: "#23dd7a", to: "#1b9b57" }}
-                size="sm"
+              <Tooltip
+                label="Fetch recent trades since last sync using existing pairs"
+                multiline
+                w={250}
               >
-                ⚡ Quick Sync
-              </Button>
-              <Button
-                onClick={handleFullSync}
-                loading={syncTradesMutation.isPending}
-                size="sm"
+                <Button
+                  onClick={handleQuickSync}
+                  loading={syncTradesMutation.isPending}
+                  variant="gradient"
+                  gradient={{ from: "#23dd7a", to: "#1b9b57" }}
+                  size="sm"
+                >
+                  ⚡ Quick Sync
+                </Button>
+              </Tooltip>
+              <Tooltip
+                label="Re-discover all trading pairs and fetch complete trade history from exchanges"
+                multiline
+                w={250}
               >
-                🔄 Full Sync
-              </Button>
-              <CreatePositionsButton />
-              <DeletePositionsButton />
-              <PositionValidationButton />
+                <Button
+                  onClick={handleFullSync}
+                  loading={syncTradesMutation.isPending}
+                  size="sm"
+                >
+                  🔄 Full Sync
+                </Button>
+              </Tooltip>
+              <Tooltip
+                label="Group existing orders into positions by matching buy and sell orders"
+                multiline
+                w={250}
+              >
+                <CreatePositionsButton />
+              </Tooltip>
+              <Tooltip
+                label="Delete all positions and unlink orders. Positions can be recreated afterwards."
+                multiline
+                w={250}
+              >
+                <DeletePositionsButton />
+              </Tooltip>
+              <Tooltip
+                label="Analyze position completeness, profitability, and matching effectiveness"
+                multiline
+                w={250}
+              >
+                <PositionValidationButton />
+              </Tooltip>
             </Group>
           )}
         </Group>
