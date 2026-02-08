@@ -18,7 +18,21 @@ export function useSocketConnection() {
 
   useEffect(() => {
     // Only connect if user is authenticated
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) {
+      // Cleanup any existing socket if user logs out
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+        setConnected(false);
+      }
+      return;
+    }
+
+    // Prevent duplicate connections
+    if (socket?.connected) {
+      console.log("Socket already connected, skipping duplicate connection");
+      return;
+    }
 
     console.log(
       "socket: Connecting to socket server...",
@@ -67,9 +81,28 @@ export function useSocketConnection() {
       });
     });
 
+    // Notification deduplication (prevent showing same alert multiple times)
+    const recentNotifications = new Set<string>();
+
     // Listen for notifications
     alertsSocket.on("notification", (alert: Alert) => {
       console.log("socket [notification]: Alert notification received:", alert);
+
+      // Create unique key for this notification
+      const notificationKey = `${alert.asset}-${alert.threshold}-${alert.direction}`;
+
+      // Check if we recently showed this notification
+      if (recentNotifications.has(notificationKey)) {
+        console.log("Duplicate notification suppressed:", notificationKey);
+        return;
+      }
+
+      // Add to recent notifications and auto-remove after 10 seconds
+      recentNotifications.add(notificationKey);
+      setTimeout(() => {
+        recentNotifications.delete(notificationKey);
+      }, 10000);
+
       // Display user notification using Mantine notifications
       notifications.show({
         title: "Alert Triggered",
