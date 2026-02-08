@@ -78,7 +78,7 @@ export default async function SetupPage({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {!session && (
         <div className="flex h-screen flex-col items-center justify-center p-4 text-center">
           <Title order={3} mb="md">
@@ -236,7 +236,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Date
@@ -245,7 +245,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Status
@@ -254,7 +254,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Type
@@ -263,7 +263,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Amount
@@ -272,7 +272,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Entry
@@ -281,7 +281,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Exit
@@ -290,7 +290,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             P&L
@@ -299,7 +299,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Duration
@@ -308,7 +308,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Orders
@@ -319,7 +319,7 @@ export default async function SetupPage({
                         {setup.positions.map((position) => (
                           <tr
                             key={position.id}
-                            style={{ borderBottom: "1px solid #f1f3f4" }}
+                            style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}
                           >
                             <td style={{ padding: "8px" }}>
                               {new Date(
@@ -417,7 +417,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Date
@@ -426,7 +426,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Type
@@ -435,7 +435,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Amount
@@ -444,7 +444,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Avg Price
@@ -453,7 +453,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Total Cost
@@ -462,7 +462,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Fees
@@ -471,7 +471,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Trades
@@ -480,7 +480,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Exchange
@@ -491,7 +491,7 @@ export default async function SetupPage({
                         {setup.orders.map((order) => (
                           <tr
                             key={order.id}
-                            style={{ borderBottom: "1px solid #f1f3f4" }}
+                            style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}
                           >
                             <td style={{ padding: "8px" }}>
                               {new Date(Number(order.time)).toLocaleDateString(
@@ -564,7 +564,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Date
@@ -573,7 +573,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Type
@@ -582,7 +582,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Price
@@ -591,7 +591,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Volume
@@ -600,7 +600,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Cost
@@ -609,7 +609,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Fee
@@ -618,7 +618,7 @@ export default async function SetupPage({
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              borderBottom: "1px solid #e9ecef",
+                              borderBottom: "1px solid var(--mantine-color-default-border)",
                             }}
                           >
                             Exchange
@@ -629,7 +629,7 @@ export default async function SetupPage({
                         {setup.trades.map((trade) => (
                           <tr
                             key={trade.id}
-                            style={{ borderBottom: "1px solid #f1f3f4" }}
+                            style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}
                           >
                             <td style={{ padding: "8px" }}>
                               {new Date(Number(trade.time)).toLocaleDateString(
@@ -710,7 +710,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Date
@@ -719,7 +719,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Status
@@ -728,7 +728,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Type
@@ -737,7 +737,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Amount
@@ -746,7 +746,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Entry
@@ -755,7 +755,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Exit
@@ -764,7 +764,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               P&L
@@ -773,7 +773,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Duration
@@ -782,7 +782,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Orders
@@ -793,7 +793,7 @@ export default async function SetupPage({
                           {setup.allPositionsSinceSession.map((position) => (
                             <tr
                               key={position.id}
-                              style={{ borderBottom: "1px solid #f1f3f4" }}
+                              style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}
                             >
                               <td style={{ padding: "8px" }}>
                                 {new Date(
@@ -898,7 +898,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Date
@@ -907,7 +907,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Type
@@ -916,7 +916,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Amount
@@ -925,7 +925,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Avg Price
@@ -934,7 +934,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Total Cost
@@ -943,7 +943,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Fees
@@ -952,7 +952,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Trades
@@ -961,7 +961,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Exchange
@@ -972,7 +972,7 @@ export default async function SetupPage({
                           {setup.allOrdersSinceSession.map((order) => (
                             <tr
                               key={order.id}
-                              style={{ borderBottom: "1px solid #f1f3f4" }}
+                              style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}
                             >
                               <td style={{ padding: "8px" }}>
                                 {new Date(
@@ -1049,7 +1049,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Date
@@ -1058,7 +1058,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Type
@@ -1067,7 +1067,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Price
@@ -1076,7 +1076,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Volume
@@ -1085,7 +1085,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Cost
@@ -1094,7 +1094,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Fee
@@ -1103,7 +1103,7 @@ export default async function SetupPage({
                               style={{
                                 padding: "8px",
                                 textAlign: "left",
-                                borderBottom: "1px solid #e9ecef",
+                                borderBottom: "1px solid var(--mantine-color-default-border)",
                               }}
                             >
                               Exchange
@@ -1114,7 +1114,7 @@ export default async function SetupPage({
                           {setup.allTradesSinceSession.map((trade) => (
                             <tr
                               key={trade.id}
-                              style={{ borderBottom: "1px solid #f1f3f4" }}
+                              style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}
                             >
                               <td style={{ padding: "8px" }}>
                                 {new Date(

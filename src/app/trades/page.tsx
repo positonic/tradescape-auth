@@ -537,7 +537,7 @@ export default function TradesPage() {
                       key={position.id}
                       onClick={() => handlePositionClick(position)}
                       style={{ cursor: "pointer" }}
-                      className="hover:bg-gray-50"
+                      className=""
                     >
                       <Table.Td>{formatDateTime(position.time)}</Table.Td>
                       <Table.Td>{position.pair}</Table.Td>
