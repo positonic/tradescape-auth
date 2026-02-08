@@ -463,22 +463,22 @@ Output format (JSON only):
 
         try {
           const response = await fetch(
-            "https://api.openai.com/v1/chat/completions",
+            "https://api.anthropic.com/v1/messages",
             {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+                "x-api-key": process.env.ANTHROPIC_API_KEY ?? "",
+                "anthropic-version": "2023-06-01",
               },
               body: JSON.stringify({
-                model: "gpt-4-turbo-preview",
+                model: "claude-opus-4-6-20250918",
+                max_tokens: 2000,
+                temperature: 0.3,
+                system: systemPrompt,
                 messages: [
-                  { role: "system", content: systemPrompt },
                   { role: "user", content: input.text },
                 ],
-                temperature: 0.3,
-                max_tokens: 2000,
-                response_format: { type: "json_object" },
               }),
             },
           );
@@ -487,14 +487,15 @@ Output format (JSON only):
             const errorText = await response.text();
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
-              message: `OpenAI API request failed: ${response.status} - ${errorText}`,
+              message: `Anthropic API request failed: ${response.status} - ${errorText}`,
             });
           }
 
           const data = (await response.json()) as {
-            choices: Array<{ message: { content: string } }>;
+            content: Array<{ type: string; text: string }>;
           };
-          const rawContent = data.choices[0]?.message?.content ?? "{}";
+          const textBlock = data.content.find((b) => b.type === "text");
+          const rawContent = textBlock?.text ?? "{}";
 
           let aiResult: AIAlertParseResult;
           try {

@@ -10,7 +10,11 @@ interface AlertImportProps {
   initialText?: string;
 }
 
-export function AlertImport({ onClose, onSuccess, initialText }: AlertImportProps) {
+export function AlertImport({
+  onClose,
+  onSuccess,
+  initialText,
+}: AlertImportProps) {
   const [text, setText] = useState(initialText ?? "");
   const [parsedAlerts, setParsedAlerts] = useState<ParsedAlert[]>([]);
   const [unparseable, setUnparseable] = useState<string[]>([]);
