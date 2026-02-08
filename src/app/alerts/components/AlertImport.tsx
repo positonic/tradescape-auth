@@ -1,22 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "~/trpc/react";
 import type { ParsedAlert } from "~/types/alertImport";
 
 interface AlertImportProps {
   onClose: () => void;
   onSuccess: () => void;
+  initialText?: string;
 }
 
-export function AlertImport({ onClose, onSuccess }: AlertImportProps) {
-  const [text, setText] = useState("");
+export function AlertImport({ onClose, onSuccess, initialText }: AlertImportProps) {
+  const [text, setText] = useState(initialText ?? "");
   const [parsedAlerts, setParsedAlerts] = useState<ParsedAlert[]>([]);
   const [unparseable, setUnparseable] = useState<string[]>([]);
   const [selectedAlerts, setSelectedAlerts] = useState<Set<string>>(new Set());
   const [step, setStep] = useState<"input" | "review" | "result">("input");
   const [parseError, setParseError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const autoParseTriggered = useRef(false);
 
   const parseAlerts = api.alerts.parseAlerts.useMutation({
     onSuccess: (data) => {
@@ -44,6 +46,15 @@ export function AlertImport({ onClose, onSuccess }: AlertImportProps) {
       setCreateError(error.message ?? "Failed to create alerts");
     },
   });
+
+  // Auto-parse when initialText is provided
+  useEffect(() => {
+    if (initialText?.trim() && !autoParseTriggered.current) {
+      autoParseTriggered.current = true;
+      parseAlerts.mutate({ text: initialText.trim() });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialText]);
 
   const handleParse = () => {
     if (text.trim()) {
