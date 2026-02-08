@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Paper,
   Title,
@@ -14,17 +14,17 @@ import {
   Alert,
   ActionIcon,
   Divider,
-} from '@mantine/core';
-import { IconEye, IconEyeOff } from '@tabler/icons-react';
-import { notifications } from '@mantine/notifications';
-import { 
-  type DecryptedKeys, 
-  KeyStorage, 
-  validateKeys, 
+} from "@mantine/core";
+import { IconEye, IconEyeOff } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
+import {
+  type DecryptedKeys,
+  KeyStorage,
+  validateKeys,
   encryptForTransmission,
-  EXCHANGE_CONFIGS
-} from '~/lib/keyEncryption';
-import { api } from '~/trpc/react';
+  EXCHANGE_CONFIGS,
+} from "~/lib/keyEncryption";
+import { api } from "~/trpc/react";
 
 interface KeyManagerProps {
   onKeysReady?: (encryptedKeys: string) => void; // Made optional for backward compatibility
@@ -33,12 +33,17 @@ interface KeyManagerProps {
   onKeysCleared?: () => void;
 }
 
-const SUPPORTED_EXCHANGES = EXCHANGE_CONFIGS.map(config => ({
+const SUPPORTED_EXCHANGES = EXCHANGE_CONFIGS.map((config) => ({
   value: config.id,
-  label: config.name
+  label: config.name,
 }));
 
-export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLoading, onKeysSaved, onKeysCleared }: KeyManagerProps) {
+export default function KeyManager({
+  onKeysReady: _onKeysReady,
+  isLoading: _isLoading,
+  onKeysSaved,
+  onKeysCleared,
+}: KeyManagerProps) {
   const [keys, setKeys] = useState<DecryptedKeys[]>([]);
   const [showSecrets, setShowSecrets] = useState<Record<number, boolean>>({});
   const [hasStoredKeys, setHasStoredKeys] = useState(false);
@@ -48,16 +53,16 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
   const syncTradesMutation = api.pairs.syncTrades.useMutation({
     onSuccess: (data) => {
       notifications.show({
-        title: 'Success',
+        title: "Success",
         message: data.message,
-        color: 'green',
+        color: "green",
       });
     },
     onError: (error) => {
       notifications.show({
-        title: 'Error',
+        title: "Error",
         message: error.message,
-        color: 'red',
+        color: "red",
       });
     },
   });
@@ -71,40 +76,48 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
       setShowForm(false);
     } else {
       // Start with one empty key if no saved keys
-      setKeys([{
-        exchange: '',
-        apiKey: '',
-        apiSecret: '',
-        passphrase: '',
-        walletAddress: '',
-        sandbox: false,
-      }]);
+      setKeys([
+        {
+          exchange: "",
+          apiKey: "",
+          apiSecret: "",
+          passphrase: "",
+          walletAddress: "",
+          sandbox: false,
+        },
+      ]);
       setShowForm(true);
     }
   }, []);
 
   const addNewExchange = () => {
     setShowForm(true);
-    setKeys([{
-      exchange: '',
-      apiKey: '',
-      apiSecret: '',
-      passphrase: '',
-      walletAddress: '',
-      sandbox: false,
-    }]);
+    setKeys([
+      {
+        exchange: "",
+        apiKey: "",
+        apiSecret: "",
+        passphrase: "",
+        walletAddress: "",
+        sandbox: false,
+      },
+    ]);
   };
 
-  const updateKey = (index: number, field: keyof DecryptedKeys, value: string | boolean) => {
-    setKeys(prev => prev.map((key, i) => 
-      i === index ? { ...key, [field]: value } : key
-    ));
+  const updateKey = (
+    index: number,
+    field: keyof DecryptedKeys,
+    value: string | boolean,
+  ) => {
+    setKeys((prev) =>
+      prev.map((key, i) => (i === index ? { ...key, [field]: value } : key)),
+    );
   };
 
   const toggleSecretVisibility = (index: number) => {
-    setShowSecrets(prev => ({
+    setShowSecrets((prev) => ({
       ...prev,
-      [index]: !prev[index]
+      [index]: !prev[index],
     }));
   };
 
@@ -113,9 +126,9 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
     const errors = validateKeys(keys);
     if (errors.length > 0) {
       notifications.show({
-        title: 'Validation Error',
-        message: errors.join(', '),
-        color: 'red',
+        title: "Validation Error",
+        message: errors.join(", "),
+        color: "red",
       });
       return;
     }
@@ -137,27 +150,27 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
     setShowForm(false);
     onKeysCleared?.();
     notifications.show({
-      title: 'Keys Cleared',
-      message: 'Stored keys have been cleared from local storage',
-      color: 'blue',
+      title: "Keys Cleared",
+      message: "Stored keys have been cleared from local storage",
+      color: "blue",
     });
   };
-
 
   const isSyncing = syncTradesMutation.isPending;
 
   const isValidKey = (key: DecryptedKeys) => {
     if (!key.exchange) return false;
-    
-    const config = EXCHANGE_CONFIGS.find(c => c.id === key.exchange);
+
+    const config = EXCHANGE_CONFIGS.find((c) => c.id === key.exchange);
     if (!config) return false;
-    
+
     // Check all required credentials
     if (config.requiredCredentials.apiKey && !key.apiKey) return false;
     if (config.requiredCredentials.apiSecret && !key.apiSecret) return false;
     if (config.requiredCredentials.passphrase && !key.passphrase) return false;
-    if (config.requiredCredentials.walletAddress && !key.walletAddress) return false;
-    
+    if (config.requiredCredentials.walletAddress && !key.walletAddress)
+      return false;
+
     return true;
   };
 
@@ -181,8 +194,9 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
 
       <Alert color="yellow" mb="md">
         <Text size="sm">
-          <strong>Security Notice:</strong> Your API keys are encrypted before transmission and storage. 
-          Never share your API keys with anyone. Recommend using read-only keys when possible.
+          <strong>Security Notice:</strong> Your API keys are encrypted before
+          transmission and storage. Never share your API keys with anyone.
+          Recommend using read-only keys when possible.
         </Text>
       </Alert>
 
@@ -193,11 +207,7 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
               ✅ Exchange API keys are saved and encrypted in your browser.
             </Text>
           </Alert>
-          <Button
-            variant="outline"
-            onClick={addNewExchange}
-            size="sm"
-          >
+          <Button variant="outline" onClick={addNewExchange} size="sm">
             Add New Exchange
           </Button>
         </Stack>
@@ -215,12 +225,16 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
                   placeholder="Select exchange"
                   data={SUPPORTED_EXCHANGES}
                   value={key.exchange}
-                  onChange={(value) => updateKey(index, 'exchange', value ?? '')}
+                  onChange={(value) =>
+                    updateKey(index, "exchange", value ?? "")
+                  }
                   required
                 />
 
                 {(() => {
-                  const config = EXCHANGE_CONFIGS.find(c => c.id === key.exchange);
+                  const config = EXCHANGE_CONFIGS.find(
+                    (c) => c.id === key.exchange,
+                  );
                   if (!config) return null;
 
                   return (
@@ -230,7 +244,9 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
                           label="API Key"
                           placeholder="Enter your API key"
                           value={key.apiKey}
-                          onChange={(e) => updateKey(index, 'apiKey', e.currentTarget.value)}
+                          onChange={(e) =>
+                            updateKey(index, "apiKey", e.currentTarget.value)
+                          }
                           required
                         />
                       )}
@@ -240,18 +256,30 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
                           <TextInput
                             label="API Secret"
                             placeholder="Enter your API secret"
-                            type={showSecrets[index] ? 'text' : 'password'}
+                            type={showSecrets[index] ? "text" : "password"}
                             value={key.apiSecret}
-                            onChange={(e) => updateKey(index, 'apiSecret', e.currentTarget.value)}
+                            onChange={(e) =>
+                              updateKey(
+                                index,
+                                "apiSecret",
+                                e.currentTarget.value,
+                              )
+                            }
                             style={{ flex: 1 }}
                             required
                           />
                           <ActionIcon
                             variant="subtle"
                             onClick={() => toggleSecretVisibility(index)}
-                            title={showSecrets[index] ? 'Hide secret' : 'Show secret'}
+                            title={
+                              showSecrets[index] ? "Hide secret" : "Show secret"
+                            }
                           >
-                            {showSecrets[index] ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+                            {showSecrets[index] ? (
+                              <IconEyeOff size={16} />
+                            ) : (
+                              <IconEye size={16} />
+                            )}
                           </ActionIcon>
                         </Group>
                       )}
@@ -260,9 +288,15 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
                         <TextInput
                           label="Passphrase"
                           placeholder="Enter passphrase (required for this exchange)"
-                          type={showSecrets[index] ? 'text' : 'password'}
+                          type={showSecrets[index] ? "text" : "password"}
                           value={key.passphrase}
-                          onChange={(e) => updateKey(index, 'passphrase', e.currentTarget.value)}
+                          onChange={(e) =>
+                            updateKey(
+                              index,
+                              "passphrase",
+                              e.currentTarget.value,
+                            )
+                          }
                           required
                         />
                       )}
@@ -272,7 +306,13 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
                           label="Wallet Address"
                           placeholder="Enter your wallet address"
                           value={key.walletAddress}
-                          onChange={(e) => updateKey(index, 'walletAddress', e.currentTarget.value)}
+                          onChange={(e) =>
+                            updateKey(
+                              index,
+                              "walletAddress",
+                              e.currentTarget.value,
+                            )
+                          }
                           required
                         />
                       )}
@@ -280,7 +320,9 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
                       <Checkbox
                         label="Sandbox/Testnet"
                         checked={key.sandbox}
-                        onChange={(e) => updateKey(index, 'sandbox', e.currentTarget.checked)}
+                        onChange={(e) =>
+                          updateKey(index, "sandbox", e.currentTarget.checked)
+                        }
                       />
                     </>
                   );
