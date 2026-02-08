@@ -17,7 +17,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Chat from "~/app/_components/Chat";
 import type { Message } from '~/types';
 import { TranscriptionContentEditor } from '~/app/_components/TranscriptionContentEditor';
@@ -39,6 +39,7 @@ export default function SessionDetail({ sessionId, showFullDetails = true, onClo
   const [transcriptionContent, setTranscriptionContent] = useState<string>('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState<string>('');
+  const setupsRef = useRef<HTMLDivElement>(null);
   const utils = api.useUtils();
 
   const updateTitleMutation = api.transcription.updateTitle.useMutation({
@@ -60,12 +61,16 @@ export default function SessionDetail({ sessionId, showFullDetails = true, onClo
   }, [session?.transcription, session?.title]);
 
   const createSetupsMutation = api.setups.createFromTranscription.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.transcription.getById.invalidate({ id: sessionId });
       notifications.show({
         title: 'Success',
         message: 'Setups created successfully',
         color: 'green',
       });
+      setTimeout(() => {
+        setupsRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     },
     onError: (error) => {
       notifications.show({
@@ -196,7 +201,7 @@ export default function SessionDetail({ sessionId, showFullDetails = true, onClo
         <Text c="dimmed">No transcription available yet</Text>
       )}
 
-      <Title order={3} mt="xl" mb="md">Setups</Title>
+      <Title order={3} mt="xl" mb="md" ref={setupsRef}>Setups</Title>
       {session.setups?.length > 0 ? (
         <Table highlightOnHover>
           <Table.Thead>
@@ -208,15 +213,12 @@ export default function SessionDetail({ sessionId, showFullDetails = true, onClo
               <Table.Th>Stop Loss</Table.Th>
               <Table.Th>Timeframe</Table.Th>
               <Table.Th>Status</Table.Th>
+              <Table.Th>Actions</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {session.setups?.map((setup) => (
-              <Table.Tr 
-                key={setup.id}
-                style={{ cursor: 'pointer' }}
-                onClick={() => router.push(`/setup/${setup.id}`)}
-              >
+              <Table.Tr key={setup.id}>
                 <Table.Td>{setup.pair.symbol}</Table.Td>
                 <Table.Td>
                   <span className={setup.direction === 'long' ? 'text-green-500' : 'text-red-500'}>
@@ -231,6 +233,17 @@ export default function SessionDetail({ sessionId, showFullDetails = true, onClo
                   <Badge color={setup.status === 'active' ? 'blue' : 'gray'}>
                     {setup.status}
                   </Badge>
+                </Table.Td>
+                <Table.Td>
+                  <Button
+                    size="xs"
+                    variant="light"
+                    component="a"
+                    href={`/setup/${setup.id}`}
+                    target="_blank"
+                  >
+                    View
+                  </Button>
                 </Table.Td>
               </Table.Tr>
             ))}

@@ -21,9 +21,15 @@ export function createSocketServer(): {
     res.end("Alert Service Running");
   });
 
+  // Parse CORS origins - support comma-separated list
+  const allowedOrigins = config.corsOrigin
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: config.corsOrigin,
+      origin: allowedOrigins.length > 1 ? allowedOrigins : config.corsOrigin,
       methods: ["GET", "POST"],
       credentials: true,
     },
@@ -78,7 +84,22 @@ export function startSocketServer(
   return new Promise((resolve) => {
     httpServer.listen(port, () => {
       console.log(`[Socket] Server listening on port ${port}`);
-      console.log(`[Socket] CORS origin: ${config.corsOrigin}`);
+
+      // Parse and display allowed origins
+      const allowedOrigins = config.corsOrigin
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0);
+
+      if (allowedOrigins.length > 1) {
+        console.log(`[Socket] CORS allowed origins (${allowedOrigins.length}):`);
+        allowedOrigins.forEach((origin, index) => {
+          console.log(`  ${index + 1}. ${origin}`);
+        });
+      } else {
+        console.log(`[Socket] CORS origin: ${config.corsOrigin}`);
+      }
+
       resolve();
     });
   });

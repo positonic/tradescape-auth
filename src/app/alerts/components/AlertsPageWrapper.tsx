@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { Button, Group } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { IconPlus, IconFileImport } from "@tabler/icons-react";
 import { AlertModal } from "./AlertModal";
 import { AlertsList } from "./AlertsList";
 import { AlertImport } from "./AlertImport";
+import { AlertServiceStatus } from "./AlertServiceStatus";
 import { api } from "~/trpc/react";
 
 export function AlertsPageWrapper() {
@@ -20,9 +22,23 @@ export function AlertsPageWrapper() {
   const openImport = () => setImportOpened(true);
   const closeImport = () => setImportOpened(false);
 
-  const handleImportSuccess = () => {
+  const handleImportSuccess = (result?: { created: number; failed: number }) => {
     // Refresh alerts list
     void utils.alerts.getAllForUser.invalidate();
+    closeImport();
+
+    if (result) {
+      const message =
+        result.failed > 0
+          ? `Created ${result.created} alert${result.created !== 1 ? "s" : ""}, ${result.failed} failed`
+          : `Successfully created ${result.created} alert${result.created !== 1 ? "s" : ""}`;
+
+      notifications.show({
+        title: result.failed > 0 ? "Alerts Partially Created" : "Alerts Created",
+        message,
+        color: result.failed > 0 ? "yellow" : "green",
+      });
+    }
   };
 
   return (
@@ -47,6 +63,8 @@ export function AlertsPageWrapper() {
           </Button>
         </Group>
       </Group>
+
+      <AlertServiceStatus />
 
       <AlertsList />
       <AlertModal opened={modalOpened} onClose={closeModal} />

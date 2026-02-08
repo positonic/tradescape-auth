@@ -6,7 +6,7 @@ import type { ParsedAlert } from "~/types/alertImport";
 
 interface AlertImportProps {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (result?: { created: number; failed: number }) => void;
   initialText?: string;
 }
 
@@ -19,7 +19,9 @@ export function AlertImport({
   const [parsedAlerts, setParsedAlerts] = useState<ParsedAlert[]>([]);
   const [unparseable, setUnparseable] = useState<string[]>([]);
   const [selectedAlerts, setSelectedAlerts] = useState<Set<string>>(new Set());
-  const [step, setStep] = useState<"input" | "review" | "result">("input");
+  const [step, setStep] = useState<"input" | "parsing" | "review" | "result">(
+    initialText?.trim() ? "parsing" : "input",
+  );
   const [parseError, setParseError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const autoParseTriggered = useRef(false);
@@ -36,13 +38,14 @@ export function AlertImport({
     },
     onError: (error) => {
       setParseError(error.message ?? "Failed to parse alerts");
+      setStep("input");
     },
   });
 
   const bulkCreate = api.alerts.bulkCreate.useMutation({
     onSuccess: (result) => {
       if (result.created > 0) {
-        onSuccess();
+        onSuccess(result);
       }
       setStep("result");
     },
@@ -129,6 +132,7 @@ export function AlertImport({
         <div className="flex items-center justify-between border-b border-gray-700 px-6 py-4">
           <h2 className="text-xl font-semibold text-white">
             {step === "input" && "Import Alerts from Text"}
+            {step === "parsing" && "Parsing Alerts..."}
             {step === "review" && "Review Parsed Alerts"}
             {step === "result" && "Import Complete"}
           </h2>
@@ -177,6 +181,15 @@ ETHBTC 4H close above 0.04 signals rotation`}
                   ⚠️ {parseError}
                 </div>
               )}
+            </div>
+          )}
+
+          {step === "parsing" && (
+            <div className="flex flex-col items-center justify-center space-y-4 py-16">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-600 border-t-blue-500" />
+              <p className="text-gray-300">
+                Analyzing text and extracting alerts...
+              </p>
             </div>
           )}
 
@@ -348,6 +361,15 @@ ETHBTC 4H close above 0.04 signals rotation`}
                 {parseAlerts.isPending ? "Parsing..." : "Parse Alerts"}
               </button>
             </>
+          )}
+
+          {step === "parsing" && (
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-300 hover:text-white"
+            >
+              Cancel
+            </button>
           )}
 
           {step === "review" && (

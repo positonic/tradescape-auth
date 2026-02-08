@@ -1,13 +1,32 @@
 "use client";
 
 import * as React from 'react';
+import { useEffect } from 'react';
 import { api } from "~/trpc/react";
 import { Paper, Table, Badge, Text, LoadingOverlay, Title, ActionIcon, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconTrash } from '@tabler/icons-react';
+import { useSocketConnection } from '~/lib/socketService';
 
 export function AlertsList() {
   const { data: alerts, isLoading, error, refetch } = api.alerts.getAllForUser.useQuery();
+  const { socket } = useSocketConnection();
+
+  // Listen for alert notifications and auto-refresh the list
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNotification = () => {
+      console.log('[AlertsList] Alert triggered, refreshing list...');
+      void refetch();
+    };
+
+    socket.on('notification', handleNotification);
+
+    return () => {
+      socket.off('notification', handleNotification);
+    };
+  }, [socket, refetch]);
   
   const deleteAlert = api.alerts.delete.useMutation({
     onSuccess: () => {

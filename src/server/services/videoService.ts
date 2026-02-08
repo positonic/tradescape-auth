@@ -558,49 +558,56 @@ export async function getSetups(
     pairsContext += `\n\nFor the coinSymbol field in your response, use the FULL pair symbol (e.g., "BTC/USDC:USDC" not just "BTC").`;
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+      "x-api-key": process.env.ANTHROPIC_API_KEY ?? "",
+      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "gpt-4-turbo-preview",
+      model: "claude-opus-4-6",
+      max_tokens: 4096,
+      temperature: 0.7,
+      system:
+        "You are a crypto trading analysis assistant that extracts structured trade ideas from video transcripts. You focus on identifying specific trade setups, entry/exit points, and market context for each cryptocurrency mentioned. Respond with valid JSON only, no other text.",
       messages: [
-        {
-          role: "system",
-          content:
-            "You are a crypto trading analysis assistant that extracts structured trade ideas from video transcripts. You focus on identifying specific trade setups, entry/exit points, and market context for each cryptocurrency mentioned.",
-        },
         {
           role: "user",
           content: `${getPrompt(summaryType)}${transcription}${pairsContext}`,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 1500,
-      response_format: { type: "json_object" },
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(
-      `OpenAI API request failed: ${response.status} ${response.statusText} - ${errorText}`,
+      `Anthropic API request failed: ${response.status} ${response.statusText} - ${errorText}`,
     );
   }
 
-  const data = (await response.json()) as OpenAIResponse;
-  const rawContent = data.choices[0]?.message?.content ?? "{}";
+  const data = (await response.json()) as {
+    content: Array<{ type: string; text: string }>;
+  };
+  const textBlock = data.content.find((b) => b.type === "text");
+  let rawContent = textBlock?.text ?? "{}";
 
-  console.log("🔍 Raw OpenAI response:", rawContent);
+  // Strip markdown code fences if present
+  rawContent = rawContent
+    .replace(/^```(?:json)?\s*\n?/i, "")
+    .replace(/\n?```\s*$/i, "");
+
+  console.log("🔍 Raw Anthropic response:", rawContent);
 
   let content: TranscriptionSetups;
   try {
     content = JSON.parse(rawContent) as TranscriptionSetups;
   } catch (parseError) {
-    console.error("❌ Failed to parse OpenAI response as JSON:", parseError);
-    throw new Error(`Failed to parse OpenAI response: ${String(parseError)}`);
+    console.error("❌ Failed to parse Anthropic response as JSON:", parseError);
+    throw new Error(
+      `Failed to parse Anthropic response: ${String(parseError)}`,
+    );
   }
 
   console.log("🔍 Parsed content:", JSON.stringify(content, null, 2));
@@ -612,7 +619,7 @@ export async function getSetups(
       contentKeys: Object.keys(content),
       content: content,
     });
-    throw new Error("Invalid response format from OpenAI");
+    throw new Error("Invalid response format from Anthropic");
   }
 
   return content;

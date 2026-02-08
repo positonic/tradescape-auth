@@ -18,6 +18,20 @@ import type { ParsedAlert, AIAlertParseResult } from "~/types/alertImport";
 // Hard-coded exchange key for all alerts
 const exchangeKey = "BINANCE";
 
+/** Extracts JSON from AI responses that may contain markdown code fences or surrounding text. */
+function extractJSONFromText(text: string): string {
+  const codeFenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (codeFenceMatch?.[1]) {
+    return codeFenceMatch[1].trim();
+  }
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return text.substring(firstBrace, lastBrace + 1);
+  }
+  return text.trim();
+}
+
 // --- TODO: Move Redis Logic to a Service File (e.g., src/server/services/redisService.ts) ---
 // For now, defining helper functions here based on your reference code.
 // These functions assume 'redis' client is available via ctx.redis
@@ -472,13 +486,11 @@ Output format (JSON only):
                 "anthropic-version": "2023-06-01",
               },
               body: JSON.stringify({
-                model: "claude-opus-4-6-20250918",
+                model: "claude-opus-4-6",
                 max_tokens: 2000,
                 temperature: 0.3,
                 system: systemPrompt,
-                messages: [
-                  { role: "user", content: input.text },
-                ],
+                messages: [{ role: "user", content: input.text }],
               }),
             },
           );
@@ -499,8 +511,10 @@ Output format (JSON only):
 
           let aiResult: AIAlertParseResult;
           try {
-            aiResult = JSON.parse(rawContent) as AIAlertParseResult;
+            const cleanedContent = extractJSONFromText(rawContent);
+            aiResult = JSON.parse(cleanedContent) as AIAlertParseResult;
           } catch {
+            console.error("Failed to parse AI response. Raw:", rawContent);
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: "Failed to parse AI response as JSON",
