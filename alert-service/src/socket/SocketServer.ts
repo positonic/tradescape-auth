@@ -92,7 +92,9 @@ export function startSocketServer(
         .filter((origin) => origin.length > 0);
 
       if (allowedOrigins.length > 1) {
-        console.log(`[Socket] CORS allowed origins (${allowedOrigins.length}):`);
+        console.log(
+          `[Socket] CORS allowed origins (${allowedOrigins.length}):`,
+        );
         allowedOrigins.forEach((origin, index) => {
           console.log(`  ${index + 1}. ${origin}`);
         });

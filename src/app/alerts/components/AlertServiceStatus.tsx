@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Badge, Group, Tooltip, Text } from "@mantine/core";
-import { IconCircleCheck, IconCircleX, IconCircleDashed } from "@tabler/icons-react";
+import {
+  IconCircleCheck,
+  IconCircleX,
+  IconCircleDashed,
+} from "@tabler/icons-react";
 import { useSocketConnection } from "~/lib/socketService";
 
 interface HealthStatus {

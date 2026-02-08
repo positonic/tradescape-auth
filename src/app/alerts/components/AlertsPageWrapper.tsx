@@ -22,7 +22,10 @@ export function AlertsPageWrapper() {
   const openImport = () => setImportOpened(true);
   const closeImport = () => setImportOpened(false);
 
-  const handleImportSuccess = (result?: { created: number; failed: number }) => {
+  const handleImportSuccess = (result?: {
+    created: number;
+    failed: number;
+  }) => {
     // Refresh alerts list
     void utils.alerts.getAllForUser.invalidate();
     closeImport();
@@ -34,7 +37,8 @@ export function AlertsPageWrapper() {
           : `Successfully created ${result.created} alert${result.created !== 1 ? "s" : ""}`;
 
       notifications.show({
-        title: result.failed > 0 ? "Alerts Partially Created" : "Alerts Created",
+        title:
+          result.failed > 0 ? "Alerts Partially Created" : "Alerts Created",
         message,
         color: result.failed > 0 ? "yellow" : "green",
       });

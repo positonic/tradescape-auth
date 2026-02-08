@@ -23,14 +23,16 @@ export function CreateAlertsButton({ content }: CreateAlertsButtonProps) {
           : `Successfully created ${result.created} alert${result.created !== 1 ? "s" : ""}`;
 
       notifications.show({
-        title: result.failed > 0 ? "Alerts Partially Created" : "Alerts Created",
+        title:
+          result.failed > 0 ? "Alerts Partially Created" : "Alerts Created",
         message,
         color: result.failed > 0 ? "yellow" : "green",
       });
     } else {
       notifications.show({
         title: "Alerts Created",
-        message: "Your alerts have been successfully created and are now active.",
+        message:
+          "Your alerts have been successfully created and are now active.",
         color: "green",
       });
     }
