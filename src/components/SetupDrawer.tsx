@@ -193,7 +193,8 @@ export function SetupDrawer({ opened, onClose, onSuccess }: SetupDrawerProps) {
           <Textarea
             label="Description"
             placeholder="Describe your setup... (you can paste screenshots here)"
-            minRows={4}
+            minRows={12}
+            resize="vertical"
             required
             {...form.getInputProps("content")}
           />
