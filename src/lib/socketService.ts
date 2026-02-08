@@ -29,12 +29,11 @@ export function useSocketConnection() {
     const alertsSocket = io(
       `${process.env.NEXT_PUBLIC_SOCKET_SERVER_URL}/alerts`,
       {
-        //query: { userId: session.user.id },
+        query: { userId: session.user.id },
         withCredentials: false, // Send cookies for additional auth if needed
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         timeout: 60000,
-        //transports: ['websocket'], // Try forcing WebSockets only
       },
     );
 

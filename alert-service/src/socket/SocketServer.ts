@@ -7,6 +7,32 @@ export function createSocketServer(): {
   io: SocketIOServer;
 } {
   const httpServer = createServer((req, res) => {
+    // Parse CORS origins for health endpoint
+    const allowedOrigins = config.corsOrigin
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0);
+
+    const origin = req.headers.origin;
+    const isAllowed =
+      allowedOrigins.includes("*") ||
+      (origin && allowedOrigins.includes(origin));
+
+    // Set CORS headers for all requests
+    if (isAllowed && origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    // Handle preflight OPTIONS requests
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     // Health check endpoint
     if (req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
