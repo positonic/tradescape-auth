@@ -29,6 +29,8 @@ import { api } from '~/trpc/react';
 interface KeyManagerProps {
   onKeysReady?: (encryptedKeys: string) => void; // Made optional for backward compatibility
   isLoading?: boolean;
+  onKeysSaved?: () => void;
+  onKeysCleared?: () => void;
 }
 
 const SUPPORTED_EXCHANGES = EXCHANGE_CONFIGS.map(config => ({
@@ -36,7 +38,7 @@ const SUPPORTED_EXCHANGES = EXCHANGE_CONFIGS.map(config => ({
   label: config.name
 }));
 
-export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLoading }: KeyManagerProps) {
+export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLoading, onKeysSaved, onKeysCleared }: KeyManagerProps) {
   const [keys, setKeys] = useState<DecryptedKeys[]>([]);
   const [showSecrets, setShowSecrets] = useState<Record<number, boolean>>({});
   const [hasStoredKeys, setHasStoredKeys] = useState(false);
@@ -122,6 +124,7 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
     KeyStorage.save(keys, true);
     setHasStoredKeys(true);
     setShowForm(false);
+    onKeysSaved?.();
 
     // Encrypt for transmission and sync trades
     const encrypted = encryptForTransmission(keys);
@@ -132,6 +135,7 @@ export default function KeyManager({ onKeysReady: _onKeysReady, isLoading: _isLo
     KeyStorage.clear();
     setHasStoredKeys(false);
     setShowForm(false);
+    onKeysCleared?.();
     notifications.show({
       title: 'Keys Cleared',
       message: 'Stored keys have been cleared from local storage',

@@ -304,6 +304,8 @@ export default function TradesPage() {
           <KeyManager
             onKeysReady={handleKeysReady}
             isLoading={syncTradesMutation.isPending}
+            onKeysSaved={() => setHasStoredKeys(true)}
+            onKeysCleared={() => setHasStoredKeys(false)}
           />
         </Paper>
       )}
