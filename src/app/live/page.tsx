@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Paper,
   Title,
@@ -31,7 +31,7 @@ import {
   IconHistory,
 } from "@tabler/icons-react";
 import { api } from "~/trpc/react";
-import { useSocket } from "~/lib/useSocket";
+import { useSocket } from "~/contexts/SocketContext";
 import { notifications } from "@mantine/notifications";
 import { getEncryptedKeysForTransmission } from "~/lib/keyUtils";
 import { KeyStorage, encryptForTransmission } from "~/lib/keyEncryption";
@@ -103,6 +103,11 @@ export default function LivePage() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [showKeyManager, setShowKeyManager] = useState(false);
   const [expandedPosition, setExpandedPosition] = useState<string | null>(null);
+  const connectionAttemptedRef = useRef(false);
+  const isConnectedRef = useRef(false);
+
+  // Keep isConnectedRef in sync
+  isConnectedRef.current = isConnected;
 
   // tRPC mutations
   const subscribeMutation = api.live.subscribeToLiveData.useMutation({
@@ -118,7 +123,7 @@ export default function LivePage() {
       setTimeout(() => {
         void (async () => {
           try {
-            const data = await refetch();
+            const data = await refetchRef.current();
             if (data.data) {
               setLiveData(data.data);
               setLastUpdate(new Date());
@@ -153,7 +158,7 @@ export default function LivePage() {
   // Query for recent snapshots (for chart data)
   const { data: chartSnapshots, refetch: refetchChartSnapshots } =
     api.portfolioSnapshot.getRecent.useQuery(
-      { limit: 30 }, // Get last 30 snapshots
+      { limit: 10 }, // Get last 10 snapshots (max allowed by schema)
       { enabled: !!session?.user },
     );
 
@@ -177,6 +182,10 @@ export default function LivePage() {
       });
     },
   });
+
+  // Ref for stable refetch (avoids interval teardown on identity change)
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -207,9 +216,18 @@ export default function LivePage() {
     };
   }, [socket, connected]);
 
+  // Refs for stable callbacks (mutations change identity every render)
+  const subscribeMutateRef = useRef(subscribeMutation.mutateAsync);
+  subscribeMutateRef.current = subscribeMutation.mutateAsync;
+  const unsubscribeMutateRef = useRef(unsubscribeMutation.mutateAsync);
+  unsubscribeMutateRef.current = unsubscribeMutation.mutateAsync;
+
   // Connect to live data stream
-  const connectToLiveData = async () => {
+  const connectToLiveData = useCallback(async () => {
     try {
+      // Mark that we're attempting a connection
+      connectionAttemptedRef.current = true;
+
       const keys = KeyStorage.load();
       if (!keys) {
         notifications.show({
@@ -218,6 +236,7 @@ export default function LivePage() {
           color: "orange",
         });
         setShowKeyManager(true);
+        connectionAttemptedRef.current = false;
         return;
       }
 
@@ -229,33 +248,36 @@ export default function LivePage() {
           color: "orange",
         });
         setShowKeyManager(true);
+        connectionAttemptedRef.current = false;
         return;
       }
 
-      await subscribeMutation.mutateAsync({
+      await subscribeMutateRef.current({
         encryptedKeys: encryptForTransmission([hyperliquidKey]),
       });
     } catch (error) {
       console.error("Failed to connect to live data:", error);
+      connectionAttemptedRef.current = false;
     }
-  };
+  }, []);
 
   // Disconnect from live data stream
-  const disconnectFromLiveData = async () => {
+  const disconnectFromLiveData = useCallback(async () => {
     try {
-      await unsubscribeMutation.mutateAsync();
+      await unsubscribeMutateRef.current();
       setIsConnected(false);
       setLiveData(null);
+      connectionAttemptedRef.current = false; // Reset so user can reconnect
     } catch (error) {
       console.error("Failed to disconnect from live data:", error);
     }
-  };
+  }, []);
 
   // Manual refresh
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await refetch();
+      const data = await refetchRef.current();
       if (data.data) {
         setLiveData(data.data);
         setLastUpdate(new Date());
@@ -265,7 +287,7 @@ export default function LivePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const handleCreateSnapshot = () => {
     // Try to use stored keys first (same logic as trades page)
@@ -308,7 +330,8 @@ export default function LivePage() {
 
   // Auto-connect on mount and start polling
   useEffect(() => {
-    if (status === "authenticated" && !isConnected) {
+    // Prevent duplicate connections - check if already connected or connection in progress
+    if (status === "authenticated" && !isConnected && !connectionAttemptedRef.current) {
       void connectToLiveData();
     }
   }, [connectToLiveData, isConnected, status]);
@@ -320,7 +343,7 @@ export default function LivePage() {
     const interval = setInterval(() => {
       void (async () => {
         try {
-          const data = await refetch();
+          const data = await refetchRef.current();
           if (data.data) {
             setLiveData(data.data);
             setLastUpdate(new Date());
@@ -332,16 +355,17 @@ export default function LivePage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isConnected, refetch]);
+  }, [isConnected]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount only
   useEffect(() => {
     return () => {
-      if (isConnected) {
-        void disconnectFromLiveData();
+      if (isConnectedRef.current) {
+        void unsubscribeMutateRef.current();
       }
     };
-  }, [disconnectFromLiveData, isConnected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (status === "loading") {
     return <LoadingOverlay visible />;

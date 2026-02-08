@@ -61,8 +61,8 @@ export function AlertModal({ opened, onClose }: AlertModalProps) {
   const form = useForm<AlertFormValues>({
     initialValues: {
       pairId: null,
-      type: null,
-      direction: null,
+      type: AlertType.PRICE,
+      direction: Direction.BELOW,
       threshold: '',
       interval: null,
     },
