@@ -66,8 +66,7 @@ export function PortfolioChart() {
         curveType="monotone"
         yAxisProps={{
           domain: [0, 3000000],
-          tickFormatter: (value: number) =>
-            `$${(value / 1000000).toFixed(1)}M`,
+          tickFormatter: (value: number) => `$${(value / 1000000).toFixed(1)}M`,
         }}
         gridAxis="y"
         withDots={false}

@@ -105,12 +105,7 @@ function Dashboard() {
               ) : (
                 <IconArrowDownRight size={16} className="text-red-500" />
               )}
-              <Text
-                size="sm"
-                fw={500}
-                c={card.positive ? "green" : "red"}
-                span
-              >
+              <Text size="sm" fw={500} c={card.positive ? "green" : "red"} span>
                 {card.change}
               </Text>
               <Text size="sm" c="dimmed" span>
@@ -146,7 +141,10 @@ function Dashboard() {
             </div>
             <div className="mt-6 space-y-3">
               {allocationData.map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
+                <div
+                  key={item.name}
+                  className="flex items-center justify-between"
+                >
                   <Text size="sm">{item.name}</Text>
                   <Text size="sm" fw={600}>
                     {item.value}%
@@ -209,7 +207,10 @@ function Dashboard() {
                   </div>
                   <div className="text-right">
                     <Text size="sm" fw={600}>
-                      ${tx.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      $
+                      {tx.total.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}
                     </Text>
                     <Text size="xs" c="dimmed">
                       {tx.date}
@@ -228,7 +229,7 @@ function Dashboard() {
             <Text size="sm" c="dimmed" mb="lg">
               Curated picks for you
             </Text>
-            <div className="rounded-lg border border-gray-200 dark:border-[var(--mantine-color-dark-4)] p-4">
+            <div className="rounded-lg border border-gray-200 p-4 dark:border-[var(--mantine-color-dark-4)]">
               <div className="mb-2 flex items-start justify-between">
                 <div>
                   <Text size="sm" fw={600}>

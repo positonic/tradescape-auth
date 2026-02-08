@@ -7,17 +7,15 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="flex h-screen bg-gray-100 dark:bg-[var(--mantine-color-body)]">
       {/* Left Navbar */}
       <Navbar />
-      
+
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex flex-1 flex-col">
         {/* Top Menu */}
         <TopMenu />
-        
+
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-4">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto p-4">{children}</main>
       </div>
     </div>
   );
-} 
+}

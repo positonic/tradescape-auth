@@ -34,7 +34,7 @@ export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {
 
   return (
     <>
-      <nav className="flex w-20 flex-col items-center space-y-4 border-r border-gray-200 bg-white text-gray-700 py-4 dark:border-[var(--mantine-color-dark-4)] dark:bg-[var(--mantine-color-dark-7)] dark:text-gray-300">
+      <nav className="flex w-20 flex-col items-center space-y-4 border-r border-gray-200 bg-white py-4 text-gray-700 dark:border-[var(--mantine-color-dark-4)] dark:bg-[var(--mantine-color-dark-7)] dark:text-gray-300">
         <div className="p-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg">
             <Image
