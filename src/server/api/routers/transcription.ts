@@ -64,7 +64,11 @@ const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
 });
 
 export const transcriptionRouter = createTRPCRouter({
-  startSession: apiKeyMiddleware.mutation(async ({ ctx }) => {
+  startSession: apiKeyMiddleware
+    .input(z.object({
+      title: z.string().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
     // Type-safe userId access
     const userId = ctx.userId;
 
@@ -74,6 +78,7 @@ export const transcriptionRouter = createTRPCRouter({
         sessionId: `session_${Date.now()}`,
         transcription: "",
         userId,
+        title: input.title ?? null,
       },
     });
 
