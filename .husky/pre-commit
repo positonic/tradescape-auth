@@ -1,9 +1,11 @@
 #!/bin/sh
 
-# Simple pre-commit hook - just run tests if they exist
-if [ -f "package.json" ] && grep -q '"test"' package.json; then
-  echo "🧪 Running tests..."
-  npm test 2>/dev/null || echo "⚠️  Tests not configured or failed"
+# Lint and typecheck staged code
+echo "🔍 Running lint and typecheck..."
+bun run lint && bun run typecheck
+if [ $? -ne 0 ]; then
+  echo "❌ Lint or type errors found. Fix before committing."
+  exit 1
 fi
 
 # Format staged files

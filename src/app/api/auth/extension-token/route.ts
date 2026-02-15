@@ -21,9 +21,12 @@ export async function POST(request: Request) {
     }
 
     // Decode the encrypted NextAuth JWT session cookie
+    const useSecureCookies = process.env.NODE_ENV === "production";
+    const cookieName = `${useSecureCookies ? "__Secure-" : ""}authjs.session-token`;
     const decoded = await decode({
       token: sessionToken,
       secret: process.env.AUTH_SECRET,
+      salt: cookieName,
     });
 
     if (!decoded?.sub) {
