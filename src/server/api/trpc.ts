@@ -22,7 +22,9 @@ const redisUrl = process.env.REDIS_URL;
 let redis: Redis | undefined;
 
 if (!redisUrl) {
-  console.warn("REDIS_URL not found in environment variables. Redis client will not be initialized.");
+  console.warn(
+    "REDIS_URL not found in environment variables. Redis client will not be initialized.",
+  );
   // Depending on your app's requirements, you might want to throw an error here
   // if Redis is essential for core functionality.
   // throw new Error("REDIS_URL environment variable is not set.");
@@ -31,7 +33,7 @@ if (!redisUrl) {
     // Optional: Configure ioredis options here
     maxRetriesPerRequest: 3, // Example: Limit retries
     connectTimeout: 10000, // Example: Connection timeout
-     // Keep the process running even if Redis loses connection initially or during runtime
+    // Keep the process running even if Redis loses connection initially or during runtime
     // This is often desired in server environments. Adjust if needed.
     enableOfflineQueue: true,
   });
@@ -46,7 +48,7 @@ if (!redisUrl) {
     console.error("[Redis] Connection error:", error);
   });
 
-   // Optional: Add a 'ready' listener if you need to ensure commands can be processed
+  // Optional: Add a 'ready' listener if you need to ensure commands can be processed
   redis.on("ready", () => {
     console.log("[Redis] Client ready to process commands.");
   });
@@ -92,7 +94,9 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
               name: decoded.name ?? null,
               image: decoded.picture ?? null,
             },
-            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            expires: new Date(
+              Date.now() + 7 * 24 * 60 * 60 * 1000,
+            ).toISOString(),
           } as typeof session;
         }
       } catch (e) {
@@ -164,7 +168,7 @@ export const createTRPCRouter = t.router;
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
 
-  if (t._config.isDev && typeof window === 'undefined') {
+  if (t._config.isDev && typeof window === "undefined") {
     // artificial delay only on server-side in dev
     const waitMs = Math.floor(Math.random() * 400) + 100;
     await new Promise((resolve) => setTimeout(resolve, waitMs));

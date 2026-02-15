@@ -40,10 +40,7 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 401 });
     }
 
     // Generate a 7-day JWT for the extension
