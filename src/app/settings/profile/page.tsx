@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Title,
-  Text,
-  Stack,
-  Paper,
-  Avatar,
-  Group,
-  Badge,
-} from "@mantine/core";
+import { Title, Text, Stack, Paper, Avatar, Group, Badge } from "@mantine/core";
 import { IconBrandDiscord } from "@tabler/icons-react";
 import { useSession } from "next-auth/react";
 

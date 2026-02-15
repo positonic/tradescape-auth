@@ -51,18 +51,14 @@ function computeStatCards(
   return [
     {
       label: "Total Portfolio Value",
-      value: dashboardStats?.hasData
-        ? formatCurrency(currentValue)
-        : "$0.00",
+      value: dashboardStats?.hasData ? formatCurrency(currentValue) : "$0.00",
       change: `${snapshotChange >= 0 ? "+" : ""}${snapshotChange.toFixed(1)}%`,
       subtitle: "vs. previous snapshot",
       positive: snapshotChange >= 0,
     },
     {
       label: "Today's P&L",
-      value: dailyStats
-        ? formatCurrency(dailyStats.netPnL)
-        : "$0.00",
+      value: dailyStats ? formatCurrency(dailyStats.netPnL) : "$0.00",
       change: dailyStats
         ? `${dailyStats.winCount}W / ${dailyStats.lossCount}L`
         : "0W / 0L",
@@ -71,23 +67,21 @@ function computeStatCards(
     },
     {
       label: "Monthly Change",
-      value: dashboardStats?.hasData && monthAgoValue > 0
-        ? `${monthlyChange >= 0 ? "+" : ""}${monthlyChange.toFixed(1)}%`
-        : "N/A",
-      change: dashboardStats?.hasData && monthAgoValue > 0
-        ? formatCurrency(monthlyDelta)
-        : "$0.00",
+      value:
+        dashboardStats?.hasData && monthAgoValue > 0
+          ? `${monthlyChange >= 0 ? "+" : ""}${monthlyChange.toFixed(1)}%`
+          : "N/A",
+      change:
+        dashboardStats?.hasData && monthAgoValue > 0
+          ? formatCurrency(monthlyDelta)
+          : "$0.00",
       subtitle: "30-day change",
       positive: monthlyDelta >= 0,
     },
     {
       label: "Win Rate",
-      value: dailyStats
-        ? `${dailyStats.winRate.toFixed(1)}%`
-        : "N/A",
-      change: dailyStats
-        ? `${dailyStats.totalOrders} orders`
-        : "0 orders",
+      value: dailyStats ? `${dailyStats.winRate.toFixed(1)}%` : "N/A",
+      change: dailyStats ? `${dailyStats.totalOrders} orders` : "0 orders",
       subtitle: "today",
       positive: (dailyStats?.winRate ?? 0) >= 50,
     },

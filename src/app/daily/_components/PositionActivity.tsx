@@ -34,12 +34,8 @@ export function PositionActivity({ positions }: PositionActivityProps) {
       </Title>
       <Tabs defaultValue="closed" mb="lg">
         <Tabs.List mb="sm">
-          <Tabs.Tab value="closed">
-            Closed ({positions.closed.length})
-          </Tabs.Tab>
-          <Tabs.Tab value="opened">
-            Opened ({positions.opened.length})
-          </Tabs.Tab>
+          <Tabs.Tab value="closed">Closed ({positions.closed.length})</Tabs.Tab>
+          <Tabs.Tab value="opened">Opened ({positions.opened.length})</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="closed">
@@ -64,8 +60,7 @@ export function PositionActivity({ positions }: PositionActivityProps) {
               <Table.Tbody>
                 {positions.closed.map((pos) => {
                   const pnl = Number(pos.profitLoss.toString());
-                  const pnlColor =
-                    pnl > 0 ? "green" : pnl < 0 ? "red" : "gray";
+                  const pnlColor = pnl > 0 ? "green" : pnl < 0 ? "red" : "gray";
                   return (
                     <Table.Tr key={pos.id}>
                       <Table.Td>

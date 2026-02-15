@@ -13,7 +13,11 @@ interface DateNavigatorProps {
 
 function shiftDate(dateString: string, days: number): string {
   const parts = dateString.split("-");
-  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + days);
+  const d = new Date(
+    Number(parts[0]),
+    Number(parts[1]) - 1,
+    Number(parts[2]) + days,
+  );
   const year = d.getFullYear();
   const month = (d.getMonth() + 1).toString().padStart(2, "0");
   const day = d.getDate().toString().padStart(2, "0");

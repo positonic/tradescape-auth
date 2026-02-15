@@ -67,9 +67,7 @@ export const dailyRouter = createTRPCRouter({
           ]);
 
         // Deduplicate positions (a position opened and closed same day appears in both)
-        const closedPositionIds = new Set(
-          positionsClosed.map((p) => p.id),
-        );
+        const closedPositionIds = new Set(positionsClosed.map((p) => p.id));
         const openedOnly = positionsOpened.filter(
           (p) => !closedPositionIds.has(p.id),
         );
@@ -138,7 +136,8 @@ export const dailyRouter = createTRPCRouter({
 
         const uniquePairs = pairMap.size;
         const totalDecisions = winCount + lossCount;
-        const winRate = totalDecisions > 0 ? (winCount / totalDecisions) * 100 : 0;
+        const winRate =
+          totalDecisions > 0 ? (winCount / totalDecisions) * 100 : 0;
 
         const pairBreakdowns = Array.from(pairMap.values()).sort(
           (a, b) => Math.abs(b.netPnL) - Math.abs(a.netPnL),

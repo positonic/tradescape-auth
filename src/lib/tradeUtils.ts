@@ -1,16 +1,17 @@
 export function formatDateTime(timestamp: number | bigint): string {
   // Convert BigInt to number if needed
-  const numericTimestamp = typeof timestamp === 'bigint' ? Number(timestamp) : timestamp;
+  const numericTimestamp =
+    typeof timestamp === "bigint" ? Number(timestamp) : timestamp;
   const date = new Date(numericTimestamp);
 
   // Extract date components
   const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
 
   // Extract time components
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
 
   // Construct the formatted date and time string
   return `${year}-${month}-${day} ${hours}:${minutes}`;
@@ -23,16 +24,16 @@ export function parseExchangePair(input: string): {
   quote: string;
 } {
   // Split the input string into exchange and pair parts
-  const [exchangePart, pairPart] = input.split('-');
+  const [exchangePart, pairPart] = input.split("-");
 
   // Capitalize the first letter of the exchange part
-  const exchange = exchangePart?.slice(0) ?? '';
+  const exchange = exchangePart?.slice(0) ?? "";
 
   // Replace underscores with slashes and convert the pair part to uppercase
-  const pair = pairPart?.replace('_', '/').toUpperCase() ?? '';
+  const pair = pairPart?.replace("_", "/").toUpperCase() ?? "";
 
-  const base = pair.split('/')[0] ?? '';
-  const quote = pair.split('/')[1] ?? '';
+  const base = pair.split("/")[0] ?? "";
+  const quote = pair.split("/")[1] ?? "";
 
   return { exchange, pair, base, quote };
 }
@@ -46,8 +47,8 @@ export function parseQuoteBaseFromPair(pair: string): {
   base: string;
   quote: string;
 } {
-  const base = pair.split('/')[0] ?? '';
-  const quote = pair.split('/')[1] ?? '';
+  const base = pair.split("/")[0] ?? "";
+  const quote = pair.split("/")[1] ?? "";
   return { base, quote };
 }
 
@@ -61,17 +62,18 @@ export function transformExchangePairFormat(input: string): string {
   let transformedString = input.toLowerCase();
 
   // Replace ':' with '-' and '/' with '_'
-  transformedString = transformedString.replace(':', '-').replace('/', '_');
+  transformedString = transformedString.replace(":", "-").replace("/", "_");
 
   return transformedString;
 }
 
 export function formatCurrency(amount: number | string): string {
   // Convert string to number if needed
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  const numericAmount =
+    typeof amount === "string" ? parseFloat(amount) : amount;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 2,
   }).format(numericAmount);
 }
@@ -79,35 +81,35 @@ export function formatCurrency(amount: number | string): string {
 type ColorMap = Record<string, string>;
 
 export const cryptoColors: ColorMap = {
-  BTC: 'rgb(247, 147, 26)',
-  BLUR: 'rgb(113, 87, 194)',
-  MATIC: 'rgb(130, 71, 229)',
-  USD: 'rgb(0, 122, 51)',
-  ZETA: 'rgb(72, 130, 180)',
-  JUP: 'rgb(255, 165, 0)',
-  ONDO: 'rgb(255, 99, 71)',
-  PYTH: 'rgb(255, 223, 186)',
-  BEAM: 'rgb(76, 175, 80)',
-  LENDS: 'rgb(250, 250, 250)',
-  TIA: 'rgb(64, 224, 208)',
-  GRT: 'rgb(96, 125, 139)',
-  SUI: 'rgb(255, 105, 180)',
-  ETH: 'rgb(108, 92, 231)',
-  MAV: 'rgb(255, 215, 0)',
-  UMA: 'rgb(0, 191, 255)',
-  ARB: 'rgb(0, 206, 209)',
-  STX: 'rgb(255, 69, 0)',
-  JTO: 'rgb(153, 50, 204)',
-  SUPER: 'rgb(233, 30, 99)',
-  VET: 'rgb(0, 0, 255)',
-  NEAR: 'rgb(255, 48, 79)',
-  DOT: 'rgb(233, 30, 99)',
-  ALGO: 'rgb(0, 178, 255)',
-  ADA: 'rgb(57, 154, 202)',
-  AVAX: 'rgb(227, 38, 54)',
-  USDT: 'rgb(7, 193, 96)',
-  USDC: 'rgb(255, 255, 255)',
-  SOL: '#24AEA9',
+  BTC: "rgb(247, 147, 26)",
+  BLUR: "rgb(113, 87, 194)",
+  MATIC: "rgb(130, 71, 229)",
+  USD: "rgb(0, 122, 51)",
+  ZETA: "rgb(72, 130, 180)",
+  JUP: "rgb(255, 165, 0)",
+  ONDO: "rgb(255, 99, 71)",
+  PYTH: "rgb(255, 223, 186)",
+  BEAM: "rgb(76, 175, 80)",
+  LENDS: "rgb(250, 250, 250)",
+  TIA: "rgb(64, 224, 208)",
+  GRT: "rgb(96, 125, 139)",
+  SUI: "rgb(255, 105, 180)",
+  ETH: "rgb(108, 92, 231)",
+  MAV: "rgb(255, 215, 0)",
+  UMA: "rgb(0, 191, 255)",
+  ARB: "rgb(0, 206, 209)",
+  STX: "rgb(255, 69, 0)",
+  JTO: "rgb(153, 50, 204)",
+  SUPER: "rgb(233, 30, 99)",
+  VET: "rgb(0, 0, 255)",
+  NEAR: "rgb(255, 48, 79)",
+  DOT: "rgb(233, 30, 99)",
+  ALGO: "rgb(0, 178, 255)",
+  ADA: "rgb(57, 154, 202)",
+  AVAX: "rgb(227, 38, 54)",
+  USDT: "rgb(7, 193, 96)",
+  USDC: "rgb(255, 255, 255)",
+  SOL: "#24AEA9",
 };
 
 interface TimeBasedObject {
@@ -115,13 +117,13 @@ interface TimeBasedObject {
 }
 
 export const sortDescending = (a: TimeBasedObject, b: TimeBasedObject) => {
-  const aTime = typeof a.time === 'bigint' ? Number(a.time) : a.time;
-  const bTime = typeof b.time === 'bigint' ? Number(b.time) : b.time;
+  const aTime = typeof a.time === "bigint" ? Number(a.time) : a.time;
+  const bTime = typeof b.time === "bigint" ? Number(b.time) : b.time;
   return bTime - aTime;
 };
 export const sortAscending = (a: TimeBasedObject, b: TimeBasedObject) => {
-  const aTime = typeof a.time === 'bigint' ? Number(a.time) : a.time;
-  const bTime = typeof b.time === 'bigint' ? Number(b.time) : b.time;
+  const aTime = typeof a.time === "bigint" ? Number(a.time) : a.time;
+  const bTime = typeof b.time === "bigint" ? Number(b.time) : b.time;
   return aTime - bTime;
 };
 
@@ -141,7 +143,7 @@ function getStartOfDayOffsetTimestamp(daysOffset: number): number {
   const startOfDay = new Date(
     now.getFullYear(),
     now.getMonth(),
-    now.getDate() + daysOffset
+    now.getDate() + daysOffset,
   );
   return startOfDay.getTime();
 }
@@ -181,8 +183,8 @@ export function createSummary(entries: BalanceEntry[]): BalanceEntry[] {
 
   // Convert each segment into milliseconds for comparison
   const segmentTimes = segments.map((segment) => segment * 3600 * 1000);
-  console.log('segmentTimes is ', segmentTimes);
-  
+  console.log("segmentTimes is ", segmentTimes);
+
   sortedEntries.forEach((entry) => {
     // Convert timestamp to a date object
     const date = new Date(entry.timestamp);
@@ -202,7 +204,7 @@ export function createSummary(entries: BalanceEntry[]): BalanceEntry[] {
 
     // Check if we already have an entry for this segment
     const existingEntryIndex = result.findIndex(
-      (e) => e.timestamp === segmentTimestamp
+      (e) => e.timestamp === segmentTimestamp,
     );
 
     if (existingEntryIndex === -1) {
@@ -215,7 +217,9 @@ export function createSummary(entries: BalanceEntry[]): BalanceEntry[] {
       // If an entry exists, determine which one is closer to the segment start
       const existingEntry = result[existingEntryIndex];
       if (existingEntry) {
-        const existingDiff = Math.abs(existingEntry.timestamp - segmentTimestamp);
+        const existingDiff = Math.abs(
+          existingEntry.timestamp - segmentTimestamp,
+        );
         const currentDiff = Math.abs(entry.timestamp - segmentTimestamp);
 
         if (currentDiff < existingDiff) {

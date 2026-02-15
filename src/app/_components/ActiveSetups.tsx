@@ -50,12 +50,7 @@ export function ActiveSetups({ setups, isLoading }: ActiveSetupsProps) {
           <Text c="dimmed" mb="sm">
             No active setups
           </Text>
-          <Button
-            component={Link}
-            href="/setups"
-            variant="subtle"
-            size="xs"
-          >
+          <Button component={Link} href="/setups" variant="subtle" size="xs">
             Create a setup
           </Button>
         </div>
@@ -127,12 +122,7 @@ export function ActiveSetups({ setups, isLoading }: ActiveSetupsProps) {
             );
           })}
           <div className="pt-2 text-center">
-            <Button
-              component={Link}
-              href="/setups"
-              variant="subtle"
-              size="xs"
-            >
+            <Button component={Link} href="/setups" variant="subtle" size="xs">
               View all setups
             </Button>
           </div>

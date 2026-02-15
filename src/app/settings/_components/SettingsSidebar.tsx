@@ -2,12 +2,7 @@
 
 import { NavLink, Stack, Title } from "@mantine/core";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  IconUser,
-  IconPalette,
-  IconKey,
-  IconLock,
-} from "@tabler/icons-react";
+import { IconUser, IconPalette, IconKey, IconLock } from "@tabler/icons-react";
 
 const settingsNav = [
   { label: "Profile", href: "/settings/profile", icon: IconUser },

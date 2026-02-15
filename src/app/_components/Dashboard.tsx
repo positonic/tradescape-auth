@@ -73,15 +73,13 @@ export function Dashboard({ userName }: DashboardProps) {
   // Transform snapshot history for chart
   const chartData = useMemo(() => {
     if (!snapshotHistory?.snapshots) return [];
-    return [...snapshotHistory.snapshots]
-      .reverse()
-      .map((s) => ({
-        date: new Date(s.timestamp).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
-        value: s.totalUsdValue,
-      }));
+    return [...snapshotHistory.snapshots].reverse().map((s) => ({
+      date: new Date(s.timestamp).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      value: s.totalUsdValue,
+    }));
   }, [snapshotHistory]);
 
   // Latest snapshot timestamp for "last updated"
@@ -96,8 +94,7 @@ export function Dashboard({ userName }: DashboardProps) {
 
   const dailyStats = dailyData?.stats ?? null;
   const hasAnyData =
-    dashboardStats?.hasData ??
-    (ordersData?.orders?.length ?? 0) > 0;
+    dashboardStats?.hasData ?? (ordersData?.orders?.length ?? 0) > 0;
 
   return (
     <Container size="xl" className="py-6">
@@ -119,23 +116,20 @@ export function Dashboard({ userName }: DashboardProps) {
       </div>
 
       {/* New user onboarding */}
-      {!statsLoading &&
-        !dailyLoading &&
-        !ordersLoading &&
-        !hasAnyData && (
-          <Card withBorder radius="md" p="xl" className="mb-6 text-center">
-            <Title order={3} mb="md">
-              Welcome to Tradescape
-            </Title>
-            <Text c="dimmed" mb="lg">
-              Get started by connecting your exchange on the Live page to begin
-              tracking your portfolio.
-            </Text>
-            <Button component={Link} href="/live">
-              Go to Live Dashboard
-            </Button>
-          </Card>
-        )}
+      {!statsLoading && !dailyLoading && !ordersLoading && !hasAnyData && (
+        <Card withBorder radius="md" p="xl" className="mb-6 text-center">
+          <Title order={3} mb="md">
+            Welcome to Tradescape
+          </Title>
+          <Text c="dimmed" mb="lg">
+            Get started by connecting your exchange on the Live page to begin
+            tracking your portfolio.
+          </Text>
+          <Button component={Link} href="/live">
+            Go to Live Dashboard
+          </Button>
+        </Card>
+      )}
 
       {/* Stat Cards */}
       <DashboardStatCards
@@ -165,16 +159,10 @@ export function Dashboard({ userName }: DashboardProps) {
       {/* Recent Orders + Active Setups */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          <RecentOrders
-            orders={ordersData?.orders}
-            isLoading={ordersLoading}
-          />
+          <RecentOrders orders={ordersData?.orders} isLoading={ordersLoading} />
         </div>
         <div className="lg:col-span-2">
-          <ActiveSetups
-            setups={setupsData}
-            isLoading={setupsLoading}
-          />
+          <ActiveSetups setups={setupsData} isLoading={setupsLoading} />
         </div>
       </div>
     </Container>

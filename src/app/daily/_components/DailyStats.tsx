@@ -41,7 +41,8 @@ function StatCard({
 }
 
 export function DailyStats({ stats }: DailyStatsProps) {
-  const pnlColor = stats.netPnL > 0 ? "green" : stats.netPnL < 0 ? "red" : undefined;
+  const pnlColor =
+    stats.netPnL > 0 ? "green" : stats.netPnL < 0 ? "red" : undefined;
 
   return (
     <SimpleGrid cols={{ base: 2, sm: 3, lg: 5 }} mb="lg">
@@ -70,7 +71,9 @@ export function DailyStats({ stats }: DailyStatsProps) {
       />
       <StatCard
         label="Largest Loss"
-        value={stats.largestLoss < 0 ? formatCurrency(stats.largestLoss) : "N/A"}
+        value={
+          stats.largestLoss < 0 ? formatCurrency(stats.largestLoss) : "N/A"
+        }
         color={stats.largestLoss < 0 ? "red" : undefined}
       />
     </SimpleGrid>

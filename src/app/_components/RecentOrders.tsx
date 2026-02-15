@@ -1,10 +1,7 @@
 "use client";
 
 import { Card, Title, Text, Badge, Skeleton, Button } from "@mantine/core";
-import {
-  IconArrowUpRight,
-  IconArrowDownLeft,
-} from "@tabler/icons-react";
+import { IconArrowUpRight, IconArrowDownLeft } from "@tabler/icons-react";
 import Link from "next/link";
 import { formatDateTime, formatCurrency } from "~/lib/tradeUtils";
 
@@ -54,12 +51,7 @@ export function RecentOrders({ orders, isLoading }: RecentOrdersProps) {
           <Text c="dimmed" mb="sm">
             No recent orders
           </Text>
-          <Button
-            component={Link}
-            href="/trades"
-            variant="subtle"
-            size="xs"
-          >
+          <Button component={Link} href="/trades" variant="subtle" size="xs">
             Sync trades
           </Button>
         </div>
@@ -71,10 +63,7 @@ export function RecentOrders({ orders, isLoading }: RecentOrdersProps) {
             const pnl = order.closedPnL ? Number(order.closedPnL) : null;
 
             return (
-              <div
-                key={order.id}
-                className="flex items-center justify-between"
-              >
+              <div key={order.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-full ${
@@ -137,12 +126,7 @@ export function RecentOrders({ orders, isLoading }: RecentOrdersProps) {
             );
           })}
           <div className="pt-2 text-center">
-            <Button
-              component={Link}
-              href="/trades"
-              variant="subtle"
-              size="xs"
-            >
+            <Button component={Link} href="/trades" variant="subtle" size="xs">
               View all trades
             </Button>
           </div>
