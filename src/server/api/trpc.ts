@@ -11,6 +11,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import Redis from "ioredis";
+import jwt from "jsonwebtoken";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
@@ -69,7 +70,36 @@ if (!redisUrl) {
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-  const session = await auth();
+  let session = await auth();
+
+  // If no session from cookies, check for Bearer token from extension
+  if (!session?.user) {
+    const authHeader = opts.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      try {
+        const decoded = jwt.verify(token, process.env.AUTH_SECRET!) as {
+          sub: string;
+          email?: string;
+          name?: string;
+          picture?: string;
+        };
+        if (decoded.sub) {
+          session = {
+            user: {
+              id: decoded.sub,
+              email: decoded.email ?? null,
+              name: decoded.name ?? null,
+              image: decoded.picture ?? null,
+            },
+            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          } as typeof session;
+        }
+      } catch (e) {
+        console.error("[TRPC] Bearer token verification failed:", e);
+      }
+    }
+  }
 
   return {
     db,

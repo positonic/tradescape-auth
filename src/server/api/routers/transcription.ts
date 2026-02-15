@@ -18,8 +18,19 @@ const logStore = () => {
   console.log("🎙️ =====================================================\n");
 };
 
-// Middleware to check API key
+// Middleware to check API key or session auth (Bearer token / cookie)
 const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
+  // If already authenticated via Bearer token (extension auto-auth) or session cookie
+  if (ctx.session?.user) {
+    return next({
+      ctx: {
+        ...ctx,
+        userId: ctx.session.user.id,
+      },
+    });
+  }
+
+  // Fallback: x-api-key validation
   const apiKey = ctx.headers.get("x-api-key");
 
   if (!apiKey) {
@@ -29,14 +40,11 @@ const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
     });
   }
 
-  console.log("AA apiKey", apiKey);
-  // Find the verification token and associated user
   const verificationToken = await ctx.db.verificationToken.findFirst({
     where: {
       token: apiKey,
     },
   });
-  console.log("AA verificationToken", verificationToken);
 
   if (!verificationToken) {
     throw new TRPCError({
@@ -45,7 +53,6 @@ const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
     });
   }
 
-  // Type-safe error handling
   const userId = verificationToken.userId;
   if (!userId) {
     throw new TRPCError({
@@ -54,11 +61,10 @@ const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
     });
   }
 
-  // Add the user id to the context
   return next({
     ctx: {
       ...ctx,
-      userId, // Now type-safe
+      userId,
     },
   });
 });
