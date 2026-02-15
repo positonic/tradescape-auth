@@ -112,16 +112,18 @@ export const tradesRouter = createTRPCRouter({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
         pairFilter: z.string().optional(),
+        statusFilter: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-      const { limit, offset, pairFilter } = input;
+      const { limit, offset, pairFilter, statusFilter } = input;
 
       try {
         const whereClause: Prisma.PositionWhereInput = {
           userId,
           ...(pairFilter ? { pair: pairFilter } : {}),
+          ...(statusFilter ? { status: statusFilter } : {}),
         };
 
         // Fetch positions from database

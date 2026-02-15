@@ -65,33 +65,35 @@ const apiKeyMiddleware = publicProcedure.use(async ({ ctx, next }) => {
 
 export const transcriptionRouter = createTRPCRouter({
   startSession: apiKeyMiddleware
-    .input(z.object({
-      title: z.string().nullable().optional(),
-    }))
+    .input(
+      z.object({
+        title: z.string().nullable().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-    // Type-safe userId access
-    const userId = ctx.userId;
+      // Type-safe userId access
+      const userId = ctx.userId;
 
-    // Create record in database using ctx.db
-    const session = await ctx.db.transcriptionSession.create({
-      data: {
-        sessionId: `session_${Date.now()}`,
-        transcription: "",
-        userId,
-        title: input.title ?? null,
-      },
-    });
+      // Create record in database using ctx.db
+      const session = await ctx.db.transcriptionSession.create({
+        data: {
+          sessionId: `session_${Date.now()}`,
+          transcription: "",
+          userId,
+          title: input.title ?? null,
+        },
+      });
 
-    // Keep in-memory store for debugging
-    transcriptionStore[session.id] = [];
-    console.log("\n🎙️ New session started:", session.id);
-    logStore();
+      // Keep in-memory store for debugging
+      transcriptionStore[session.id] = [];
+      console.log("\n🎙️ New session started:", session.id);
+      logStore();
 
-    return {
-      id: session.id,
-      startTime: new Date().toISOString(),
-    };
-  }),
+      return {
+        id: session.id,
+        startTime: new Date().toISOString(),
+      };
+    }),
 
   saveTranscription: protectedProcedure
     .input(

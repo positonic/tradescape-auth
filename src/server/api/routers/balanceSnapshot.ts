@@ -245,6 +245,46 @@ export const portfolioSnapshotRouter = createTRPCRouter({
     }),
 
   /**
+   * Aggregated dashboard stats: latest value, previous value, 30-day-ago value
+   */
+  getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const service = new PortfolioSnapshotService(ctx.db);
+      const userId = ctx.session.user.id;
+
+      const recentSnapshots = await service.getSnapshots(userId, {
+        limit: 2,
+        offset: 0,
+      });
+      const latest = recentSnapshots[0] ?? null;
+      const previous = recentSnapshots[1] ?? null;
+
+      // Get snapshot from ~30 days ago
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const monthAgoSnapshots = await service.getSnapshots(userId, {
+        endDate: new Date(thirtyDaysAgo.getTime() + 86400000),
+        limit: 1,
+      });
+      const monthAgoSnapshot = monthAgoSnapshots[0] ?? null;
+
+      return {
+        currentValue: latest?.totalUsdValue ?? null,
+        currentTimestamp: latest?.timestamp ?? null,
+        previousValue: previous?.totalUsdValue ?? null,
+        monthAgoValue: monthAgoSnapshot?.totalUsdValue ?? null,
+        hasData: latest !== null,
+      };
+    } catch (error) {
+      console.error("Failed to get dashboard stats:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to retrieve dashboard stats",
+      });
+    }
+  }),
+
+  /**
    * Clean up old snapshots
    */
   cleanup: protectedProcedure

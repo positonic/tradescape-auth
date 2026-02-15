@@ -14,6 +14,7 @@ import {
   IconChartLine,
   IconCalculator,
   IconActivity,
+  IconCalendarStats,
 } from "@tabler/icons-react";
 import { Drawer } from "@mantine/core";
 import ManyChat from "./ManyChat";
@@ -58,6 +59,7 @@ export default function NavbarWithDrawer({ session }: NavbarWithDrawerProps) {
           <NavItem href="/sessions" icon={<IconMicrophone size={24} />} />
           <NavItem href="/setups" icon={<IconTargetArrow size={24} />} />
           <NavItem href="/trades" icon={<IconChartLine size={24} />} />
+          <NavItem href="/daily" icon={<IconCalendarStats size={24} />} />
           <NavItem href="/live" icon={<IconActivity size={24} />} />
           <NavItem href="/calculator" icon={<IconCalculator size={24} />} />
         </div>

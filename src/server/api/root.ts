@@ -10,6 +10,7 @@ import { tradesRouter } from "./routers/trades";
 import { liveRouter } from "./routers/live";
 import { mastraRouter } from "./routers/mastra";
 import { portfolioSnapshotRouter } from "./routers/balanceSnapshot";
+import { dailyRouter } from "./routers/daily";
 
 /**
  * This is the primary router for your server.
@@ -28,6 +29,7 @@ export const appRouter = createTRPCRouter({
   live: liveRouter,
   mastra: mastraRouter,
   portfolioSnapshot: portfolioSnapshotRouter,
+  daily: dailyRouter,
 });
 
 // export type definition of API

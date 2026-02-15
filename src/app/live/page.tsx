@@ -119,7 +119,7 @@ export default function LivePage() {
         color: "green",
       });
 
-      // Immediately fetch initial data
+      // Fetch initial data after server has time to initialize exchange
       setTimeout(() => {
         void (async () => {
           try {
@@ -128,11 +128,11 @@ export default function LivePage() {
               setLiveData(data.data);
               setLastUpdate(new Date());
             }
-          } catch (error) {
-            console.error("Failed to fetch initial data:", error);
+          } catch {
+            // Expected if server is still initializing - polling will retry
           }
         })();
-      }, 1000);
+      }, 3000);
     },
     onError: (error) => {
       notifications.show({
@@ -147,19 +147,21 @@ export default function LivePage() {
 
   const { refetch } = api.live.getCurrentLiveData.useQuery(undefined, {
     enabled: false, // Only fetch manually
+    retry: false, // Don't auto-retry - polling handles retries
   });
 
   // Query for latest portfolio snapshot
   const { data: latestSnapshot, refetch: refetchLatestSnapshot } =
     api.portfolioSnapshot.getLatest.useQuery(undefined, {
       enabled: !!session?.user,
+      retry: false,
     });
 
   // Query for recent snapshots (for chart data)
   const { data: chartSnapshots, refetch: refetchChartSnapshots } =
     api.portfolioSnapshot.getRecent.useQuery(
       { limit: 10 }, // Get last 10 snapshots (max allowed by schema)
-      { enabled: !!session?.user },
+      { enabled: !!session?.user, retry: false },
     );
 
   // Portfolio snapshot mutations
@@ -331,7 +333,11 @@ export default function LivePage() {
   // Auto-connect on mount and start polling
   useEffect(() => {
     // Prevent duplicate connections - check if already connected or connection in progress
-    if (status === "authenticated" && !isConnected && !connectionAttemptedRef.current) {
+    if (
+      status === "authenticated" &&
+      !isConnected &&
+      !connectionAttemptedRef.current
+    ) {
       void connectToLiveData();
     }
   }, [connectToLiveData, isConnected, status]);

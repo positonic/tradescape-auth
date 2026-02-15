@@ -242,3 +242,48 @@ export interface TradeResponseData {
   firstTradeTime?: number | null;
   lastTradeTime?: number | null;
 }
+
+/**
+ * Given a date string "YYYY-MM-DD", returns the start and end
+ * timestamps in milliseconds for that day in local timezone.
+ */
+export function getDayBoundsMs(dateString: string): {
+  startMs: number;
+  endMs: number;
+} {
+  const parts = dateString.split("-");
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  const start = new Date(year, month - 1, day);
+  const end = new Date(year, month - 1, day + 1);
+  return {
+    startMs: start.getTime(),
+    endMs: end.getTime(),
+  };
+}
+
+/**
+ * Format a date string "YYYY-MM-DD" into a human-readable form
+ * like "Friday, February 14, 2026"
+ */
+export function formatDateLong(dateString: string): string {
+  const date = new Date(dateString + "T12:00:00");
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+}
+
+/**
+ * Get today's date as "YYYY-MM-DD" in local timezone.
+ */
+export function getTodayDateString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, "0");
+  const day = now.getDate().toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
