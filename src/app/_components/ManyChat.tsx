@@ -17,7 +17,7 @@ import {
   Tooltip,
   Skeleton,
   useMantineTheme,
-  useMantineColorScheme,
+  useComputedColorScheme,
 } from "@mantine/core";
 import {
   IconSend,
@@ -55,7 +55,7 @@ export default function ManyChat({
   buttons,
 }: ManyChatProps) {
   const theme = useMantineTheme();
-  const { colorScheme } = useMantineColorScheme();
+  const colorScheme = useComputedColorScheme("dark");
 
   // Define theme-aware colors
   const colors = {
