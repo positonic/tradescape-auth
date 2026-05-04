@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Title,
   Text,
@@ -9,10 +11,12 @@ import {
   Divider,
   Button,
   ScrollArea,
+  Skeleton,
 } from "@mantine/core";
 import Link from "next/link";
-import { auth } from "~/server/auth";
-import { api } from "~/trpc/server";
+import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { api } from "~/trpc/react";
 import {
   IconCalendar,
   IconChartCandle,
@@ -28,34 +32,24 @@ import { DeleteButton } from "./_components/DeleteButton";
 import { PairEditor } from "./_components/PairEditor";
 import { CreateAlertsButton } from "./_components/CreateAlertsButton";
 
-export default async function SetupPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const slug = (await params).slug;
-  const session = await auth();
+export default function SetupPage() {
+  const params = useParams<{ slug: string }>();
+  const slug = params?.slug ?? "";
+  const { data: session, status: sessionStatus } = useSession();
 
-  let setup: Awaited<ReturnType<typeof api.setups.getById>> | null = null;
-  if (session?.user) {
-    try {
-      setup = await api.setups.getById.call({}, { id: slug });
-      // Log setup data for debugging
-      if (setup) {
-        console.log("🔍 [Setup Page] Setup data:", {
-          id: setup.id,
-          pairId: setup.pairId,
-          pairSymbol: setup.pair?.symbol,
-          createdAt: setup.createdAt,
-          tradesCount: setup.trades?.length || 0,
-          ordersCount: setup.orders?.length || 0,
-          positionsCount: setup.positions?.length || 0,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to fetch setup:", error);
-    }
-  }
+  const {
+    data: setup,
+    isLoading: setupLoading,
+  } = api.setups.getById.useQuery(
+    { id: slug },
+    {
+      enabled: !!session?.user && !!slug,
+      staleTime: 60_000,
+    },
+  );
+
+  const isLoading =
+    sessionStatus === "loading" || (!!session?.user && setupLoading);
 
   const getDirectionColor = (direction: string) => {
     switch (direction.toLowerCase()) {
@@ -80,7 +74,7 @@ export default async function SetupPage({
 
   return (
     <div className="min-h-screen">
-      {!session && (
+      {sessionStatus === "unauthenticated" && (
         <div className="flex h-screen flex-col items-center justify-center p-4 text-center">
           <Title order={3} mb="md">
             Access Denied
@@ -94,7 +88,16 @@ export default async function SetupPage({
           </Link>
         </div>
       )}
-      {session?.user && (
+      {session?.user && isLoading && (
+        <div className="container mx-auto px-4 py-8">
+          <Stack gap="xl">
+            <Skeleton height={140} radius="md" />
+            <Skeleton height={220} radius="md" />
+            <Skeleton height={180} radius="md" />
+          </Stack>
+        </div>
+      )}
+      {session?.user && !isLoading && (
         <div className="container mx-auto px-4 py-8">
           {!setup && (
             <Card

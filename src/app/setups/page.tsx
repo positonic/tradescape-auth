@@ -194,6 +194,13 @@ function SetupsTable({
               <Table.Tr
                 key={setup.id}
                 style={{ cursor: bulkMode ? "default" : "pointer" }}
+                onMouseEnter={() => {
+                  if (bulkMode) return;
+                  void utils.setups.getById.prefetch(
+                    { id: setup.id },
+                    { staleTime: 60_000 },
+                  );
+                }}
                 onClick={() => {
                   if (bulkMode) return;
                   router.push(`/setup/${setup.id}`);
