@@ -37,10 +37,7 @@ export default function SetupPage() {
   const slug = params?.slug ?? "";
   const { data: session, status: sessionStatus } = useSession();
 
-  const {
-    data: setup,
-    isLoading: setupLoading,
-  } = api.setups.getById.useQuery(
+  const { data: setup, isLoading: setupLoading } = api.setups.getById.useQuery(
     { id: slug },
     {
       enabled: !!session?.user && !!slug,
