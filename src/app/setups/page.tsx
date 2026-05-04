@@ -31,7 +31,7 @@ function SetupsTable({
 }) {
   const router = useRouter();
   const utils = api.useUtils();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lastIndex, setLastIndex] = useState<number | null>(null);
@@ -121,9 +121,9 @@ function SetupsTable({
           value={statusFilter}
           onChange={(v) => setStatusFilter(v as StatusFilter)}
           data={[
-            { label: "All", value: "all" },
             { label: "Active", value: "active" },
             { label: "Inactive", value: "inactive" },
+            { label: "All", value: "all" },
           ]}
         />
         {canBulkEdit && (
