@@ -1053,6 +1053,25 @@ export const setupsRouter = createTRPCRouter({
       return setup;
     }),
 
+  setActiveStatus: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string()).min(1),
+        status: z.enum(["active", "inactive"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db.setup.updateMany({
+        where: {
+          id: { in: input.ids },
+          userId: ctx.session.user.id,
+        },
+        data: { status: input.status },
+      });
+
+      return { count: result.count };
+    }),
+
   deleteSetup: protectedProcedure
     .input(
       z.object({
