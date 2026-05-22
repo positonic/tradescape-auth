@@ -64,7 +64,7 @@ function EditableSourceCell({
     onError: (error) => {
       notifications.show({
         title: "Error",
-        message: error.message || "Failed to update source",
+        message: error.message ?? "Failed to update source",
         color: "red",
       });
     },
@@ -74,7 +74,7 @@ function EditableSourceCell({
     onError: (error) => {
       notifications.show({
         title: "Error",
-        message: error.message || "Failed to create source",
+        message: error.message ?? "Failed to create source",
         color: "red",
       });
     },
