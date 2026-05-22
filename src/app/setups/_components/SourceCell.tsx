@@ -1,13 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Combobox,
-  InputBase,
-  Loader,
-  Text,
-  useCombobox,
-} from "@mantine/core";
+import { Combobox, InputBase, Loader, Text, useCombobox } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { api } from "~/trpc/react";
 
@@ -34,9 +28,7 @@ export function SourceCell({
       </Text>
     );
   }
-  return (
-    <EditableSourceCell setupId={setupId} currentSource={currentSource} />
-  );
+  return <EditableSourceCell setupId={setupId} currentSource={currentSource} />;
 }
 
 function EditableSourceCell({
@@ -94,14 +86,11 @@ function EditableSourceCell({
   const filtered = useMemo(() => {
     if (!sources) return [];
     if (!trimmedLower) return sources;
-    return sources.filter((s) =>
-      s.name.toLowerCase().includes(trimmedLower),
-    );
+    return sources.filter((s) => s.name.toLowerCase().includes(trimmedLower));
   }, [sources, trimmedLower]);
 
   const exactMatch = useMemo(
-    () =>
-      sources?.some((s) => s.name.toLowerCase() === trimmedLower) ?? false,
+    () => sources?.some((s) => s.name.toLowerCase() === trimmedLower) ?? false,
     [sources, trimmedLower],
   );
 
@@ -141,9 +130,7 @@ function EditableSourceCell({
             component="button"
             type="button"
             pointer
-            rightSection={
-              pending ? <Loader size="xs" /> : <Combobox.Chevron />
-            }
+            rightSection={pending ? <Loader size="xs" /> : <Combobox.Chevron />}
             rightSectionPointerEvents="none"
             onClick={() => combobox.toggleDropdown()}
             disabled={pending}
@@ -166,9 +153,7 @@ function EditableSourceCell({
             placeholder="Search or create…"
           />
           <Combobox.Options>
-            {sourcesLoading && (
-              <Combobox.Empty>Loading…</Combobox.Empty>
-            )}
+            {sourcesLoading && <Combobox.Empty>Loading…</Combobox.Empty>}
 
             {!sourcesLoading && currentSource && (
               <Combobox.Option value={CLEAR_VALUE}>
@@ -193,9 +178,7 @@ function EditableSourceCell({
             {!sourcesLoading &&
               filtered.length === 0 &&
               !showCreate &&
-              !currentSource && (
-                <Combobox.Empty>No sources yet</Combobox.Empty>
-              )}
+              !currentSource && <Combobox.Empty>No sources yet</Combobox.Empty>}
           </Combobox.Options>
         </Combobox.Dropdown>
       </Combobox>
