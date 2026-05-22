@@ -50,6 +50,7 @@ model User {
   positions             Position[]
   sessions              Session[]
   setups                Setup[]
+  sources               Source[]
   transcriptionSessions TranscriptionSession[]
   userPairs             UserPair[]
   userTrades            UserTrade[]
@@ -144,9 +145,11 @@ model Setup {
   privacy                String                @default("private")
   userId                 String
   transcriptionSessionId String?
+  sourceId               Int?
   alerts                 Alert[]
   coin                   Coin?                 @relation(fields: [coinId], references: [id])
   pair                   Pair                  @relation(fields: [pairId], references: [id])
+  source                 Source?               @relation(fields: [sourceId], references: [id])
   transcriptionSession   TranscriptionSession? @relation("TranscriptionSetups", fields: [transcriptionSessionId], references: [id])
   user                   User                  @relation(fields: [userId], references: [id])
   video                  Video?                @relation(fields: [videoId], references: [id], onDelete: Cascade)
@@ -156,6 +159,19 @@ model Setup {
   @@index([pairId])
   @@index([coinId])
   @@index([transcriptionSessionId])
+  @@index([sourceId])
+}
+
+model Source {
+  id        Int      @id @default(autoincrement())
+  name      String
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  setups    Setup[]
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model Coin {

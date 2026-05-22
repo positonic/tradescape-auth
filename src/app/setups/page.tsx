@@ -18,6 +18,7 @@ import {
 import { useRouter } from "next/navigation";
 import { IconPlus } from "@tabler/icons-react";
 import { SetupDrawer } from "~/components/SetupDrawer";
+import { SourceCell } from "./_components/SourceCell";
 
 type SetupListItem = RouterOutputs["setups"]["getPrivate"][number];
 type StatusFilter = "all" | "active" | "inactive";
@@ -112,7 +113,7 @@ function SetupsTable({
     setActiveStatus.mutate({ ids: Array.from(selectedIds), status });
   };
 
-  const colSpan = bulkMode ? 9 : 8;
+  const colSpan = bulkMode ? 10 : 9;
 
   return (
     <>
@@ -178,6 +179,7 @@ function SetupsTable({
               </Table.Th>
             )}
             <Table.Th>Pair</Table.Th>
+            <Table.Th>Source</Table.Th>
             <Table.Th>Direction</Table.Th>
             <Table.Th>Entry</Table.Th>
             <Table.Th>Take Profit</Table.Th>
@@ -216,6 +218,13 @@ function SetupsTable({
                   </Table.Td>
                 )}
                 <Table.Td>{setup.pair.symbol}</Table.Td>
+                <Table.Td style={{ minWidth: 160 }}>
+                  <SourceCell
+                    setupId={setup.id}
+                    currentSource={setup.source}
+                    editable={canBulkEdit}
+                  />
+                </Table.Td>
                 <Table.Td>
                   <span
                     className={
