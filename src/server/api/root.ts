@@ -2,6 +2,7 @@ import { videoRouter } from "~/server/api/routers/video";
 import { toolRouter } from "~/server/api/routers/tool";
 import { discordRouter } from "./routers/discord";
 import { setupsRouter } from "./routers/setups";
+import { sourcesRouter } from "./routers/sources";
 import { createTRPCRouter, createCallerFactory } from "./trpc";
 import { transcriptionRouter } from "./routers/transcription";
 import { alertsRouter } from "./routers/alerts";
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
   tools: toolRouter,
   discord: discordRouter,
   setups: setupsRouter,
+  sources: sourcesRouter,
   transcription: transcriptionRouter,
   alerts: alertsRouter,
   pairs: pairsRouter,

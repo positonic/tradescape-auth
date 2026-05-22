@@ -202,6 +202,7 @@ export const setupsRouter = createTRPCRouter({
         pair: true,
         video: true,
         coin: true,
+        source: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -219,6 +220,7 @@ export const setupsRouter = createTRPCRouter({
         pair: true,
         video: true,
         coin: true,
+        source: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -242,6 +244,7 @@ export const setupsRouter = createTRPCRouter({
           pair: true,
           video: true,
           coin: true,
+          source: true,
           transcriptionSession: true,
         },
       });
@@ -1007,6 +1010,49 @@ export const setupsRouter = createTRPCRouter({
         },
       });
       return setup;
+    }),
+
+  updateSource: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        sourceId: z.number().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const setup = await ctx.db.setup.findUnique({
+        where: { id: input.id },
+        select: { userId: true },
+      });
+
+      if (!setup || setup.userId !== userId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Setup not found",
+        });
+      }
+
+      if (input.sourceId !== null) {
+        const source = await ctx.db.source.findUnique({
+          where: { id: input.sourceId },
+          select: { userId: true },
+        });
+        if (!source || source.userId !== userId) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Source not found",
+          });
+        }
+      }
+
+      const updated = await ctx.db.setup.update({
+        where: { id: input.id },
+        data: { sourceId: input.sourceId },
+        include: { source: true },
+      });
+      return updated;
     }),
 
   updatePair: protectedProcedure
