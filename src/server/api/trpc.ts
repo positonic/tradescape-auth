@@ -15,6 +15,7 @@ import jwt from "jsonwebtoken";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+import { API_KEY_PREFIX, parseApiKey, safeEqual } from "~/server/apiKeys";
 
 // Initialize Redis Client
 // Ensure REDIS_URL is set in your .env files
@@ -71,36 +72,91 @@ if (!redisUrl) {
  *
  * @see https://trpc.io/docs/server/context
  */
+/**
+ * Resolves a `ts_live_` API key to a session-shaped object.
+ *
+ * Headless clients (CLI, SDK, MCP) authenticate with these instead of a JWT:
+ * they do not expire on a 7-day clock and can be revoked individually.
+ */
+const sessionFromApiKey = async (key: string) => {
+  const parsed = parseApiKey(key);
+  if (!parsed) return null;
+
+  const record = await db.apiKey.findUnique({
+    where: { prefix: parsed.prefix },
+    include: {
+      user: { select: { id: true, email: true, name: true, image: true } },
+    },
+  });
+
+  if (!record) return null;
+  if (!safeEqual(record.hashedKey, parsed.hashedKey)) return null;
+  if (record.revokedAt) return null;
+  if (record.expiresAt && record.expiresAt.getTime() < Date.now()) return null;
+
+  // Best-effort usage stamp — never block the request on it.
+  void db.apiKey
+    .update({ where: { id: record.id }, data: { lastUsedAt: new Date() } })
+    .catch((error) =>
+      console.error("[TRPC] Failed to stamp API key usage:", error),
+    );
+
+  return {
+    user: {
+      id: record.user.id,
+      email: record.user.email,
+      name: record.user.name,
+      image: record.user.image,
+    },
+    expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  };
+};
+
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   let session = await auth();
 
-  // If no session from cookies, check for Bearer token from extension
+  // If no session from cookies, check for a Bearer credential. This is either
+  // a `ts_live_` API key (CLI / SDK / MCP) or a JWT (browser extension).
   if (!session?.user) {
     const authHeader = opts.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
-      try {
-        const decoded = jwt.verify(token, process.env.AUTH_SECRET!) as {
-          sub: string;
-          email?: string;
-          name?: string;
-          picture?: string;
-        };
-        if (decoded.sub) {
-          session = {
-            user: {
-              id: decoded.sub,
-              email: decoded.email ?? null,
-              name: decoded.name ?? null,
-              image: decoded.picture ?? null,
-            },
-            expires: new Date(
-              Date.now() + 7 * 24 * 60 * 60 * 1000,
-            ).toISOString(),
-          } as typeof session;
+
+      if (token.startsWith(API_KEY_PREFIX)) {
+        const apiKeySession = await sessionFromApiKey(token);
+        if (apiKeySession) {
+          return {
+            db,
+            session: apiKeySession as typeof session,
+            redis: redis,
+            ...opts,
+          };
         }
-      } catch (e) {
-        console.error("[TRPC] Bearer token verification failed:", e);
+        console.error("[TRPC] API key rejected");
+      } else {
+        try {
+          const decoded = jwt.verify(token, process.env.AUTH_SECRET!) as {
+            sub: string;
+            email?: string;
+            name?: string;
+            picture?: string;
+          };
+          if (decoded.sub) {
+            session = {
+              user: {
+                id: decoded.sub,
+                email: decoded.email ?? null,
+                name: decoded.name ?? null,
+                image: decoded.picture ?? null,
+              },
+              expires: new Date(
+                Date.now() + 7 * 24 * 60 * 60 * 1000,
+              ).toISOString(),
+            } as typeof session;
+          }
+        } catch (e) {
+          console.error("[TRPC] Bearer token verification failed:", e);
+        }
       }
     }
   }

@@ -341,7 +341,7 @@ export const mastraRouter = createTRPCRouter({
           picture: ctx.session.user.image,
         };
 
-        jwt.sign(tokenPayload, process.env.AUTH_SECRET, {
+        const signedToken = jwt.sign(tokenPayload, process.env.AUTH_SECRET, {
           algorithm: "HS256", // Same as NextAuth default
           issuer: "todo-app",
           audience: "mastra-agents",
@@ -358,7 +358,10 @@ export const mastraRouter = createTRPCRouter({
         });
 
         return {
-          token: tokenPayload.jti, // Return the UUID instead of the JWT
+          // The signed JWT — this is what a caller sends as `Authorization:
+          // Bearer <token>`. Previously this returned `jti`, a bare UUID that
+          // no verifier would accept.
+          token: signedToken,
           tokenId: tokenPayload.jti,
           expiresAt: expiresAt.toISOString(),
           expiresIn: input.expiresIn,

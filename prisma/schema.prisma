@@ -57,6 +57,22 @@ model User {
   userVideos            UserVideo[]
   verificationTokens    VerificationToken[]
   portfolioSnapshots    PortfolioSnapshot[]
+  apiKeys               ApiKey[]
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  prefix     String    @unique
+  hashedKey  String    @unique
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
