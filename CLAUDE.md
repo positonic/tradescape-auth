@@ -231,6 +231,30 @@ Do NOT use `db:push` as it bypasses the migration system. Migrations are essenti
 - Database schema history tracking
 - Rollback capabilities
 
+#### How migrations reach production
+
+`.github/workflows/migrate.yml` runs `prisma migrate deploy` on every push to
+`main` (and on demand via **Actions → Migrate Database → Run workflow**, which
+has a dry-run option that only reports what is pending).
+
+It reads `MIGRATION_DATABASE_URL`, falling back to `DATABASE_URL`, from the
+`production` GitHub Environment. Set `MIGRATION_DATABASE_URL` to the **direct**
+connection string if the app connects through a pooler — Supabase, Neon and
+PgBouncer in transaction mode cannot run the advisory locks and DDL that Prisma
+Migrate needs.
+
+Vercel builds on the same push, so the migration and the deploy race. Migrations
+finish in seconds and the Next build takes minutes, so the database is ready
+first in practice — but do not rely on it. Ship schema changes expand/contract:
+the additive migration plus code that tolerates both shapes first, the
+destructive change in a later release.
+
+`.github/workflows/ci.yml` has a `migrations` job that runs on every PR against
+a throwaway pgvector database. It applies every migration from scratch, fails if
+`schema.prisma` and `prisma/migrations` disagree (the "edited the schema, forgot
+the migration" mistake), and fails if re-applying is not a no-op. A migration
+that cannot reach production cleanly should not be mergeable.
+
 ### Current Feature Set
 
 - **Video Processing**: YouTube URL ingestion, transcription, chunk-based indexing

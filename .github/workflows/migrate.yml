@@ -1,0 +1,97 @@
+name: Migrate Database
+
+# Applies pending Prisma migrations to the production database when work lands
+# on main, and on demand.
+#
+# Ordering note: Vercel builds on the same push, so this job and the deploy run
+# concurrently. `migrate deploy` finishes in seconds and a Next build takes
+# minutes, so in practice the database is ready first — but that is a race, not
+# a guarantee. Additive migrations (a new table, a nullable column) are safe in
+# either order. A destructive change is not, whatever the ordering: use
+# expand/contract — ship the additive migration and the code that tolerates
+# both shapes first, drop the old column in a later release.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only report pending migrations, do not apply them"
+        type: boolean
+        default: false
+
+# One migration at a time. Two merges in quick succession must not race, and a
+# queued run must not be cancelled — an unapplied migration is worse than a
+# slow one.
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply migrations
+    runs-on: ubuntu-latest
+    # Scope the database credential to an environment so it is not readable by
+    # workflows on other branches. Add required reviewers here to gate
+    # production migrations behind an approval.
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Check the database credential is configured
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "${MIGRATION_DATABASE_URL}${DATABASE_URL}" ]; then
+            echo "::error::No database URL configured. Add a DATABASE_URL secret"
+            echo "::error::to the 'production' environment (Settings -> Environments)."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Prefer a direct connection for migrations. Providers that pool
+      # (Supabase, Neon, PgBouncer in transaction mode) cannot run the
+      # advisory locks and DDL that Prisma Migrate needs, so set
+      # MIGRATION_DATABASE_URL to the direct connection string when the app's
+      # DATABASE_URL points at a pooler. Falls back to DATABASE_URL otherwise.
+      - name: Report pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL || secrets.DATABASE_URL }}
+        run: bunx prisma migrate status
+
+      - name: Apply migrations
+        if: ${{ inputs.dry_run != true }}
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL || secrets.DATABASE_URL }}
+        run: bunx prisma migrate deploy
+
+      - name: Confirm the database is up to date
+        if: ${{ inputs.dry_run != true }}
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL || secrets.DATABASE_URL }}
+        run: bunx prisma migrate status
+
+      - name: Summarise
+        if: always()
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "### Dry run — nothing applied" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "### Migrations applied to production" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Migration failed — the database may be partially migrated" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Prisma marks a failed migration in \`_prisma_migrations\` and refuses" >> "$GITHUB_STEP_SUMMARY"
+            echo "to continue until it is resolved. Fix the cause, then run" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`prisma migrate resolve --rolled-back <name>\` (or \`--applied\`)" >> "$GITHUB_STEP_SUMMARY"
+            echo "against the database before re-running this workflow." >> "$GITHUB_STEP_SUMMARY"
+          fi

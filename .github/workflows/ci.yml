@@ -83,3 +83,67 @@ jobs:
         run: bun run build
         env:
           SKIP_ENV_VALIDATION: true
+
+  migrations:
+    name: Migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # pgvector, not plain postgres: the init migration does
+        # CREATE EXTENSION "vector" and fails on the stock image.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: migrations_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5433/migrations_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Every migration, applied in order to an empty database. Catches SQL
+      # that only works against a database that already has the change.
+      - name: Apply every migration from scratch
+        run: bunx prisma migrate deploy
+
+      # Catches the classic mistake: schema.prisma edited, no migration
+      # written. Exit code 2 means the migrated database and the schema
+      # disagree.
+      - name: Check schema.prisma matches the migrations
+        run: |
+          set +e
+          bunx prisma migrate diff \
+            --from-config-datasource \
+            --to-schema ./prisma/schema.prisma \
+            --exit-code
+          code=$?
+          set -e
+
+          if [ $code -eq 2 ]; then
+            echo "::error::schema.prisma does not match prisma/migrations (see the diff above)."
+            echo "::error::Run 'bunx prisma migrate dev --name <description>' and commit the result."
+            exit 1
+          fi
+          exit $code
+
+      # A re-run must be a no-op. A migration that applies twice with
+      # different results will corrupt production on any retry.
+      - name: Check migrations are idempotent
+        run: bunx prisma migrate deploy
